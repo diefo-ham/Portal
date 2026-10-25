@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+*.tsbuildinfo
+private-data/
+*.pdf
+*.backup.json
+*.log

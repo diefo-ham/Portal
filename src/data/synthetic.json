@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "questions": [
+    {
+      "id": "demo-m01",
+      "source": "Original synthetic examples",
+      "sourceId": "M01",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear equations in one variable",
+      "difficulty": "easy",
+      "stem": "If 3x + 7 = 22, what is the value of x?",
+      "choices": [
+        { "id": "A", "text": "3" },
+        { "id": "B", "text": "5" },
+        { "id": "C", "text": "7" },
+        { "id": "D", "text": "15" }
+      ],
+      "answer": { "type": "choice", "value": "B" },
+      "rationale": "Subtract 7 from both sides to obtain 3x = 15. Divide both sides by 3, so x = 5.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-m02",
+      "source": "Original synthetic examples",
+      "sourceId": "M02",
+      "section": "math",
+      "domain": "Algebra",
+      "skill": "Linear functions",
+      "difficulty": "medium",
+      "stem": "A bike rental costs $8 plus $4 per hour. What is the total cost, in dollars, of a 5-hour rental?",
+      "answer": { "type": "numeric", "accepted": ["28"] },
+      "rationale": "The fixed fee is $8 and the hourly charge is 4 × 5 = $20. The total is 8 + 20 = $28.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-m03",
+      "source": "Original synthetic examples",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Quadratic equations",
+      "difficulty": "medium",
+      "stem": "The equation x² − 7x + 12 = 0 has two solutions. What is the smaller solution?",
+      "answer": { "type": "numeric", "accepted": ["3"] },
+      "rationale": "Factor the expression: (x − 3)(x − 4) = 0. The solutions are 3 and 4, so the smaller is 3.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-m04",
+      "source": "Original synthetic examples",
+      "section": "math",
+      "domain": "Problem-Solving and Data Analysis",
+      "skill": "Probability",
+      "difficulty": "easy",
+      "stem": "A bag contains 3 blue tiles and 5 gold tiles. One tile is selected at random. What is the probability of selecting a blue tile? Enter a fraction or decimal.",
+      "answer": { "type": "numeric", "accepted": ["3/8"] },
+      "rationale": "There are 8 equally likely tiles, of which 3 are blue. The probability is 3/8, or 0.375.",
+      "testStatus": "unknown"
+    },
+    {
+      "id": "demo-m05",
+      "source": "Original synthetic examples",
+      "section": "math",
+      "domain": "Geometry and Trigonometry",
+      "skill": "Area and volume",
+      "difficulty": "easy",
+      "stem": "A right triangle has legs of length 6 and 8. What is its area?",
+      "choices": [
+        { "id": "A", "text": "14" },
+        { "id": "B", "text": "24" },
+        { "id": "C", "text": "28" },
+        { "id": "D", "text": "48" }
+      ],
+      "answer": { "type": "choice", "value": "B" },
+      "rationale": "For a right triangle, its legs can serve as the base and height. Area = ½ × 6 × 8 = 24.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-m06",
+      "source": "Original synthetic examples",
+      "section": "math",
+      "domain": "Advanced Math",
+      "skill": "Exponential functions",
+      "difficulty": "hard",
+      "stem": "A population is modeled by P(t) = 80 × 2ᵗ, where t is measured in years. After how many years does the model predict a population of 640?",
+      "answer": { "type": "numeric", "accepted": ["3"] },
+      "rationale": "Divide 640 by 80 to get 8. Since 2³ = 8, t = 3.",
+      "testStatus": "active"
+    },
+    {
+      "id": "demo-r01",
+      "source": "Original synthetic examples",
+      "section": "reading-writing",
+      "domain": "Craft and Structure",
+      "skill": "Words in context",
+      "difficulty": "easy",
+      "passage": "The library's new catalog was designed to make rare manuscripts more accessible. Before its introduction, even experienced researchers found locating a specific document arduous.",
+      "stem": "As used in the text, “arduous” most nearly means",
+      "choices": [
+        { "id": "A", "text": "unnecessary." },
+        { "id": "B", "text": "difficult." },
+        { "id": "C", "text": "rewarding." },
+        { "id": "D", "text": "familiar." }
+      ],
+      "answer": { "type": "choice", "value": "B" },
+      "rationale": "The catalog improves access to documents that had been hard to locate. In this context, arduous means difficult or requiring considerable effort.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-r02",
+      "source": "Original synthetic examples",
+      "section": "reading-writing",
+      "domain": "Information and Ideas",
+      "skill": "Central ideas and details",
+      "difficulty": "medium",
+      "passage": "Urban ecologist Mira Chen compared gardens on twelve rooftops. Gardens with a wider variety of native flowers attracted more bee species, even when those gardens occupied less space. Chen suggests that plant selection deserves as much attention as garden size.",
+      "stem": "Which choice best states the main idea of the text?",
+      "choices": [
+        { "id": "A", "text": "Rooftop gardens cannot support native plants." },
+        {
+          "id": "B",
+          "text": "Larger gardens always attract more bee species."
+        },
+        {
+          "id": "C",
+          "text": "The variety of native flowers may matter as much as garden size for attracting bees."
+        },
+        {
+          "id": "D",
+          "text": "Bee species prefer rooftops to all other habitats."
+        }
+      ],
+      "answer": { "type": "choice", "value": "C" },
+      "rationale": "The comparison links plant variety with bee diversity, including in smaller gardens. Choice C reflects both the observation and Chen's conclusion without adding unsupported claims.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-r03",
+      "source": "Original synthetic examples",
+      "section": "reading-writing",
+      "domain": "Standard English Conventions",
+      "skill": "Boundaries",
+      "difficulty": "medium",
+      "passage": "The observatory opened in 1924 _____ it remains a center for astronomical research today.",
+      "stem": "Which choice completes the text so that it conforms to the conventions of Standard English?",
+      "choices": [
+        { "id": "A", "text": ", " },
+        { "id": "B", "text": "; " },
+        { "id": "C", "text": "because " },
+        { "id": "D", "text": "and, " }
+      ],
+      "answer": { "type": "choice", "value": "B" },
+      "rationale": "Both parts are independent clauses. A semicolon correctly joins them. A comma alone creates a comma splice, and the other choices do not form a correct sentence here.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-r04",
+      "source": "Original synthetic examples",
+      "section": "reading-writing",
+      "domain": "Expression of Ideas",
+      "skill": "Transitions",
+      "difficulty": "easy",
+      "passage": "The first prototype was light and inexpensive. _____ it could not withstand the heat required for regular use.",
+      "stem": "Which choice completes the text with the most logical transition?",
+      "choices": [
+        { "id": "A", "text": "Similarly," },
+        { "id": "B", "text": "For example," },
+        { "id": "C", "text": "Therefore," },
+        { "id": "D", "text": "However," }
+      ],
+      "answer": { "type": "choice", "value": "D" },
+      "rationale": "The second sentence introduces a drawback that contrasts with the advantages in the first. However signals that contrast.",
+      "testStatus": "unknown"
+    },
+    {
+      "id": "demo-r05",
+      "source": "Original synthetic examples",
+      "section": "reading-writing",
+      "domain": "Information and Ideas",
+      "skill": "Inferences",
+      "difficulty": "hard",
+      "passage": "In a controlled trial, seedlings exposed to a daily breeze developed thicker stems than seedlings grown in still air. Both groups received the same amount of light and water.",
+      "stem": "Which inference is best supported by the text?",
+      "choices": [
+        { "id": "A", "text": "Air movement may influence stem development." },
+        {
+          "id": "B",
+          "text": "The seedlings in still air received less water."
+        },
+        { "id": "C", "text": "All plants require constant wind to survive." },
+        { "id": "D", "text": "Thicker stems always produce larger flowers." }
+      ],
+      "answer": { "type": "choice", "value": "A" },
+      "rationale": "Air movement was the differing condition associated with thicker stems. The text supports a possible influence on stem development, but not the broader claims in C or D.",
+      "testStatus": "inactive"
+    },
+    {
+      "id": "demo-r06",
+      "source": "Original synthetic examples",
+      "section": "reading-writing",
+      "domain": "Standard English Conventions",
+      "skill": "Form, structure, and sense",
+      "difficulty": "easy",
+      "stem": "Which choice correctly completes the sentence?\n\nThe collection of maps _____ in a climate-controlled room.",
+      "choices": [
+        { "id": "A", "text": "are stored" },
+        { "id": "B", "text": "were stored" },
+        { "id": "C", "text": "is stored" },
+        { "id": "D", "text": "have been stored" }
+      ],
+      "answer": { "type": "choice", "value": "C" },
+      "rationale": "The subject is the singular noun collection, so the singular verb phrase is stored agrees with it. The plural maps is part of a prepositional phrase.",
+      "testStatus": "active"
+    }
+  ]
+}
