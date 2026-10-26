@@ -80,6 +80,7 @@ test("compact domain and skill combinations persist in a deterministically resum
   expect(saved.questionIds).toEqual(["demo-m01", "demo-m03"]);
   expect(saved.filters.domains).toHaveLength(2);
   expect(saved.filters.skills).toHaveLength(2);
+  await expect(page.getByRole("article")).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("button", { name: "Open question overview" }),

@@ -104,6 +104,21 @@ try {
     library.questions.find(
       (q) => q.section === "reading-writing" && q.testStatus === "inactive",
     ),
+    library.questions
+      .filter(
+        (q) => q.section === "reading-writing" && q.testStatus === "inactive",
+      )
+      .sort(
+        (a, b) =>
+          b.document.question.reduce((n, p) => n + p.height / p.width, 0) -
+          a.document.question.reduce((n, p) => n + p.height / p.width, 0),
+      )[0],
+    library.questions.find(
+      (q) =>
+        q.section === "math" &&
+        q.testStatus === "inactive" &&
+        /\btable\b/i.test(q.stem),
+    ),
   ];
   for (const q of examples) {
     if (await page.getByRole("button", { name: "← Exit", exact: true }).count())
@@ -125,11 +140,27 @@ try {
     );
     if (await page.getByLabel("Original PDF explanation").count())
       throw new Error("Rationale shown before submission");
-    const name = q.section + "-" + q.answer.type;
-    await page.screenshot({
-      path: resolve("private-data/inspection/" + name + "-practice.png"),
-      fullPage: true,
-    });
+    const name = q.section + "-" + q.answer.type + "-" + q.sourceId;
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+        localStorage.setItem("sat-theme", value);
+      }, theme);
+      await page.setViewportSize({ width: 1024, height: 768 });
+      if (
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        )
+      )
+        throw new Error("Question layout overflows at laptop width");
+      await page.screenshot({
+        path: resolve(
+          `private-data/inspection/stage4-${theme}-${name}-practice.png`,
+        ),
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
     if (q.answer.type === "numeric")
       await page.getByLabel("Your numeric answer").fill(q.answer.accepted[0]);
     else
@@ -145,10 +176,18 @@ try {
         (img) => img.complete && img.naturalWidth > 0,
       ),
     );
-    await page.screenshot({
-      path: resolve("private-data/inspection/" + name + "-feedback.png"),
-      fullPage: true,
-    });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate((value) => {
+        document.documentElement.dataset.theme = value;
+      }, theme);
+      await page.screenshot({
+        path: resolve(
+          `private-data/inspection/stage4-${theme}-${name}-feedback.png`,
+        ),
+        fullPage: true,
+        animations: "disabled",
+      });
+    }
   }
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).click();
@@ -160,6 +199,7 @@ try {
       counts,
       examples: examples.map((q) => q.id),
       network: "All non-loopback requests blocked",
+      themes: ["light", "dark"],
       errors,
     }),
   );

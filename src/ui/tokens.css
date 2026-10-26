@@ -1,0 +1,80 @@
+:root {
+  color-scheme: light;
+  --font-reading:
+    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-ui: "Segoe UI", Calibri, "Trebuchet MS", sans-serif;
+  --bg: #f3f0e6;
+  --paper: #fbf8ef;
+  --surface: #eeeade;
+  --surface-hover: #e6e6d7;
+  --surface-selected: #e5eadb;
+  --ink: #30382b;
+  --muted: #66705e;
+  --line: #d4d5c5;
+  --line-strong: #a5af96;
+  --control-border: #828d77;
+  --accent: #405b3c;
+  --accent-hover: #30482d;
+  --on-accent: #fcfaf1;
+  --focus: #657c43;
+  --correct: #3e6843;
+  --correct-surface: #e8eedf;
+  --incorrect: #924c3c;
+  --incorrect-surface: #f3e7de;
+  --warning: #745e25;
+  --warning-surface: #f2ecd7;
+  --outcome-correct: #708969;
+  --outcome-incorrect: #b1755c;
+  --outcome-unanswered: #d0d1c0;
+  --shadow: 0 8px 28px #33382512;
+  --dialog-shadow: 0 20px 80px #2823172b;
+  --backdrop: #24261f66;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --control-height: 40px;
+  --motion: 150ms;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #241e19;
+  --paper: #2d251e;
+  --surface: #342c23;
+  --surface-hover: #40362a;
+  --surface-selected: #423d2b;
+  --ink: #e7ddc8;
+  --muted: #b8ac97;
+  --line: #4c4134;
+  --line-strong: #817356;
+  --control-border: #817356;
+  --accent: #c2b075;
+  --accent-hover: #d2c28b;
+  --on-accent: #29251a;
+  --focus: #d2bd7a;
+  --correct: #b1c09a;
+  --correct-surface: #303627;
+  --incorrect: #e1ac97;
+  --incorrect-surface: #3e2c25;
+  --warning: #d2be85;
+  --warning-surface: #3a3223;
+  --outcome-correct: #86996b;
+  --outcome-incorrect: #b77f65;
+  --outcome-unanswered: #615646;
+  --shadow: 0 8px 28px #130e091c;
+  --dialog-shadow: 0 20px 80px #100b0766;
+  --backdrop: #100d0a99;
+}
+/* Provide an appropriate first paint before the local appearance module runs. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    background: #241e19;
+    color: #e7ddc8;
+    color-scheme: dark;
+  }
+}

@@ -20,8 +20,10 @@ import { Practice } from "./Practice";
 import { Home } from "./Home";
 import { Review } from "./Review";
 import { ResetProgress } from "./ResetProgress";
+import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 export function App() {
+  const appearance = useAppearance();
   const { data, mutate, error, setError, loadingMessage } = useStudy();
   const [page, setPage] = useState("home");
   const [protectedTests, setProtectedTests] = useState(
@@ -150,6 +152,7 @@ export function App() {
             ].map(([id, label]) => (
               <button
                 className={page === id ? "active" : ""}
+                aria-current={page === id ? "page" : undefined}
                 key={id}
                 onClick={() => {
                   setPage(id);
@@ -436,8 +439,9 @@ export function App() {
           }}
         />
       ) : (
-        <main className="page narrow">
+        <main className="page narrow settings-page">
           <h1>Settings</h1>
+          <AppearanceSettings appearance={appearance} />
           <section className="utility">
             <label>
               <input
