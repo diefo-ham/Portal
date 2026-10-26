@@ -98,12 +98,11 @@ export function Practice({
     });
   const choose = (value: string) => {
     setDraft({ id: question.id, value });
-    void run(() =>
-      mutate((d) => {
-        d.sessions.find((s) => s.id === session.id)!.drafts[question.id] =
-          value;
-      }),
-    );
+    // Keep radio focus while its draft saves; transaction ordering still ensures
+    // the draft is committed before a subsequent submission.
+    void mutate((d) => {
+      d.sessions.find((s) => s.id === session.id)!.drafts[question.id] = value;
+    }).catch(() => {});
   };
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   const missed = attempts.filter((a) => !a.correct).map((a) => a.questionId);
@@ -181,7 +180,7 @@ export function Practice({
           e.ctrlKey ||
           e.metaKey ||
           (e.target instanceof HTMLElement &&
-            e.target.matches("input,textarea,select,button"))
+            e.target.matches('input:not([type="radio"]),textarea,select'))
         )
           return;
         const choice = question.choices?.find(
@@ -192,6 +191,7 @@ export function Practice({
           choose(choice.id);
         } else if (
           e.key === "Enter" &&
+          !(e.target instanceof HTMLElement && e.target.closest("button")) &&
           answer &&
           !attempt &&
           (question.answer.type === "choice" ||

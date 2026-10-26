@@ -147,4 +147,22 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   await expect(
     page.getByLabel("Original PDF question").locator("img"),
   ).toBeVisible();
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByText("Library & maintenance", { exact: true }).click();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "Reset study progress", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Study progress reset");
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Resume practice" }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Start practice" }).click();
+  await expect(
+    page.getByLabel("Original PDF question").locator("img"),
+  ).toBeVisible();
+  await expect(page.getByLabel("Original PDF explanation")).toHaveCount(0);
+  expect(assetRequests).toBe(1);
 });

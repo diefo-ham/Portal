@@ -69,7 +69,7 @@ export function createSession(
 ): Session {
   return {
     id: crypto.randomUUID(),
-    questionIds: ids,
+    questionIds: [...ids],
     index: 0,
     startedAt: new Date().toISOString(),
     filters: { ...filters },
@@ -77,6 +77,31 @@ export function createSession(
     elapsed: {},
     paused: false,
   };
+}
+
+/** Shuffle a fresh candidate pool once, before selecting the session size.
+ * Saved sessions are never passed through this function when resumed.
+ */
+export function selectSessionQuestions(
+  ids: string[],
+  limit = 0,
+  previous: string[] = [],
+  random: () => number = Math.random,
+): string[] {
+  const shuffled = [...new Set(ids)];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const selected = shuffled.slice(0, limit || shuffled.length);
+  if (
+    selected.length > 1 &&
+    selected.length === previous.length &&
+    selected.every((id, i) => id === previous[i])
+  ) {
+    [selected[0], selected[1]] = [selected[1], selected[0]];
+  }
+  return selected;
 }
 export function summarize(data: StudyData) {
   const attempts = data.attempts;

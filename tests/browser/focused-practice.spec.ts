@@ -1,4 +1,10 @@
 import { test, expect } from "@playwright/test";
+// Known question content for these interaction tests, independent of sampling.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999;
+  });
+});
 
 test("contextual practice tools preserve drafts, calculator state and keyboard flow", async ({
   page,
@@ -19,6 +25,9 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   await expect(
     page.getByRole("button", { name: "Finish session", exact: true }),
   ).not.toBeVisible();
+  await page.keyboard.press("b");
+  await expect(page.getByRole("radio").nth(1)).toBeChecked();
+  await page.getByRole("radio").first().check();
   await page.keyboard.press("b");
   await expect(page.getByRole("radio").nth(1)).toBeChecked();
   await page.getByRole("button", { name: "Calculator", exact: true }).click();

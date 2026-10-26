@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { beginSession } from "../core/commands";
+import { beginSession, resetStudyProgress } from "../core/commands";
 import {
   defaultFilters,
   type Filters as FilterValues,
   type StudyData,
   emptyData,
 } from "../core/model";
-import { filterQuestions, latestAttempt, summarize } from "../core/practice";
+import {
+  filterQuestions,
+  latestAttempt,
+  summarize,
+  selectSessionQuestions,
+} from "../core/practice";
 import { parseQuestions, mergeQuestions } from "../importing/json";
 import { parseBackup, downloadJson } from "../importing/backup";
 import synthetic from "../data/synthetic.json";
@@ -84,11 +89,16 @@ export function App() {
         "Portable backup exported, including PDF question and explanation images.",
       );
     });
-  const start = async (ids: string[]) => {
+  const start = async (ids: string[], size = 0) => {
     if (!ids.length) return;
+    const selected = selectSessionQuestions(
+      ids,
+      size,
+      data?.sessions.at(-1)?.questionIds,
+    );
     if (
       data?.questions.some(
-        (q) => ids.includes(q.id) && q.testStatus === "active",
+        (q) => selected.includes(q.id) && q.testStatus === "active",
       ) &&
       !window.confirm(
         "This session includes active practice-test questions and may spoil a future Bluebook test. Begin anyway?",
@@ -98,7 +108,7 @@ export function App() {
     await run(async () => {
       let id = "";
       await mutate((d) => {
-        id = beginSession(d, ids, filters).id;
+        id = beginSession(d, selected, filters).id;
       });
       setSessionId(id);
       setMessage("");
@@ -361,9 +371,8 @@ export function App() {
                     disabled={!filtered.length || busy}
                     onClick={() =>
                       void start(
-                        filtered
-                          .slice(0, limit || filtered.length)
-                          .map((q) => q.id),
+                        filtered.map((q) => q.id),
+                        limit,
                       )
                     }
                   >
@@ -582,6 +591,40 @@ export function App() {
           </section>
           <details className="maintenance">
             <summary>Library & maintenance</summary>
+            <section className="data-card spaced">
+              <h2>Reset study progress</h2>
+              <p>
+                Start fresh by clearing answers, sessions, bookmarks, notes, and
+                recorded practice time. Your question bank and interface
+                preferences stay available.
+              </p>
+              <button
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "Reset all study progress? This clears all answers, completed and unfinished sessions, bookmarks, notes, and recorded practice time. Your question bank and interface preferences will remain available.",
+                    )
+                  )
+                    return;
+                  void run(async () => {
+                    await mutate(resetStudyProgress);
+                    setSessionId("");
+                    setRestore(undefined);
+                    changeFilters({
+                      ...filters,
+                      status: "",
+                      bookmark: "",
+                    });
+                    setMessage(
+                      "Study progress reset. Your question bank is ready to use.",
+                    );
+                  });
+                }}
+              >
+                Reset study progress
+              </button>
+            </section>
             <p className="muted">
               Question content and study history stay in this browser. No
               account, uploads, or cloud sync.

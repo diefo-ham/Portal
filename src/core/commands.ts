@@ -67,3 +67,13 @@ export function finishSession(data: StudyData, sessionId: string) {
   if (!session) throw new Error("Session no longer exists.");
   session.finishedAt ??= new Date().toISOString();
 }
+
+/** Clear personal study records; retain question definitions and import receipts.
+ * The storage adapter commits this as one atomic state transaction; image assets
+ * and interface preferences are outside these fields and are never touched.
+ */
+export function resetStudyProgress(data: StudyData) {
+  data.attempts = [];
+  data.sessions = [];
+  data.annotations = {};
+}

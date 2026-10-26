@@ -22,6 +22,16 @@ The timer is hidden by default but records the same foreground time as before. T
 
 Existing IndexedDB schema, imported questions, images, answers, notes, bookmarks, backup format, scoring, and session rules are unchanged. No data migration is required. All prepared-library loading remains automatic.
 
+## Behavioral follow-up
+
+The original MVP and pre-redesign checkpoint both selected the first matching questions in library order; randomization was absent, not removed by the redesign. New generated sessions now shuffle the full eligible pool with Fisher–Yates before applying the session size. A match to the immediately preceding saved order swaps the first two questions when possible. Single-question Browse access stays intentional. Answer choices are never reordered, and existing/resumed sessions are never shuffled. Mistake retries shuffle only the supplied missed-question IDs. The active-question confirmation checks the selected set before it is committed.
+
+Settings → Library & maintenance has a confirmed Reset study progress action. It atomically empties attempts, sessions, and annotations. Sessions include all saved drafts, timing, pause state, navigation position, and resumable/completed history; annotations include every note and bookmark. Derived analytics and mistake filters consequently return to an empty state. Questions, image assets, import receipts, application files, and interface preferences are preserved. Temporary progress-specific filters and restore previews are cleared after a successful reset. Cancelling the confirmation performs no mutation. No schema migration is involved.
+
+Focused regression review found an accidental keyboard regression: the shortcut handler ignored focused radio controls, and draft saves temporarily disabled the fieldset, dropping focus. Choice drafts now save without disabling controls; A–D and Enter work after a pointer selection as well. Submission remains guarded and transactionally ordered. Existing numeric entry, annotations, calculator, timing controls, question overview, backups, imports, and saved-session behavior remain covered by browser tests. No additional product choices or Stage 3 changes were made.
+
+Follow-up verification: production build, 15 core/storage tests, and nine browser tests. Added coverage includes shuffle-before-limit, duplicate-free selection, repeat avoidance, exact saved-order/index resumption, reset cancellation/confirmation, completed and unfinished record removal, preference/import/corpus preservation, and continued PDF-image practice after reset and reload. Browser tests that assert particular synthetic question content fix their random source explicitly; the session-generation browser test uses production randomness.
+
 ## Verification
 
 - Production TypeScript/Vite build and 12 core/storage tests pass.

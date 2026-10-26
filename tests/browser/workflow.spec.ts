@@ -1,5 +1,11 @@
 import { test, expect, chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+// Keep content-specific assertions reproducible; random generation is tested separately.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999;
+  });
+});
 test("offline local workflow, history, reload persistence and backup restore", async ({
   page,
   context,
@@ -120,6 +126,9 @@ test("progress survives closing and reopening the browser process", async ({}, t
   });
   try {
     let page = await context.newPage();
+    await page.addInitScript(() => {
+      Math.random = () => 0.999999;
+    });
     await page.goto("http://127.0.0.1:4318");
     await page
       .getByRole("button", { name: "Load synthetic sample", exact: true })
