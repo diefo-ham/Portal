@@ -66,8 +66,48 @@ Numeric response questions omit choices:
 4. Emit the versioned normalized envelope and pass it through `parseQuestions`.
 5. Provide an import preview and warnings before committing when extraction is imperfect.
 
-The four provided PDF exports are prospective parser fixtures; keep them outside Git. Filename labels alone are not evidence of individual questions' practice-test status. Paired inclusive/exclusive comparison must first establish identical export filter scope and reliable question identity.
+The supplied PDF exports are handled by `scripts/import_college_board.py`. Their active-only meaning was confirmed by the user; the preparation report retains the classification mode and source file hashes. Keep sources and generated question material outside Git. Paired inclusive/exclusive comparison must first establish identical export filter scope and reliable question identity.
+
+## Original PDF representation
+
+Questions may have an optional `document` object:
+
+```json
+{
+  "document": {
+    "question": [
+      {
+        "src": "asset:<64-character-sha256>.webp",
+        "alt": "Original question content",
+        "width": 1160,
+        "height": 400
+      }
+    ],
+    "rationale": [
+      {
+        "src": "asset:<64-character-sha256>.webp",
+        "alt": "Original explanation",
+        "width": 1160,
+        "height": 600
+      }
+    ],
+    "textIsApproximate": true,
+    "answerKeyOrigin": "answer-key",
+    "provenance": [
+      {
+        "filename": "user-export.pdf",
+        "sha256": "<64-character-source-sha256>",
+        "pages": [1, 2]
+      }
+    ]
+  }
+}
+```
+
+Each panel requires a safe asset reference or embedded PNG/JPEG/WebP data URL, alt text, and finite positive image dimensions. Each group contains 1–30 panels. No HTTP URLs, HTML, SVG, or path traversal references are accepted. `answerKeyOrigin` can be `answer-key` or `rationale`; optional `extractionWarnings` is an array of plain-text messages shown with the question. Provenance page numbers are one-based.
+
+For document-backed multiple-choice questions, choices retain IDs and generic labels; the original choices are visible in the question image. Structured `stem` and `rationale` remain available for search and future conversion, but visual practice uses the preserved layout. Only the rationale panel group appears after submission.
 
 ## Backups
 
-Full backups are a different envelope: `{ "format": "sat-study-backup-v1", "exportedAt": "ISO timestamp", "data": StudyData }`. They contain the full normalized library, import log, annotations, attempts, and sessions. Restore checks references and types before replacing state in one transaction and pauses restored timers. Use **Restore a backup**, not the question importer. Future schema changes must supply explicit migrations; unsupported versions are rejected.
+Full backups are a different envelope: `{ "format": "sat-study-backup-v1", "exportedAt": "ISO timestamp", "data": StudyData }`. They contain the full normalized library, import log, annotations, attempts, and sessions. PDF asset references are materialized as embedded image data URLs on export. Restore validates the data, saves images into the separate IndexedDB assets store, replaces state in one transaction, and pauses restored timers. Existing study state remains intact if image saving fails. Question JSON imports are limited to 50 MB; full backup restoration allows up to 768 MB. Use **Restore a backup**, not the question importer. Future schema changes must supply explicit migrations; unsupported versions are rejected.

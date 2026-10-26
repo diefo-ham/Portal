@@ -4,6 +4,7 @@ import {
   defaultFilters,
   type Filters as FilterValues,
   type StudyData,
+  emptyData,
 } from "../core/model";
 import { filterQuestions, latestAttempt, summarize } from "../core/practice";
 import { parseQuestions, mergeQuestions } from "../importing/json";
@@ -12,8 +13,9 @@ import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
 import { Filters, sectionName } from "./Filters";
 import { Practice } from "./Practice";
+import { portableBackup, storeInlineDocuments } from "../importing/documents";
 export function App() {
-  const { data, mutate, error, setError, saving } = useStudy();
+  const { data, mutate, error, setError, saving, loadingMessage } = useStudy();
   const [page, setPage] = useState("library");
   const [filters, setFilters] = useState<FilterValues>({ ...defaultFilters });
   const [sessionId, setSessionId] = useState("");
@@ -34,7 +36,12 @@ export function App() {
     }
   };
   const importData = async (raw: unknown, filename: string) => {
-    const incoming = parseQuestions(raw);
+    const incoming = (
+      await storeInlineDocuments({
+        ...emptyData(),
+        questions: parseQuestions(raw),
+      })
+    ).questions;
     let report = "";
     await mutate((d) => {
       const result = mergeQuestions(d.questions, incoming, filename);
@@ -52,12 +59,22 @@ export function App() {
   };
   const readFile = async (file: File | undefined, backup = false) => {
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024)
-      throw new Error("Choose a JSON file smaller than 50 MB.");
+    if (file.size > (backup ? 768 : 50) * 1024 * 1024)
+      throw new Error(
+        `Choose a JSON file smaller than ${backup ? 768 : 50} MB.`,
+      );
     const raw: unknown = JSON.parse(await file.text());
     if (backup) setRestore(parseBackup(raw));
     else await importData(raw, file.name);
   };
+  const exportBackup = (filename: string) =>
+    void run(async () => {
+      setMessage("Preparing a portable backup, including original PDF images…");
+      downloadJson(await portableBackup(data!), filename);
+      setMessage(
+        "Portable backup exported, including PDF question and explanation images.",
+      );
+    });
   const start = async (ids: string[]) => {
     if (!ids.length) return;
     await run(async () => {
@@ -74,7 +91,7 @@ export function App() {
     return (
       <main className="page">
         <h1>SAT Study</h1>
-        <p>{error || "Opening your local library…"}</p>
+        <p>{error || loadingMessage}</p>
         {error && <button onClick={() => location.reload()}>Try again</button>}
       </main>
     );
@@ -482,8 +499,9 @@ export function App() {
                 />
               </label>
               <p className="small muted">
-                PDF parsing is a next step. Keep your original exports outside
-                the repository.
+                Prepared PDF libraries are loaded automatically from this
+                laptop. Keep original exports and private library files outside
+                Git.
               </p>
               <button
                 className="text-button"
@@ -511,13 +529,9 @@ export function App() {
               </p>
               <button
                 className="primary"
+                disabled={busy}
                 onClick={() =>
-                  downloadJson(
-                    {
-                      format: "sat-study-backup-v1",
-                      exportedAt: new Date().toISOString(),
-                      data,
-                    },
+                  exportBackup(
                     `sat-study-${new Date().toISOString().slice(0, 10)}.backup.json`,
                   )
                 }
@@ -554,12 +568,8 @@ export function App() {
                 current library and history.
               </p>
               <button
-                onClick={() =>
-                  downloadJson(
-                    { format: "sat-study-backup-v1", data },
-                    "before-restore.backup.json",
-                  )
-                }
+                disabled={busy}
+                onClick={() => exportBackup("before-restore.backup.json")}
               >
                 Back up current data first
               </button>
@@ -568,8 +578,9 @@ export function App() {
                 disabled={busy}
                 onClick={() =>
                   void run(async () => {
+                    const normalized = await storeInlineDocuments(restore);
                     await mutate((d) => {
-                      Object.assign(d, restore);
+                      Object.assign(d, normalized);
                     });
                     setRestore(undefined);
                     setSessionId("");

@@ -1,4 +1,41 @@
 @charset "UTF-8";
+.pdf-document {
+  margin: 20px 0;
+}
+.pdf-panel {
+  margin: 0 0 12px;
+  background: white;
+}
+.pdf-panel img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+.pdf-document + .small {
+  margin-top: 16px;
+}
+.question-card:has(.pdf-document) .answers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.question-card:has(.pdf-document) .numeric-answer {
+  grid-column: 1/-1;
+}
+.question-card:has(.pdf-document) .answer-choice {
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 5px;
+}
+.feedback .pdf-document {
+  margin-bottom: 12px;
+}
+.source-details details {
+  overflow-wrap: anywhere;
+}
+.source-details summary {
+  cursor: pointer;
+}
 :root {
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   color: #27352e;

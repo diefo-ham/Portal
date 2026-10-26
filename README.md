@@ -20,13 +20,13 @@ npm.cmd run build
 npm.cmd start
 ```
 
-Dependency installation requires internet once. The built app and local server do not. `npm start` uses Node's built-in HTTP server, binds only to `127.0.0.1`, and serves only `dist/`. It does not expose your repository or PDF files. Stop it with Ctrl+C. Port conflicts produce an error rather than silently changing your storage origin.
+Dependency installation requires internet once. The built app and local server do not. `npm start` uses Node's built-in HTTP server and binds only to `127.0.0.1`. It serves built app assets and the explicitly prepared library under `/local-library/`; source PDFs, caches, and other repository files are not served. Stop it with Ctrl+C. Port conflicts produce an error rather than silently changing your storage origin.
 
 For frontend changes, stop the production server and run `npm.cmd run dev` at the same origin. Rebuild before using `npm start` again.
 
 ## First session
 
-1. Click **Load synthetic sample** for 12 original examples. Two are marked active to demonstrate spoiler protection, and two have unknown status.
+1. Your prepared PDF library loads automatically on first launch in a browser profile. Allow the local image-import progress to finish. If no prepared library exists, **Load synthetic sample** provides 12 original examples.
 2. Choose section, domain, skill, difficulty, answer status, bookmark, and practice-test status filters. Active questions are hidden by default. Choose **Inactive only** if you also want to exclude uncertain questions.
 3. Start a session (the first 5, 10, 20, or all matching questions, in library order), or open an individual question. A new session ends the previous one while retaining its submitted answers.
 4. Submit an answer, read the explanation, bookmark, and take notes. Skip and return using the session map. Numeric questions accept equivalent decimal/fraction values.
@@ -36,7 +36,7 @@ For frontend changes, stop the production server and run `npm.cmd run dev` at th
 ## Technology and storage
 
 - React 19, TypeScript, Vite; plain CSS and locally available system fonts. No UI framework, CDN, authentication, analytics service, remote API, or hosted database.
-- IndexedDB database **`sat-study-local`**, version 1, object store **`state`**, key **`current`** in the browser profile for `http://127.0.0.1:4317`.
+- IndexedDB database **`sat-study-local`**, version 2, in the browser profile for `http://127.0.0.1:4317`. The `state` store retains the versioned question/progress snapshot under `current`; the `assets` store holds immutable PDF images as separate Blobs. Existing version-1 data migrates automatically.
 - Questions, import provenance, every submitted attempt, notes, bookmarks, session membership, drafts, and elapsed time persist. Mutations are atomic IndexedDB transactions, and failed writes show an error.
 - Browser data lives outside this repository and is not automatically synchronized or included in Git. Browser cleanup, profile deletion, or eviction can remove it. Full JSON backups include imported question content: keep them private.
 - Use one study tab at a time. Transactions preserve concurrent changes, but live cross-tab UI synchronization is not implemented.
@@ -58,9 +58,9 @@ For frontend changes, stop the production server and run `npm.cmd run dev` at th
 | `src/data/synthetic.json`    | Original examples, also downloadable inside the app                  |
 | `scripts/serve.mjs`          | Dependency-free production server for built local assets             |
 
-Parsing, normalized data, persistence, and presentation are separate. An eventual PDF parser should emit the documented JSON format for review before storage; it should not render question UI or write directly to IndexedDB. See [question format](docs/question-format.md) and [calculator investigation](docs/calculator.md). Durable product principles are in [AGENTS.md](AGENTS.md).
+Parsing, normalized data, persistence, and presentation are separate. The PDF preparation utility emits normalized JSON and local image assets; it never writes browser progress. See [PDF import instructions and classification](docs/pdf-import.md), [question format](docs/question-format.md), and [calculator investigation](docs/calculator.md). Durable product principles are in [AGENTS.md](AGENTS.md).
 
-The database stores a versioned snapshot in one record for a simple personal-use MVP. Large libraries with many images or long histories may warrant separate question/attempt stores and indexes later. Preserve the storage interface and provide an explicit migration when doing so.
+Question metadata and progress remain in a versioned snapshot. Large PDF image content is stored separately, so it is not rewritten when answers, notes, or timers save. Full backups embed those images and can be large. For very long histories, separate question/attempt stores and indexes remain a possible future optimization.
 
 ## Verification
 
@@ -74,8 +74,8 @@ Unit tests cover numeric equivalence, filtering, duplicate/import safety, backup
 
 ## Current limits and next steps
 
-1. **Real exports:** JSON import is implemented. The four supplied PDFs are not parsed or bundled. Add a dedicated parser with source IDs, manual preview, figure handling, and extraction-quality checks before importing real content. Plain text and embedded raster figures are supported; rich math typesetting, tables, and passage formatting need a future content model extension.
-2. **Active comparison:** The tri-state field and filters are implemented. A paired-export comparison utility is not. Compare only equivalent export scopes; confidently matching `(source, sourceId)` in both exports means inactive, inclusive-only means active, and uncertain matches stay unknown. Never infer status from an unmatched PDF filename or fuzzy text alone.
+1. **Real exports:** The supplied PDF exports are prepared locally with metadata, source IDs, answer keys, and original-layout question/explanation images. The parser targets this specific export layout; arbitrary PDFs are not accepted directly by the browser. Search text is approximate and may omit math notation. Semantic math and full screen-reader transcription remain future work.
+2. **Active comparison:** These exports were confirmed by the user to be separate active-only and inactive sets. The preparation utility also supports inclusive/exclusive comparisons with source IDs and flags inconsistent sets; uncertain matches remain unknown. New export modes must be stated explicitly.
 3. **Calculator:** Offline arithmetic is available. Graphing needs a licensed offline Desmos integration or a separately assessed local graphing engine. No public Desmos website is embedded or copied.
 4. **Analytics:** Accuracy includes all attempts, not predicted SAT scores. Latest-answer status and ever-missed history are distinct. Timing is approximate, untimed practice only. Expand metrics only when the records support them.
 5. **GUI:** The current academic layout is a starting point. Iterate on `src/ui` and `src/calculator` while preserving tested import, scoring, and storage rules. Add a meaningful regression test when a behavioral edge case is fixed.

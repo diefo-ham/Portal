@@ -1,5 +1,11 @@
 export type Section = "math" | "reading-writing";
 export type TestStatus = "active" | "inactive" | "unknown";
+export interface DocumentPanel {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+}
 export interface Question {
   id: string;
   sourceId?: string;
@@ -16,6 +22,14 @@ export interface Question {
   rationale?: string;
   testStatus: TestStatus;
   media?: { alt: string; dataUrl: string }[];
+  document?: {
+    question: DocumentPanel[];
+    rationale: DocumentPanel[];
+    textIsApproximate: boolean;
+    answerKeyOrigin?: "answer-key" | "rationale";
+    extractionWarnings?: string[];
+    provenance: { filename: string; sha256: string; pages: number[] }[];
+  };
   importMetadata?: { importedAt?: string; filename?: string; parser?: string };
 }
 export interface Attempt {

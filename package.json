@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 4317 --strictPort",
     "build": "tsc -b && vite build",
     "start": "node scripts/serve.mjs",
-    "test": "vitest run tests/core.test.ts",
+    "test": "vitest run tests/core.test.ts tests/pdf.test.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -7,3 +7,5 @@ private-data/
 *.pdf
 *.backup.json
 *.log
+__pycache__/
+*.pyc

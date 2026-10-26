@@ -115,6 +115,74 @@ export function parseQuestions(input: unknown): Question[] {
         dataUrl: m.dataUrl as string,
       }));
     }
+    if (raw.document != null) {
+      const doc = raw.document;
+      if (
+        !record(doc) ||
+        typeof doc.textIsApproximate !== "boolean" ||
+        !Array.isArray(doc.provenance)
+      )
+        return fail("Invalid document representation.");
+      const panels = (value: unknown) => {
+        if (!Array.isArray(value) || !value.length || value.length > 30)
+          return fail("Document requires 1–30 image panels.");
+        return value.map((p) => {
+          if (
+            !record(p) ||
+            !text(p.alt) ||
+            typeof p.src !== "string" ||
+            !validDocumentSource(p.src) ||
+            typeof p.width !== "number" ||
+            !Number.isFinite(p.width) ||
+            p.width <= 0 ||
+            p.width > 10000 ||
+            typeof p.height !== "number" ||
+            !Number.isFinite(p.height) ||
+            p.height <= 0 ||
+            p.height > 20000
+          )
+            return fail("Invalid document image panel.");
+          return { src: p.src, alt: p.alt, width: p.width, height: p.height };
+        });
+      };
+      const provenance = doc.provenance.map((p) => {
+        if (
+          !record(p) ||
+          !text(p.filename) ||
+          typeof p.sha256 !== "string" ||
+          !/^([a-f0-9]{64})$/.test(p.sha256) ||
+          !Array.isArray(p.pages) ||
+          !p.pages.length ||
+          p.pages.some((n) => !Number.isInteger(n) || n < 1)
+        )
+          return fail("Invalid PDF provenance.");
+        return {
+          filename: p.filename,
+          sha256: p.sha256,
+          pages: p.pages as number[],
+        };
+      });
+      q.document = {
+        question: panels(doc.question),
+        rationale: panels(doc.rationale),
+        textIsApproximate: doc.textIsApproximate,
+        provenance,
+      };
+      if (doc.answerKeyOrigin !== undefined) {
+        if (!["answer-key", "rationale"].includes(String(doc.answerKeyOrigin)))
+          return fail("Invalid answer-key provenance.");
+        q.document.answerKeyOrigin = doc.answerKeyOrigin as
+          "answer-key" | "rationale";
+      }
+      if (doc.extractionWarnings !== undefined) {
+        if (
+          !Array.isArray(doc.extractionWarnings) ||
+          doc.extractionWarnings.some((w) => typeof w !== "string")
+        )
+          return fail("Invalid extraction warnings.");
+        q.document.extractionWarnings = [...doc.extractionWarnings];
+      }
+    }
     return q;
   });
 }
@@ -172,5 +240,13 @@ function contentKey(q: Question) {
     q.rationale,
     q.testStatus,
     q.media,
+    q.document,
   ]);
+}
+
+export function validDocumentSource(src: string) {
+  return (
+    /^asset:[a-f0-9]{64}\.webp$/.test(src) ||
+    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(src)
+  );
 }

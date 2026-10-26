@@ -5,6 +5,7 @@ import type { Question, Session, StudyData } from "../core/model";
 import { numericValue } from "../core/practice";
 import { sectionName } from "./Filters";
 import { Calculator } from "../calculator/Calculator";
+import { DocumentPanels } from "./DocumentPanels";
 type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
 export const time = (ms: number) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
@@ -113,15 +114,23 @@ export function Practice({
                   </span>{" "}
                   · {q.skill || q.domain || sectionName(q.section)}
                 </summary>
-                <p className="question-text">{q.stem}</p>
+                {q.document ? (
+                  <DocumentPanels question={q} kind="question" />
+                ) : (
+                  <p className="question-text">{q.stem}</p>
+                )}
                 {a && (
                   <>
                     <p>Your answer: {displayAnswer(q, a.answer)}</p>
                     <p>Correct answer: {correctAnswer(q)}</p>
-                    <p>
-                      {q.rationale ||
-                        "No rationale was included in this import."}
-                    </p>
+                    {q.document ? (
+                      <DocumentPanels question={q} kind="rationale" />
+                    ) : (
+                      <p>
+                        {q.rationale ||
+                          "No rationale was included in this import."}
+                      </p>
+                    )}
                   </>
                 )}
               </details>
@@ -226,7 +235,24 @@ export function Practice({
               <figcaption>{m.alt}</figcaption>
             </figure>
           ))}
-          <h1 className="question-text">{question.stem}</h1>
+          {question.document ? (
+            <>
+              <h1 className="sr-only">Question {question.sourceId}</h1>
+              {question.document.extractionWarnings?.map((warning, i) => (
+                <p className="notice" key={i}>
+                  {warning}
+                </p>
+              ))}
+              <DocumentPanels question={question} kind="question" />
+              <p className="small muted">
+                {question.answer.type === "choice"
+                  ? "Select an answer from the choices shown above."
+                  : "Enter your answer below."}
+              </p>
+            </>
+          ) : (
+            <h1 className="question-text">{question.stem}</h1>
+          )}
           <fieldset className="answers" disabled={!!attempt || pending}>
             <legend className="sr-only">Your answer</legend>
             {question.answer.type === "choice" ? (
@@ -252,7 +278,7 @@ export function Practice({
                     }}
                   />
                   <span className="choice-letter">{c.id}</span>
-                  <span>{c.text}</span>
+                  {!question.document && <span>{c.text}</span>}
                 </label>
               ))
             ) : (
@@ -311,10 +337,14 @@ export function Practice({
                 <strong>Correct answer:</strong> {correctAnswer(question)}
               </p>
               <h3>Explanation</h3>
-              <p className="rationale">
-                {question.rationale ||
-                  "No rationale was included in this import."}
-              </p>
+              {question.document ? (
+                <DocumentPanels question={question} kind="rationale" />
+              ) : (
+                <p className="rationale">
+                  {question.rationale ||
+                    "No rationale was included in this import."}
+                </p>
+              )}
               <span className="small muted">
                 Your answer: {displayAnswer(question, attempt.answer)} ·{" "}
                 {time(attempt.durationMs)}
@@ -414,6 +444,20 @@ export function Practice({
               {question.sourceId ? ` · ${question.sourceId}` : ""}
             </p>
             <p>Practice-test status: {question.testStatus}</p>
+            {question.document && (
+              <details>
+                <summary>PDF source details</summary>
+                {question.document.provenance.map((p) => (
+                  <p key={p.filename}>
+                    {p.filename} · pages {p.pages.join(", ")}
+                  </p>
+                ))}
+                <p>
+                  Original layout is shown above. Search text was extracted
+                  automatically and may omit math notation.
+                </p>
+              </details>
+            )}
           </div>
         </aside>
       </div>
@@ -421,6 +465,7 @@ export function Practice({
   );
 }
 function displayAnswer(q: Question, value: string) {
+  if (q.document && q.answer.type === "choice") return value;
   return q.choices?.find((c) => c.id === value)
     ? `${value}. ${q.choices.find((c) => c.id === value)!.text}`
     : value;

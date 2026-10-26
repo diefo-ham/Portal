@@ -7,7 +7,7 @@ test("offline local workflow, history, reload persistence and backup restore", a
   const remote: string[] = [];
   await context.route("**/*", async (route) => {
     const url = route.request().url();
-    if (!url.startsWith("http://127.0.0.1:4317") && !url.startsWith("data:")) {
+    if (!url.startsWith("http://127.0.0.1:4318") && !url.startsWith("data:")) {
       remote.push(url);
       await route.abort();
     } else await route.continue();
@@ -39,7 +39,7 @@ test("offline local workflow, history, reload persistence and backup restore", a
     .poll(async () =>
       page.evaluate(async () => {
         const db = await new Promise<IDBDatabase>((r) => {
-          const q = indexedDB.open("sat-study-local", 1);
+          const q = indexedDB.open("sat-study-local");
           q.onsuccess = () => r(q.result);
         });
         return await new Promise((r) => {
@@ -111,7 +111,7 @@ test("progress survives closing and reopening the browser process", async ({}, t
   });
   try {
     let page = await context.newPage();
-    await page.goto("http://127.0.0.1:4317");
+    await page.goto("http://127.0.0.1:4318");
     await page
       .getByRole("button", { name: "Load synthetic sample", exact: true })
       .click();
@@ -125,7 +125,7 @@ test("progress survives closing and reopening the browser process", async ({}, t
       headless: true,
     });
     page = await context.newPage();
-    await page.goto("http://127.0.0.1:4317");
+    await page.goto("http://127.0.0.1:4318");
     await page.getByRole("button", { name: "Resume practice" }).click();
     await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
     await expect(page.getByRole("radio").nth(1)).toBeChecked();

@@ -11,4 +11,14 @@ Verified on 2026-10-25 using Node 24.22.1 and Microsoft Edge on Windows.
 - Visual inspection in the in-app browser confirmed the library and practice layouts. Timing resumed from saved data and the pause control worked. A screenshot is in `screenshots/practice.png`.
 - Dependency installation audit reported zero known vulnerabilities after updating Vitest to a patched version.
 
-The local server must run during study. No PWA/service-worker caching claim is made. The supplied College Board PDFs were not imported or used as repository fixtures. PDF extraction quality and a licensed offline graphing integration remain future work.
+The local server must run during study. No PWA/service-worker caching claim is made. No College Board content is used as tracked repository fixtures. A licensed offline graphing integration remains future work.
+
+## PDF import verification
+
+The next implementation imported all 3,770 unique source question IDs: 1,748 inactive and 2,022 active, with zero unknown or quarantined items. Classification uses source metadata and the user's confirmation that the active files contain active-only questions. Private source hashes, page provenance, and coverage are retained in `private-data/library/import-report.json`.
+
+The full corpus was imported into an isolated browser context with all non-loopback requests blocked. Every manifest asset was stored locally; representative numeric Math, multiple-choice Math, and Reading & Writing questions displayed, accepted answers, showed explanations only after submission, and retained progress after reload. Private screenshots were visually inspected; a tight math crop found during that review was corrected, and blank page margins were trimmed. Real question screenshots remain excluded from Git.
+
+Regression coverage now additionally includes PDF panel/schema validation, separate image storage, portable image backups and restoration, annotation suppression, rationale-derived explicit keys, accepted numeric rounding variants, and migration of existing version-one study data. Tests use synthetic content. Test output and temporary browser profiles now live outside OneDrive.
+
+Final checks: production build passed; 12 TypeScript/core tests, five browser tests, and three synthetic PDF tests passed. The separate complete-corpus browser check also passed with all external requests blocked.
