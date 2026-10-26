@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { type StudyData } from "../core/model";
-import { readData, updateData } from "../storage/database";
+import {
+  readData,
+  updateData,
+  readResetArchive,
+  type UpdateOptions,
+} from "../storage/database";
+import type { ResetArchive } from "../storage/resetArchive";
 import { loadPreparedLibrary } from "../importing/preparedLibrary";
 export function useStudy() {
   const [data, setData] = useState<StudyData>();
+  const [archive, setArchive] = useState<ResetArchive>();
   const [error, setError] = useState("");
   const [writes, setWrites] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState(
@@ -11,7 +18,10 @@ export function useStudy() {
   );
   useEffect(() => {
     loadPreparedLibrary(setLoadingMessage)
-      .then(setData)
+      .then(async (next) => {
+        setData(next);
+        setArchive(await readResetArchive());
+      })
       .catch(async (e) => {
         setError(e instanceof Error ? e.message : String(e));
         try {
@@ -21,18 +31,30 @@ export function useStudy() {
         }
       });
   }, []);
-  const mutate = useCallback(async (fn: (d: StudyData) => void) => {
-    setWrites((n) => n + 1);
-    try {
-      const next = await updateData(fn);
-      setData(next);
-      return next;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      throw e;
-    } finally {
-      setWrites((n) => n - 1);
-    }
-  }, []);
-  return { data, mutate, error, setError, saving: writes > 0, loadingMessage };
+  const mutate = useCallback(
+    async (fn: (d: StudyData) => void, options?: UpdateOptions) => {
+      setWrites((n) => n + 1);
+      try {
+        const next = await updateData(fn, options);
+        setData(next);
+        if (options) setArchive(await readResetArchive());
+        return next;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        throw e;
+      } finally {
+        setWrites((n) => n - 1);
+      }
+    },
+    [],
+  );
+  return {
+    data,
+    archive,
+    mutate,
+    error,
+    setError,
+    saving: writes > 0,
+    loadingMessage,
+  };
 }

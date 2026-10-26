@@ -1294,20 +1294,17 @@ figcaption {
   font-size: 14px;
 }
 .maintenance {
-  margin-top: 28px;
+  margin-top: 32px;
 }
 .maintenance > h2 {
   margin-bottom: 18px;
 }
 .data-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 36px;
+  display: block;
   margin-top: 26px;
 }
 .data-card {
-  padding: 24px 0;
-  border-top: 1px solid var(--line);
+  padding: 12px 0 24px;
 }
 .data-card h2 {
   font-size: 21px;
@@ -1359,8 +1356,6 @@ figcaption {
   pointer-events: none;
 }
 .local-storage-note {
-  border-left: 2px solid var(--line-strong);
-  padding-left: 18px;
   margin: 24px 0 30px;
   font-size: 13px;
   color: var(--muted);
@@ -1396,9 +1391,75 @@ figcaption {
   margin: 8px 10px 0 0;
 }
 .danger {
-  background: var(--incorrect);
-  color: var(--paper);
-  border-color: var(--incorrect);
+  color: var(--incorrect);
+  background: transparent;
+  border-color: var(--line);
+}
+.danger:hover {
+  color: var(--incorrect);
+  background: var(--incorrect-surface);
+}
+.reset-maintenance {
+  margin-top: 36px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.reset-maintenance > p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 12px 0;
+}
+.reset-maintenance > .text-button {
+  padding-left: 0;
+  border-color: transparent;
+}
+.reset-recovery {
+  margin-top: 18px;
+}
+.continue-area {
+  margin: 30px 0;
+}
+.continue-area > h2 {
+  margin-bottom: 4px;
+}
+.continue-area .resume-strip {
+  margin: 0;
+  padding: 18px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+.bookmark-review {
+  margin: 28px 0 20px;
+}
+.bookmark-review p {
+  margin: 10px 0 16px;
+}
+.shortcut-help dl {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) 1fr;
+  gap: 14px 20px;
+  margin: 24px 0;
+  font-size: 14px;
+}
+.shortcut-help dt {
+  font-weight: 600;
+}
+.shortcut-help dd {
+  margin: 0;
+  color: var(--muted);
+}
+.shortcut-help p + p {
+  margin-top: 14px;
+}
+.app-header .help-link {
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .help-link span {
+    display: none;
+  }
 }
 .reset-actions {
   display: flex;

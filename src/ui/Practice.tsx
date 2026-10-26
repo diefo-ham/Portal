@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ShortcutHelp } from "./Help";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
 import type { Session, StudyData } from "../core/model";
@@ -102,6 +103,15 @@ export function Practice({
       d.sessions.find((s) => s.id === session.id)!.drafts[question.id] = value;
     }).catch(() => {});
   };
+  const toggleBookmark = () =>
+    run(() =>
+      mutate((d) => {
+        d.annotations[question.id] = {
+          note: d.annotations[question.id]?.note || "",
+          bookmarked: !d.annotations[question.id]?.bookmarked,
+        };
+      }),
+    );
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   if (session.finishedAt)
     return (
@@ -129,9 +139,31 @@ export function Practice({
             ))
         )
           return;
-        const choice = question.choices?.find(
-          (c) => c.id.toLowerCase() === e.key.toLowerCase(),
-        );
+        if (
+          e.key.toLowerCase() === "b" &&
+          !(
+            e.target instanceof HTMLElement &&
+            e.target.closest(
+              'button,input,a,summary,[role="button"],[role="combobox"],[role="listbox"],[role="slider"],[role="spinbutton"],[role="switch"],[role="checkbox"],[role="menuitem"]',
+            )
+          )
+        ) {
+          e.preventDefault();
+          void toggleBookmark();
+          return;
+        }
+        // B on a focused radio retains its existing answer-choice behavior;
+        // other utility controls must not accidentally select answer B.
+        if (
+          e.key.toLowerCase() === "b" &&
+          !(e.target instanceof HTMLInputElement && e.target.type === "radio")
+        )
+          return;
+        const choice = /^[1-4]$/.test(e.key)
+          ? question.choices?.[Number(e.key) - 1]
+          : question.choices?.find(
+              (c) => c.id.toLowerCase() === e.key.toLowerCase(),
+            );
         if (!attempt && question.answer.type === "choice" && choice) {
           e.preventDefault();
           choose(choice.id);
@@ -257,16 +289,13 @@ export function Practice({
               title={
                 annotation.bookmarked ? "Remove bookmark" : "Bookmark question"
               }
-              onClick={() =>
-                void run(() =>
-                  mutate((d) => {
-                    d.annotations[question.id] = {
-                      note: d.annotations[question.id]?.note || "",
-                      bookmarked: !d.annotations[question.id]?.bookmarked,
-                    };
-                  }),
-                )
-              }
+              onClick={(e) => {
+                // Pointer activation returns to reading; keyboard activation keeps
+                // button focus and its pressed state accessible.
+                if (e.detail > 0)
+                  questionTop.current?.focus({ preventScroll: true });
+                void toggleBookmark();
+              }}
             >
               {annotation.bookmarked ? "★" : "☆"}
             </button>
@@ -461,12 +490,10 @@ export function Practice({
         </div>
         {panel === "tools" && (
           <div className="tool-menu">
-            <p className="small muted">
-              Use A–D to choose an answer. Enter or Space checks it and advances
-              after feedback. Left and Right move between questions. These
-              shortcuts leave focused form controls and buttons their normal
-              behavior. Timing pauses when you leave practice or switch tabs.
-            </p>
+            <details>
+              <summary>Keyboard shortcuts & help</summary>
+              <ShortcutHelp />
+            </details>
             <button onClick={() => setPanel("overview")}>
               Question overview
             </button>

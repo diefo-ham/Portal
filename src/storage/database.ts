@@ -1,4 +1,10 @@
 import { emptyData, type StudyData } from "../core/model";
+import {
+  createResetArchive,
+  validateResetArchive,
+  type ResetArchive,
+} from "./resetArchive";
+export type UpdateOptions = { resetArchive?: "save" | "restore" };
 let connection: Promise<IDBDatabase> | undefined;
 function database() {
   return (connection ??= new Promise<IDBDatabase>((resolve, reject) => {
@@ -63,6 +69,7 @@ export async function readData(): Promise<StudyData> {
 }
 export async function updateData(
   update: (data: StudyData) => void,
+  options: UpdateOptions = {},
 ): Promise<StudyData> {
   const db = await database();
   return new Promise((resolve, reject) => {
@@ -72,13 +79,23 @@ export async function updateData(
     const req = store.get("current");
     req.onsuccess = () => {
       data = req.result ?? emptyData();
-      try {
-        update(data);
-        store.put(data, "current");
-      } catch (error) {
-        tx.abort();
-        reject(error);
-      }
+      const commit = (archive?: unknown) => {
+        try {
+          if (options.resetArchive === "save")
+            store.put(createResetArchive(data), "reset-archive");
+          if (options.resetArchive === "restore")
+            Object.assign(data, validateResetArchive(archive, data).study);
+          update(data);
+          store.put(data, "current");
+        } catch (error) {
+          tx.abort();
+          reject(error);
+        }
+      };
+      if (options.resetArchive === "restore") {
+        const archive = store.get("reset-archive");
+        archive.onsuccess = () => commit(archive.result);
+      } else commit();
     };
     tx.oncomplete = () => resolve(data);
     tx.onerror = () => reject(tx.error);
@@ -86,5 +103,24 @@ export async function updateData(
       reject(
         tx.error ?? new Error("Save failed. Your previous data is intact."),
       );
+  });
+}
+
+export async function readResetArchive(): Promise<ResetArchive | undefined> {
+  const db = await database();
+  return new Promise((resolve, reject) => {
+    const store = db.transaction("state").objectStore("state");
+    const current = store.get("current");
+    const archive = store.get("reset-archive");
+    archive.onsuccess = () => {
+      try {
+        resolve(
+          validateResetArchive(archive.result, current.result ?? emptyData()),
+        );
+      } catch {
+        resolve(undefined);
+      }
+    };
+    archive.onerror = () => reject(archive.error);
   });
 }

@@ -13,11 +13,6 @@ export function beginSession(
   )
     throw new Error("Select existing questions before starting a session.");
   const session = createSession([...new Set(questionIds)], filters);
-  data.sessions
-    .filter((s) => !s.finishedAt)
-    .forEach((s) => {
-      s.finishedAt = session.startedAt;
-    });
   data.sessions.push(session);
   return session;
 }

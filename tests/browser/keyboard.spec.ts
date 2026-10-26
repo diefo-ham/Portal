@@ -20,7 +20,7 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByRole("article")).toBeFocused();
   await expect(page.getByRole("button", { name: /note/i })).toHaveCount(0);
-  await page.keyboard.press("b");
+  await page.keyboard.press("2");
   await expect(page.getByRole("radio").nth(1)).toBeChecked();
   await page.keyboard.press("Space");
   await expect(page.getByText("Correct. Nicely done.")).toBeVisible();

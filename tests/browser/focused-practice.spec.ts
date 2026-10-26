@@ -25,7 +25,7 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   await expect(
     page.getByRole("button", { name: "Finish session", exact: true }),
   ).not.toBeVisible();
-  await page.keyboard.press("b");
+  await page.keyboard.press("2");
   await expect(page.getByRole("radio").nth(1)).toBeChecked();
   await page.getByRole("radio").first().check();
   await page.keyboard.press("b");

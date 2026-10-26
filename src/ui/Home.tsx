@@ -1,6 +1,7 @@
 import type { Filters as FilterValues, StudyData } from "../core/model";
 import { filterQuestions } from "../core/practice";
-import { reviewQueues, sessionOutcomes } from "../core/review";
+import { reviewQueues } from "../core/review";
+import { ContinueSessions } from "./ContinueSessions";
 import { Filters } from "./Filters";
 
 export function Home({
@@ -30,7 +31,6 @@ export function Home({
   onBrowse: () => void;
   onSample: () => void;
 }) {
-  const ongoing = data.sessions.findLast((s) => !s.finishedAt);
   const questions = filterQuestions(data, value);
   const queues = reviewQueues(data, protectTests);
   const reset = () =>
@@ -53,22 +53,7 @@ export function Home({
       <p className="muted">
         Choose a focus, settle in, and take it one question at a time.
       </p>
-      {ongoing && (
-        <section className="resume-strip">
-          <div>
-            <strong>Continue where you left off.</strong>
-            <span>
-              {ongoing.questionIds.length -
-                sessionOutcomes(data, ongoing).unanswered.length}{" "}
-              answered · {sessionOutcomes(data, ongoing).unanswered.length} left
-              in your session
-            </span>
-          </div>
-          <button onClick={() => onResume(ongoing.id)}>
-            Resume practice →
-          </button>
-        </section>
-      )}
+      <ContinueSessions data={data} onResume={onResume} />
       {!data.questions.length ? (
         <section className="empty-state">
           <h2>Your practice space is ready.</h2>
@@ -150,12 +135,6 @@ export function Home({
               <p className="muted small">
                 No questions match this combination. Broaden your focus or reset
                 the filters.
-              </p>
-            )}
-            {ongoing && (
-              <p className="small muted">
-                Starting a new set closes the current session. Unanswered
-                questions remain available in Review.
               </p>
             )}
           </section>

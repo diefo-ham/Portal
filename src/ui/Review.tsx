@@ -16,6 +16,16 @@ export function Review({
 }) {
   const [visible, setVisible] = useState(5);
   const queues = reviewQueues(data, protectTests);
+  const bookmarks = data.questions
+    .filter(
+      (q) =>
+        data.annotations[q.id]?.bookmarked &&
+        (!protectTests || q.testStatus !== "active"),
+    )
+    .map((q) => q.id);
+  const protectedBookmarks =
+    data.questions.filter((q) => data.annotations[q.id]?.bookmarked).length -
+    bookmarks.length;
   const recent = data.sessions.toReversed();
   const missed = data.questions.filter((q) => queues.mistakes.includes(q.id));
   const skills = taxonomyOptions(missed, "skill")
@@ -61,6 +71,22 @@ export function Review({
           </button>
         </section>
       </div>
+      <section className="bookmark-review">
+        <h2>Bookmarks</h2>
+        <p className="muted">
+          {bookmarks.length
+            ? `${bookmarks.length} saved questions ready to revisit.`
+            : protectedBookmarks
+              ? "Your saved questions are currently protected practice-test material."
+              : "Save a question with the star or B during practice."}
+          {protectedBookmarks > 0 && bookmarks.length > 0
+            ? ` ${protectedBookmarks} saved questions are hidden by practice-test protection.`
+            : ""}
+        </p>
+        <button disabled={!bookmarks.length} onClick={() => onStart(bookmarks)}>
+          Practice bookmarks
+        </button>
+      </section>
       <p className="small muted">
         {protectTests
           ? "Practice-test protection is on for these review sets."

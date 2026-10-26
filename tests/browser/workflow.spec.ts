@@ -92,12 +92,6 @@ test("offline local workflow, history, reload persistence and backup restore", a
   await expect(
     page.getByText("Backup restored. Saved session timers are paused."),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
-  await expect(
-    page.getByText("0 questions imported. 12 duplicates skipped."),
-  ).toBeVisible();
   expect(remote).toEqual([]);
 });
 test("progress survives closing and reopening the browser process", async ({}, testInfo) => {
@@ -134,21 +128,18 @@ test("progress survives closing and reopening the browser process", async ({}, t
     await context.close();
   }
 });
-test("import validation preserves library and supports narrow screens", async ({
+test("question import controls are absent and narrow screens remain usable", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByText("Library & maintenance", { exact: true }).click();
-  await page.getByLabel("Import question JSON").setInputFiles({
-    name: "bad.json",
-    mimeType: "application/json",
-    buffer: Buffer.from('{"schemaVersion":1,"questions":[{"id":"bad"}]}'),
-  });
-  await expect(page.getByRole("alert")).toContainText("section must be");
   await page
     .getByRole("button", { name: "Load synthetic sample", exact: true })
     .click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByLabel("Import question JSON")).toHaveCount(0);
+  await expect(
+    page.getByText("Stored on this device", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Browse", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(

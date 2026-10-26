@@ -19,12 +19,13 @@ import { Filters, sectionName } from "./Filters";
 import { Practice } from "./Practice";
 import { Home } from "./Home";
 import { Review } from "./Review";
+import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 export function App() {
   const appearance = useAppearance();
-  const { data, mutate, error, setError, loadingMessage } = useStudy();
+  const { data, archive, mutate, error, setError, loadingMessage } = useStudy();
   const [page, setPage] = useState("home");
   const [protectedTests, setProtectedTests] = useState(
     () => localStorage.getItem("sat-protect-tests") !== "false",
@@ -75,15 +76,12 @@ export function App() {
     });
     setMessage(report);
   };
-  const readFile = async (file: File | undefined, backup = false) => {
+  const readFile = async (file: File | undefined) => {
     if (!file) return;
-    if (file.size > (backup ? 768 : 50) * 1024 * 1024)
-      throw new Error(
-        `Choose a JSON file smaller than ${backup ? 768 : 50} MB.`,
-      );
+    if (file.size > 768 * 1024 * 1024)
+      throw new Error("Choose a backup smaller than 768 MB.");
     const raw: unknown = JSON.parse(await file.text());
-    if (backup) setRestore(parseBackup(raw));
-    else await importData(raw, file.name);
+    setRestore(parseBackup(raw));
   };
   const exportBackup = (filename: string) =>
     void run(async () => {
@@ -174,6 +172,7 @@ export function App() {
             >
               ⚙
             </button>
+            <Help />
           </nav>
         </header>
       )}
@@ -260,7 +259,8 @@ export function App() {
               <p>
                 Load 12 original sample questions to try the full workflow,
                 <br />
-                or import your own structured question file.
+                Question libraries are prepared locally outside the study
+                interface.
               </p>
               <button
                 className="primary"
@@ -349,12 +349,6 @@ export function App() {
                   </button>
                 </div>
               </div>
-              {ongoing && (
-                <p className="small muted">
-                  Starting a new session ends the current session and keeps all
-                  submitted answers and bookmarks.
-                </p>
-              )}
               {page === "library" && (
                 <div className="question-list">
                   {filtered.slice(0, visible).map((q, index) => {
@@ -404,9 +398,7 @@ export function App() {
               {!filtered.length && (
                 <div className="empty-state">
                   <h2>No questions match yet.</h2>
-                  <p>
-                    Try broadening your filters or importing more questions.
-                  </p>
+                  <p>Try broadening your filters.</p>
                   <button onClick={() => changeFilters({ ...defaultFilters })}>
                     Reset filters
                   </button>
@@ -470,72 +462,11 @@ export function App() {
             aria-labelledby="maintenance-heading"
           >
             <h2 id="maintenance-heading">Library & maintenance</h2>
-            <ResetProgress
-              busy={busy}
-              onConfirm={(clearBookmarks) =>
-                run(async () => {
-                  await mutate((d) => resetStudyProgress(d, clearBookmarks));
-                  setSessionId("");
-                  setRestore(undefined);
-                  changeFilters({
-                    ...filters,
-                    status: "",
-                    bookmark: "",
-                  });
-                  setMessage(
-                    "Study progress reset. Your question bank is ready to use.",
-                  );
-                })
-              }
-            />
             <p className="muted">
               Question content and study history stay in this browser. No
               account, uploads, or cloud sync.
             </p>
             <div className="data-grid">
-              <section className="data-card">
-                <h2>Import a question set</h2>
-                <p>
-                  Choose normalized JSON in the documented schema. Imports are
-                  validated before saving; existing source IDs are skipped.
-                </p>
-                <label className={`file-button ${busy ? "disabled" : ""}`}>
-                  Choose question JSON
-                  <input
-                    aria-label="Import question JSON"
-                    type="file"
-                    accept=".json,application/json"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = "";
-                      void run(() => readFile(file));
-                    }}
-                  />
-                </label>
-                <p className="small muted">
-                  Prepared PDF libraries are loaded automatically from this
-                  laptop. Keep original exports and private library files
-                  outside Git.
-                </p>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(() => importData(synthetic, "synthetic.json"))
-                  }
-                >
-                  Load synthetic sample
-                </button>
-                <button
-                  className="text-button"
-                  onClick={() =>
-                    downloadJson(synthetic, "synthetic-questions.json")
-                  }
-                >
-                  Download example JSON
-                </button>
-              </section>
               <section className="data-card">
                 <h2>Back up your work</h2>
                 <p>
@@ -563,7 +494,7 @@ export function App() {
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       e.target.value = "";
-                      void run(() => readFile(file, true));
+                      void run(() => readFile(file));
                     }}
                   />
                 </label>
@@ -596,7 +527,7 @@ export function App() {
                       const normalized = await storeInlineDocuments(restore);
                       await mutate((d) => {
                         Object.assign(d, normalized);
-                      });
+                      }, {});
                       setRestore(undefined);
                       setSessionId("");
                       setMessage(
@@ -645,6 +576,38 @@ export function App() {
             ) : (
               <p className="muted">No imports yet.</p>
             )}
+            <ResetProgress
+              busy={busy}
+              archiveDate={archive?.createdAt}
+              onRestore={() =>
+                run(async () => {
+                  await mutate(() => {}, { resetArchive: "restore" });
+                  setSessionId("");
+                  setRestore(undefined);
+                  changeFilters({ ...filters, status: "", bookmark: "" });
+                  setMessage(
+                    "Previous study state restored. Saved timers are paused.",
+                  );
+                })
+              }
+              onConfirm={(clearBookmarks) =>
+                run(async () => {
+                  await mutate((d) => resetStudyProgress(d, clearBookmarks), {
+                    resetArchive: "save",
+                  });
+                  setSessionId("");
+                  setRestore(undefined);
+                  changeFilters({
+                    ...filters,
+                    status: "",
+                    bookmark: "",
+                  });
+                  setMessage(
+                    "Study progress reset. Your question bank is ready to use.",
+                  );
+                })
+              }
+            />
           </section>
         </main>
       )}

@@ -240,14 +240,27 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
       ],
     },
   };
-  await page.getByLabel("Import question JSON").setInputFiles({
-    name: "visual-fixtures.json",
+  await page.getByLabel("Restore backup JSON").setInputFiles({
+    name: "visual-fixtures.backup.json",
     mimeType: "application/json",
     buffer: Buffer.from(
-      JSON.stringify({ schemaVersion: 1, questions: [long, dense] }),
+      JSON.stringify({
+        format: "sat-study-backup-v1",
+        data: {
+          version: 1,
+          questions: [long, dense],
+          attempts: [],
+          sessions: [],
+          annotations: {},
+          imports: [],
+        },
+      }),
     ),
   });
-  await expect(page.getByRole("status")).toContainText("2 questions imported");
+  await page
+    .getByRole("button", { name: "Replace with backup", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Backup restored");
   for (const theme of ["light", "dark"]) {
     await page.getByLabel("Theme", { exact: true }).selectOption(theme);
     await page.getByRole("button", { name: "Browse", exact: true }).click();
