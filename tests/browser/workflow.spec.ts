@@ -26,9 +26,9 @@ test("offline local workflow, history, reload persistence and backup restore", a
   await expect(page.getByRole("button", { name: /01 Math/ })).toBeVisible();
   await expect(page.locator(".question-row")).toHaveCount(10);
   await page
-    .getByRole("combobox", { name: "Practice-test status", exact: true })
-    .selectOption("only");
-  await expect(page.locator(".question-row")).toHaveCount(2);
+    .getByLabel("Protect practice-test questions", { exact: true })
+    .uncheck();
+  await expect(page.locator(".question-row")).toHaveCount(12);
   await page.getByRole("button", { name: "Reset filters" }).click();
   await page
     .getByRole("combobox", { name: "Section", exact: true })
@@ -63,14 +63,18 @@ test("offline local workflow, history, reload persistence and backup restore", a
     .getByRole("button", { name: "Finish session", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Practice these 1 mistakes again" }),
+    page.getByRole("button", { name: "Practice mistakes (1)", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Review", exact: true }).click();
+  await page.getByText("Study details", { exact: true }).click();
   await expect(page.getByText("50%", { exact: true })).toBeVisible();
   await page
-    .getByRole("button", { name: "Review mistakes →", exact: true })
+    .getByRole("button", { name: "Practice mistakes", exact: true })
     .click();
-  await expect(page.locator(".question-row")).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Open question overview" }),
+  ).toHaveText(/Question 1 of 1/);
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByText("Library & maintenance", { exact: true }).click();
   const download = page.waitForEvent("download");

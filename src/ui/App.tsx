@@ -9,7 +9,6 @@ import {
 import {
   filterQuestions,
   latestAttempt,
-  summarize,
   selectSessionQuestions,
 } from "../core/practice";
 import { parseQuestions, mergeQuestions } from "../importing/json";
@@ -18,6 +17,8 @@ import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
 import { Filters, sectionName } from "./Filters";
 import { Practice } from "./Practice";
+import { Home } from "./Home";
+import { Review } from "./Review";
 import { ResetProgress } from "./ResetProgress";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 export function App() {
@@ -90,7 +91,7 @@ export function App() {
         "Portable backup exported, including PDF question and explanation images.",
       );
     });
-  const start = async (ids: string[], size = 0) => {
+  const start = async (ids: string[], size = 0, sessionFilters = filters) => {
     if (!ids.length) return;
     const selected = selectSessionQuestions(
       ids,
@@ -109,7 +110,7 @@ export function App() {
     await run(async () => {
       let id = "";
       await mutate((d) => {
-        id = beginSession(d, selected, filters).id;
+        id = beginSession(d, selected, sessionFilters).id;
       });
       setSessionId(id);
       setMessage("");
@@ -127,11 +128,6 @@ export function App() {
   const filtered = filterQuestions(data, filters);
   const ongoing = data.sessions.findLast((s) => !s.finishedAt);
   const current = data.sessions.find((s) => s.id === sessionId);
-  const stats = summarize(data);
-  const misses = filterQuestions(data, {
-    ...defaultFilters,
-    status: "incorrect",
-  }).length;
   const changeFilters = (value: FilterValues) => {
     setFilters(value);
     setVisible(40);
@@ -173,7 +169,7 @@ export function App() {
                 setMessage("");
               }}
             >
-              Settings
+              ⚙
             </button>
           </nav>
         </header>
@@ -201,18 +197,34 @@ export function App() {
           session={current}
           mutate={mutate}
           onBack={() => setPage("home")}
-          onRetry={(ids) => void start(ids)}
+          onRetry={(ids) => void start(ids, 0, current.filters)}
         />
-      ) : page === "library" || page === "home" ? (
+      ) : page === "home" ? (
+        <Home
+          data={data}
+          value={filters}
+          onChange={changeFilters}
+          limit={limit}
+          setLimit={setLimit}
+          busy={busy}
+          protectTests={protectedTests}
+          onStart={(ids, size) => void start(ids, size)}
+          onResume={(id) => {
+            setSessionId(id);
+            setPage("practice");
+          }}
+          onReview={() => setPage("review")}
+          onBrowse={() => setPage("library")}
+          onSample={() =>
+            void run(() => importData(synthetic, "synthetic.json"))
+          }
+        />
+      ) : page === "library" ? (
         <main className="page">
           <div className="page-heading">
             <div>
               <p className="eyebrow">YOUR DAILY PRACTICE</p>
-              <h1>
-                {page === "library"
-                  ? "Browse questions."
-                  : "Make room for a little progress."}
-              </h1>
+              <h1>Browse questions.</h1>
               <p className="muted">
                 Choose a focus. Take your time. Learn from every answer.
               </p>
@@ -278,46 +290,7 @@ export function App() {
                     Reset filters
                   </button>
                 </div>
-                <Filters
-                  data={data}
-                  value={filters}
-                  onChange={changeFilters}
-                  compact={page === "home"}
-                />
-                {page === "home" && (
-                  <details className="refine-selection">
-                    <summary>
-                      Refine selection
-                      {filters.skill ||
-                      filters.difficulty ||
-                      filters.status ||
-                      filters.bookmark ||
-                      filters.search ||
-                      filters.active !== (protectedTests ? "hide" : "include")
-                        ? " · custom filters"
-                        : ""}
-                    </summary>
-                    <Filters
-                      data={data}
-                      value={filters}
-                      onChange={changeFilters}
-                      advanced
-                    />
-                    {filters.search && (
-                      <p className="small">
-                        Search: {filters.search}{" "}
-                        <button
-                          className="text-button"
-                          onClick={() =>
-                            changeFilters({ ...filters, search: "" })
-                          }
-                        >
-                          Clear search
-                        </button>
-                      </p>
-                    )}
-                  </details>
-                )}
+                <Filters data={data} value={filters} onChange={changeFilters} />
                 {page === "library" && (
                   <div className="filter-bottom">
                     <label className="search">
@@ -330,28 +303,19 @@ export function App() {
                         }
                       />
                     </label>
-                    <span className="small muted">
-                      Unknown status is included when active questions are
-                      hidden.
-                    </span>
                   </div>
                 )}
               </section>
               <div className="library-toolbar">
                 <div>
                   <h2>
-                    {page === "home"
-                      ? "Questions available"
-                      : "Question library"}{" "}
+                    Question library{" "}
                     <span className="count">{filtered.length}</span>
                   </h2>
                   <p className="small muted">
                     {filters.active === "hide"
-                      ? "Active practice-test questions are hidden."
-                      : filters.active === "include" ||
-                          filters.active === "only"
-                        ? "Active questions can appear in these results."
-                        : "Practice-test status filter applied."}
+                      ? "Practice-test protection is on."
+                      : "Practice-test protection is off for this selection."}
                   </p>
                 </div>
                 <div className="session-controls">
@@ -387,14 +351,6 @@ export function App() {
                   Starting a new session ends the current session and keeps all
                   submitted answers and bookmarks.
                 </p>
-              )}
-              {page === "home" && (
-                <button
-                  className="text-button"
-                  onClick={() => setPage("library")}
-                >
-                  Browse individual questions →
-                </button>
               )}
               {page === "library" && (
                 <div className="question-list">
@@ -433,7 +389,7 @@ export function App() {
                               : "Unanswered"}
                           </span>
                           <span className="small muted">
-                            {q.difficulty || "Unspecified"} · {q.testStatus}
+                            {q.difficulty || "Unspecified"}
                           </span>
                         </span>
                         <span className="row-arrow">↗</span>
@@ -465,106 +421,20 @@ export function App() {
           )}
         </main>
       ) : page === "review" ? (
-        <main className="page narrow">
-          <p className="eyebrow">REFLECT & RETURN</p>
-          <h1>Turn mistakes into understanding.</h1>
-          <p className="muted">
-            A small record of the work you’ve done. Every submitted attempt
-            counts.
-          </p>
-          <div className="stats">
-            <div>
-              <strong>{stats.total}</strong>
-              <span>answers submitted</span>
-            </div>
-            <div>
-              <strong>{stats.total ? `${stats.accuracy}%` : "—"}</strong>
-              <span>accuracy across attempts</span>
-            </div>
-            <div>
-              <strong>{stats.total ? `${stats.averageSeconds}s` : "—"}</strong>
-              <span>average answer time</span>
-            </div>
-          </div>
-          <section className="review-card">
-            <h2>Return to your mistakes</h2>
-            <p>
-              {misses} questions have an incorrect latest answer, with active
-              questions hidden.
-            </p>
-            <button
-              className="primary"
-              disabled={!misses}
-              onClick={() => {
-                setFilters({ ...defaultFilters, status: "incorrect" });
-                setPage("library");
-              }}
-            >
-              Review mistakes →
-            </button>
-            <button
-              className="text-button"
-              onClick={() => {
-                setFilters({ ...defaultFilters, status: "ever-missed" });
-                setPage("library");
-              }}
-            >
-              See everything ever missed
-            </button>
-          </section>
-          <h2>Skills to revisit</h2>
-          {!stats.weaknesses.length ? (
-            <p className="muted">
-              Missed answers will help you find a focus here.
-            </p>
-          ) : (
-            <div className="skill-list">
-              {stats.weaknesses.map((s) => (
-                <button
-                  key={s.skill}
-                  onClick={() => {
-                    setFilters({
-                      ...defaultFilters,
-                      skill: s.skill === "Unspecified skill" ? "" : s.skill,
-                      status: "ever-missed",
-                    });
-                    setPage("library");
-                  }}
-                >
-                  <span>{s.skill}</span>
-                  <span>
-                    {s.missed} missed / {s.total} attempts →
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-          <h2 className="spaced">Recent sessions</h2>
-          {data.sessions.length === 0 ? (
-            <p className="muted">Your practice sessions will appear here.</p>
-          ) : (
-            data.sessions
-              .slice()
-              .reverse()
-              .slice(0, 10)
-              .map((s) => (
-                <button
-                  className="session-row"
-                  key={s.id}
-                  onClick={() => {
-                    setSessionId(s.id);
-                    setPage("practice");
-                  }}
-                >
-                  <span>
-                    {new Date(s.startedAt).toLocaleString()} ·{" "}
-                    {s.questionIds.length} questions
-                  </span>
-                  <span>{s.finishedAt ? "View results" : "Resume"} →</span>
-                </button>
-              ))
-          )}
-        </main>
+        <Review
+          data={data}
+          protectTests={protectedTests}
+          onStart={(ids) =>
+            void start(ids, 0, {
+              ...defaultFilters,
+              active: protectedTests ? "hide" : "include",
+            })
+          }
+          onOpen={(id) => {
+            setSessionId(id);
+            setPage("practice");
+          }}
+        />
       ) : (
         <main className="page narrow">
           <h1>Settings</h1>

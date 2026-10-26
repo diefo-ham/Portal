@@ -97,11 +97,8 @@ test("practice-test protection persists and active overrides require a session c
   await page.reload();
   await page.getByText("Refine selection", { exact: true }).click();
   await expect(
-    page.getByRole("combobox", { name: "Practice-test status", exact: true }),
-  ).toHaveValue("include");
-  await page
-    .getByRole("combobox", { name: "Practice-test status", exact: true })
-    .selectOption("only");
+    page.getByLabel("Protect practice-test questions", { exact: true }),
+  ).not.toBeChecked();
   page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(

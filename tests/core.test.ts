@@ -19,8 +19,80 @@ import {
   finishSession,
   resetStudyProgress,
 } from "../src/core/commands";
+import { domainKey, skillKey, taxonomyOptions } from "../src/core/taxonomy";
+import { reviewQueues, sessionOutcomes } from "../src/core/review";
 describe("question integrity and practice rules", () => {
   const questions = parseQuestions(sample);
+  it("combines domains and skills without merging similarly named source skills", () => {
+    const a = questions[0],
+      b = questions[2];
+    const d = { ...emptyData(), questions };
+    const f = {
+      ...defaultFilters,
+      domains: [domainKey(a), domainKey(b)],
+      skills: [skillKey(a), skillKey(b)],
+    };
+    expect(filterQuestions(d, f).map((q) => q.id)).toEqual([a.id, b.id]);
+    const variants = [
+      questions[6],
+      { ...questions[6], id: "case", skill: " Words  in Context " },
+      { ...questions[6], id: "other-domain", domain: "Another domain" },
+      {
+        ...questions[6],
+        id: "different",
+        skill: "Words in Context and Meaning",
+      },
+    ];
+    expect(taxonomyOptions(variants, "skill")).toHaveLength(3);
+    const names = taxonomyOptions(variants, "skill").map((o) => o.label);
+    expect(names.some((name) => name.includes("Craft and Structure"))).toBe(
+      true,
+    );
+    expect(names.some((name) => name.includes("Another domain"))).toBe(true);
+    expect(variants[1].skill).toBe(" Words  in Context ");
+    const s = createSession([a.id, b.id], f);
+    f.domains.pop();
+    f.skills.pop();
+    expect(s.filters.domains).toHaveLength(2);
+    expect(
+      parseBackup({
+        format: "sat-study-backup-v1",
+        data: { ...d, sessions: [s] },
+      }).sessions[0].filters.skills,
+    ).toHaveLength(2);
+  });
+  it("retains session outcomes while later attempts resolve global review queues", () => {
+    const d = { ...emptyData(), questions };
+    const first = beginSession(
+      d,
+      [questions[0].id, questions[1].id, questions[5].id],
+      defaultFilters,
+    );
+    submitAnswer(d, first.id, questions[0].id, "A");
+    finishSession(d, first.id);
+    expect(sessionOutcomes(d, first).incorrect).toEqual([questions[0].id]);
+    expect(sessionOutcomes(d, first).unanswered).toEqual([
+      questions[1].id,
+      questions[5].id,
+    ]);
+    expect(reviewQueues(d).unanswered).toEqual([questions[1].id]); // active protected
+    expect(reviewQueues(d, false).unanswered).toEqual([
+      questions[1].id,
+      questions[5].id,
+    ]);
+    const next = beginSession(
+      d,
+      [questions[0].id, questions[1].id],
+      defaultFilters,
+    );
+    submitAnswer(d, next.id, questions[0].id, "B");
+    submitAnswer(d, next.id, questions[1].id, "28");
+    expect(reviewQueues(d).mistakes).toEqual([]);
+    expect(reviewQueues(d).unanswered).toEqual([]);
+    expect(sessionOutcomes(d, first).unanswered).toHaveLength(2);
+    expect(sessionOutcomes(d, first).incorrect).toHaveLength(1);
+    expect(reviewQueues({ ...emptyData(), questions }).unanswered).toEqual([]);
+  });
   it("shuffles before limiting without mutating the pool or saved session order", () => {
     const pool = ["a", "b", "c", "d"];
     const selected = selectSessionQuestions(pool, 2, [], () => 0);

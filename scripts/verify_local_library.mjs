@@ -24,7 +24,7 @@ const counts = {};
 try {
   await page.goto("http://127.0.0.1:4317");
   await page
-    .getByRole("heading", { name: /Questions available/ })
+    .getByRole("button", { name: "Start practice" })
     .waitFor({ timeout: 240000 });
   const stored = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
@@ -60,6 +60,34 @@ try {
     );
   Object.assign(counts, stored);
   await mkdir("private-data/inspection", { recursive: true });
+  await page.getByRole("button", { name: /^Domain:/ }).click();
+  const domainCount = await page
+    .getByRole("group", { name: "Domain", exact: true })
+    .getByRole("checkbox")
+    .count();
+  await page.keyboard.press("Escape");
+  await page.getByText("Refine selection", { exact: true }).click();
+  await page.getByRole("button", { name: /^Skill:/ }).click();
+  const skillCount = await page
+    .getByRole("group", { name: "Skill", exact: true })
+    .getByRole("checkbox")
+    .count();
+  await page.keyboard.press("Escape");
+  const normalize = (value) =>
+    (value || "").trim().replace(/\s+/g, " ").toLowerCase();
+  const expectedSkills = new Set(
+    library.questions.map((q) =>
+      JSON.stringify([q.section, normalize(q.domain), normalize(q.skill)]),
+    ),
+  ).size;
+  if (skillCount !== expectedSkills || domainCount !== 8)
+    throw new Error("Taxonomy options differ from the source metadata");
+  counts.taxonomy = { domains: domainCount, skills: skillCount };
+  await page.getByText("Refine selection", { exact: true }).click();
+  await page.screenshot({
+    path: resolve("private-data/inspection/stage3-real-home.png"),
+    fullPage: true,
+  });
   const examples = [
     library.questions.find(
       (q) =>

@@ -50,6 +50,9 @@ export interface Filters {
   section: string;
   domain: string;
   skill: string;
+  /** Scoped multi-selections. Legacy domain/skill strings remain readable. */
+  domains?: string[];
+  skills?: string[];
   difficulty: string;
   status: string;
   bookmark: string;

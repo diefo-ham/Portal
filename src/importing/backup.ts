@@ -47,6 +47,13 @@ export function parseBackup(raw: unknown): StudyData {
     )
       throw new Error("Invalid session in backup.");
     if (
+      [s.filters.domains, s.filters.skills].some(
+        (values) =>
+          values !== undefined &&
+          (!Array.isArray(values) ||
+            values.length > 200 ||
+            values.some((value) => typeof value !== "string")),
+      ) ||
       Object.entries(s.drafts).some(
         ([id, v]) => !s.questionIds.includes(id) || typeof v !== "string",
       ) ||

@@ -151,8 +151,8 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   // Return to protected questions before practicing, without changing the saved preference.
   await page.getByText("Refine selection", { exact: true }).click();
   await page
-    .getByRole("combobox", { name: "Practice-test status", exact: true })
-    .selectOption("hide");
+    .getByLabel("Protect practice-test questions", { exact: true })
+    .check();
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(
     page.getByRole("button", { name: "Practice tools" }),

@@ -5,6 +5,7 @@ import {
   type StudyData,
   type Session,
 } from "./model";
+import { domainKey, skillKey, metadataKey } from "./taxonomy";
 export function numericValue(text: string): number | undefined {
   const value = text.trim().replace(/−/g, "-");
   if (
@@ -39,8 +40,10 @@ export function filterQuestions(data: StudyData, f: Filters): Question[] {
     const a = latestAttempt(data, q.id);
     return (
       (!f.section || q.section === f.section) &&
-      (!f.domain || q.domain === f.domain) &&
-      (!f.skill || q.skill === f.skill) &&
+      (!f.domain || metadataKey(q.domain) === metadataKey(f.domain)) &&
+      (!f.skill || metadataKey(q.skill) === metadataKey(f.skill)) &&
+      (!f.domains?.length || f.domains.includes(domainKey(q))) &&
+      (!f.skills?.length || f.skills.includes(skillKey(q))) &&
       (!f.difficulty || q.difficulty === f.difficulty) &&
       (f.active === "include" ||
         (f.active === "hide"
@@ -72,7 +75,11 @@ export function createSession(
     questionIds: [...ids],
     index: 0,
     startedAt: new Date().toISOString(),
-    filters: { ...filters },
+    filters: {
+      ...filters,
+      ...(filters.domains ? { domains: [...filters.domains] } : {}),
+      ...(filters.skills ? { skills: [...filters.skills] } : {}),
+    },
     drafts: {},
     elapsed: {},
     paused: false,

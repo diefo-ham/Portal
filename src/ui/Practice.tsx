@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
-import type { Question, Session, StudyData } from "../core/model";
+import type { Session, StudyData } from "../core/model";
 import { numericValue } from "../core/practice";
 import { sectionName } from "./Filters";
 import { Calculator } from "../calculator/Calculator";
 import { DocumentPanels } from "./DocumentPanels";
+import { SessionResults, displayAnswer, correctAnswer } from "./SessionResults";
 type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
 export const time = (ms: number) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
@@ -102,70 +103,14 @@ export function Practice({
     }).catch(() => {});
   };
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
-  const missed = attempts.filter((a) => !a.correct).map((a) => a.questionId);
   if (session.finishedAt)
     return (
-      <main className="page narrow">
-        <button className="text-button" onClick={onBack}>
-          ← Back to practice
-        </button>
-        <p className="eyebrow">SESSION COMPLETE</p>
-        <h1>A little practice, a clearer picture.</h1>
-        <div className="summary-line">
-          <strong>
-            {attempts.filter((a) => a.correct).length} / {attempts.length}
-          </strong>
-          <span>
-            answered correctly · {session.questionIds.length - attempts.length}{" "}
-            unanswered · {time(attempts.reduce((n, a) => n + a.durationMs, 0))}{" "}
-            answer time
-          </span>
-        </div>
-        {missed.length > 0 && (
-          <button className="primary" onClick={() => onRetry(missed)}>
-            Practice these {missed.length} mistakes again →
-          </button>
-        )}
-        <div className="result-list">
-          {session.questionIds.map((id) => {
-            const q = data.questions.find((q) => q.id === id)!;
-            const a = attempts.find((a) => a.questionId === id);
-            return (
-              <details key={id}>
-                <summary>
-                  <span
-                    className={
-                      a?.correct ? "correct" : a ? "incorrect" : "muted"
-                    }
-                  >
-                    {a ? (a.correct ? "Correct" : "Incorrect") : "Unanswered"}
-                  </span>{" "}
-                  · {q.skill || q.domain || sectionName(q.section)}
-                </summary>
-                {q.document ? (
-                  <DocumentPanels question={q} kind="question" />
-                ) : (
-                  <p className="question-text">{q.stem}</p>
-                )}
-                {a && (
-                  <>
-                    <p>Your answer: {displayAnswer(q, a.answer)}</p>
-                    <p>Correct answer: {correctAnswer(q)}</p>
-                    {q.document ? (
-                      <DocumentPanels question={q} kind="rationale" />
-                    ) : (
-                      <p>
-                        {q.rationale ||
-                          "No rationale was included in this import."}
-                      </p>
-                    )}
-                  </>
-                )}
-              </details>
-            );
-          })}
-        </div>
-      </main>
+      <SessionResults
+        data={data}
+        session={session}
+        onBack={onBack}
+        onRetry={onRetry}
+      />
     );
   return (
     <main
@@ -629,15 +574,4 @@ export function Practice({
       </dialog>
     </main>
   );
-}
-function displayAnswer(q: Question, value: string) {
-  if (q.document && q.answer.type === "choice") return value;
-  return q.choices?.find((c) => c.id === value)
-    ? `${value}. ${q.choices.find((c) => c.id === value)!.text}`
-    : value;
-}
-function correctAnswer(q: Question) {
-  return q.answer.type === "choice"
-    ? displayAnswer(q, q.answer.value)
-    : q.answer.accepted.join(" or ");
 }
