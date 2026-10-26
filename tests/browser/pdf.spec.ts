@@ -39,11 +39,13 @@ test("version-one study data survives the image-store migration", async ({
     });
   }, sample.questions);
   await page.goto("/");
+  await page.getByRole("button", { name: "Browse", exact: true }).click();
   await expect(page.locator(".question-row")).toHaveCount(10);
   await page.locator(".question-row").first().click();
   await expect(
-    page.getByRole("button", { name: "★ Bookmarked" }),
+    page.getByRole("button", { name: "Remove bookmark" }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Edit note", exact: true }).click();
   await expect(page.getByLabel("My notes")).toHaveValue(
     "Existing note from the MVP",
   );
@@ -111,18 +113,21 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
     }
   });
   await page.goto("/");
+  await page.getByRole("button", { name: "Browse", exact: true }).click();
   await expect(page.locator(".question-row")).toHaveCount(1);
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByLabel("Original PDF question")).toBeVisible();
   await expect(page.getByLabel("Original PDF explanation")).toHaveCount(0);
   await page.getByRole("radio").nth(1).check();
-  await page.getByRole("button", { name: "Submit answer" }).click();
+  await page.getByRole("button", { name: "Check answer" }).click();
   await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
   await expect(page.getByLabel("Original PDF explanation")).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).click();
   expect(assetRequests).toBe(1);
-  await page.getByRole("button", { name: "My data", exact: true }).click();
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByText("Library & maintenance", { exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export full backup" }).click();
   const path = await (await download).path();
@@ -137,9 +142,7 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   await expect(
     page.getByText("Backup restored. Saved session timers are paused."),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Question library", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
   await page.getByRole("button", { name: "Resume practice" }).click();
   await expect(
     page.getByLabel("Original PDF question").locator("img"),

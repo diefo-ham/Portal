@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
 import type { Question, Session, StudyData } from "../core/model";
@@ -29,7 +29,30 @@ export function Practice({
     (a) => a.questionId === question.id && a.sessionId === session.id,
   );
   const [pending, setPending] = useState(false);
-  const [calculator, setCalculator] = useState(true);
+  const [calculator, setCalculator] = useState(false);
+  const [panel, setPanel] = useState<
+    "overview" | "notes" | "details" | "tools" | null
+  >(null);
+  const [showTime, setShowTime] = useState(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const questionTop = useRef<HTMLElement>(null);
+  const nextButton = useRef<HTMLButtonElement>(null);
+  const trigger = useRef<HTMLElement | null>(null);
+  const openPanel = (value: typeof panel) => {
+    trigger.current = document.activeElement as HTMLElement;
+    setPanel(value);
+  };
+  useEffect(() => {
+    if (panel) dialog.current?.showModal();
+    else if (dialog.current?.open) dialog.current.close();
+  }, [panel]);
+  useEffect(() => {
+    questionTop.current?.focus({ preventScroll: true });
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [question.id]);
+  useEffect(() => {
+    if (attempt) nextButton.current?.focus({ preventScroll: true });
+  }, [attempt?.id]);
   const [draft, setDraft] = useState<{ id: string; value: string }>();
   const [noteDraft, setNoteDraft] = useState<{ id: string; value: string }>();
   const timer = useQuestionTimer(
@@ -73,13 +96,22 @@ export function Practice({
       await timer.flush();
       await mutate((d) => finishSession(d, session.id));
     });
+  const choose = (value: string) => {
+    setDraft({ id: question.id, value });
+    void run(() =>
+      mutate((d) => {
+        d.sessions.find((s) => s.id === session.id)!.drafts[question.id] =
+          value;
+      }),
+    );
+  };
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   const missed = attempts.filter((a) => !a.correct).map((a) => a.questionId);
   if (session.finishedAt)
     return (
       <main className="page narrow">
         <button className="text-button" onClick={onBack}>
-          ← Back to library
+          ← Back to practice
         </button>
         <p className="eyebrow">SESSION COMPLETE</p>
         <h1>A little practice, a clearer picture.</h1>
@@ -140,7 +172,37 @@ export function Practice({
       </main>
     );
   return (
-    <main className="practice-page">
+    <main
+      onKeyDown={(e) => {
+        if (
+          panel ||
+          pending ||
+          e.altKey ||
+          e.ctrlKey ||
+          e.metaKey ||
+          (e.target instanceof HTMLElement &&
+            e.target.matches("input,textarea,select,button"))
+        )
+          return;
+        const choice = question.choices?.find(
+          (c) => c.id.toLowerCase() === e.key.toLowerCase(),
+        );
+        if (!attempt && question.answer.type === "choice" && choice) {
+          e.preventDefault();
+          choose(choice.id);
+        } else if (
+          e.key === "Enter" &&
+          answer &&
+          !attempt &&
+          (question.answer.type === "choice" ||
+            numericValue(answer) !== undefined)
+        ) {
+          e.preventDefault();
+          void submit();
+        }
+      }}
+      className={`practice-page focused-practice ${calculator && question.section === "math" ? "with-calculator" : ""}`}
+    >
       <div className="practice-toolbar">
         <button
           className="text-button"
@@ -151,31 +213,38 @@ export function Practice({
             })
           }
         >
-          ← Library
+          ← Exit
         </button>
-        <span>
+        <button
+          className="text-button"
+          onClick={() => openPanel("overview")}
+          aria-label="Open question overview"
+        >
           Question {session.index + 1}{" "}
           <span className="muted">of {session.questionIds.length}</span>
-        </span>
+        </button>
         <div className="toolbar-right">
-          <span className="timer" aria-label="Time on this question">
-            {time((session.elapsed[question.id] || 0) + timer.pendingMs)}
-          </span>
+          {session.paused && (
+            <button onClick={() => openPanel("tools")}>Timing paused</button>
+          )}
+          {showTime && (
+            <span className="timer" aria-label="Time on this question">
+              {time((session.elapsed[question.id] || 0) + timer.pendingMs)}
+            </span>
+          )}
+          {question.section === "math" && (
+            <button
+              aria-expanded={calculator}
+              onClick={() => setCalculator(!calculator)}
+            >
+              Calculator
+            </button>
+          )}
           <button
-            onClick={() =>
-              void run(async () => {
-                await timer.flush();
-                await mutate((d) => {
-                  const s = d.sessions.find((s) => s.id === session.id)!;
-                  s.paused = !s.paused;
-                });
-              })
-            }
+            aria-label="Practice tools"
+            onClick={() => openPanel("tools")}
           >
-            {session.paused ? "Resume timer" : "Pause timer"}
-          </button>
-          <button onClick={() => void finish()} disabled={pending}>
-            Finish session
+            •••
           </button>
         </div>
       </div>
@@ -187,20 +256,29 @@ export function Practice({
         />
       </div>
       <div className="practice-layout">
-        <article className="question-card" key={question.id}>
+        <article
+          className="question-card"
+          key={question.id}
+          ref={questionTop}
+          tabIndex={-1}
+          aria-label={`Question ${session.index + 1}`}
+        >
           <div className="question-heading">
             <div>
               <p className="eyebrow">{sectionName(question.section)}</p>
-              <span className="muted small">
-                {question.domain || "Domain unspecified"} ·{" "}
-                {question.difficulty || "Difficulty unspecified"}
-              </span>
+              <span className="muted small">{question.domain || ""}</span>
             </div>
             <button
               className={
                 annotation.bookmarked ? "bookmark selected" : "bookmark"
               }
               aria-pressed={annotation.bookmarked}
+              aria-label={
+                annotation.bookmarked ? "Remove bookmark" : "Bookmark question"
+              }
+              title={
+                annotation.bookmarked ? "Remove bookmark" : "Bookmark question"
+              }
               onClick={() =>
                 void run(() =>
                   mutate((d) => {
@@ -212,20 +290,17 @@ export function Practice({
                 )
               }
             >
-              {annotation.bookmarked ? "★ Bookmarked" : "☆ Bookmark"}
+              {annotation.bookmarked ? "★" : "☆"}
+            </button>
+            <button
+              className="bookmark"
+              aria-label={note ? "Edit note" : "Add note"}
+              title={note ? "Edit note" : "Add note"}
+              onClick={() => openPanel("notes")}
+            >
+              {note ? "✎ •" : "✎"}
             </button>
           </div>
-          {question.testStatus === "active" && (
-            <p className="notice">
-              Active practice-test question · included by your filter selection.
-            </p>
-          )}
-          {question.testStatus === "unknown" && (
-            <p className="small muted">
-              Practice-test status unknown; this question may appear in a
-              practice test.
-            </p>
-          )}
           {question.passage && (
             <div className="passage">{question.passage}</div>
           )}
@@ -259,23 +334,14 @@ export function Practice({
               question.choices!.map((c) => (
                 <label
                   key={c.id}
-                  className={`answer-choice ${answer === c.id ? "chosen" : ""} ${attempt && question.answer.type === "choice" && question.answer.value === c.id ? "right-answer" : ""}`}
+                  className={`answer-choice ${answer === c.id ? "chosen" : ""} ${attempt && !attempt.correct && answer === c.id ? "wrong-answer" : ""} ${attempt && question.answer.type === "choice" && question.answer.value === c.id ? "right-answer" : ""}`}
                 >
                   <input
                     type="radio"
                     name="answer"
                     value={c.id}
                     checked={answer === c.id}
-                    onChange={() => {
-                      setDraft({ id: question.id, value: c.id });
-                      void run(() =>
-                        mutate((d) => {
-                          d.sessions.find((s) => s.id === session.id)!.drafts[
-                            question.id
-                          ] = c.id;
-                        }),
-                      );
-                    }}
+                    onChange={() => choose(c.id)}
                   />
                   <span className="choice-letter">{c.id}</span>
                   {!question.document && <span>{c.text}</span>}
@@ -298,6 +364,17 @@ export function Practice({
                     }).catch(() => {});
                   }}
                   placeholder="Enter a number or fraction"
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" &&
+                      !pending &&
+                      !attempt &&
+                      numericValue(answer) !== undefined
+                    ) {
+                      e.preventDefault();
+                      void submit();
+                    }
+                  }}
                 />
                 <span className="small muted">
                   Decimals and fractions accepted (for example, 0.5 or 1/2).
@@ -321,7 +398,7 @@ export function Practice({
               }
               onClick={() => void submit()}
             >
-              Submit answer
+              Check answer
             </button>
           ) : (
             <section
@@ -346,8 +423,8 @@ export function Practice({
                 </p>
               )}
               <span className="small muted">
-                Your answer: {displayAnswer(question, attempt.answer)} ·{" "}
-                {time(attempt.durationMs)}
+                Your answer: {displayAnswer(question, attempt.answer)}
+                {showTime ? ` · ${time(attempt.durationMs)}` : ""}
               </span>
             </section>
           )}
@@ -358,20 +435,19 @@ export function Practice({
             >
               ← Previous
             </button>
-            <span className="small muted">
-              {attempts.length} of {session.questionIds.length} answered
-            </span>
             {session.index < session.questionIds.length - 1 ? (
               <button
-                className="primary"
+                ref={nextButton}
+                className={attempt ? "primary" : "text-button"}
                 disabled={pending}
                 onClick={() => void navigate(session.index + 1)}
               >
-                Next question →
+                {attempt ? "Next question →" : "Skip for now →"}
               </button>
             ) : (
               <button
-                className="primary"
+                ref={nextButton}
+                className={attempt ? "primary" : "text-button"}
                 disabled={pending}
                 onClick={() => void finish()}
               >
@@ -380,30 +456,131 @@ export function Practice({
             )}
           </div>
         </article>
-        <aside className="practice-aside">
-          <section className="utility">
-            <h3>Session map</h3>
-            <div className="question-map">
-              {session.questionIds.map((id, index) => {
-                const a = attempts.find((a) => a.questionId === id);
-                return (
-                  <button
-                    key={id}
-                    aria-label={`Go to question ${index + 1}${a ? (a.correct ? ", correct" : ", incorrect") : ""}`}
-                    aria-current={index === session.index ? "step" : undefined}
-                    className={`${a ? (a.correct ? "map-correct" : "map-incorrect") : ""} ${index === session.index ? "current" : ""}`}
-                    disabled={pending}
-                    onClick={() => void navigate(index)}
-                  >
-                    {index + 1}
-                  </button>
-                );
-              })}
-            </div>
+        {calculator && question.section === "math" && (
+          <aside className="calculator-sheet" aria-label="Calculator panel">
+            <button
+              className="text-button"
+              onClick={() => setCalculator(false)}
+            >
+              Close calculator ×
+            </button>
+            <Calculator />
+          </aside>
+        )}
+      </div>
+      <dialog
+        ref={dialog}
+        className="practice-dialog"
+        onCancel={() => setPanel(null)}
+        onClose={() => {
+          setPanel(null);
+          trigger.current?.focus();
+        }}
+      >
+        <div className="dialog-heading">
+          <h2>
+            {panel === "overview"
+              ? "Question overview"
+              : panel === "notes"
+                ? "My notes"
+                : panel === "details"
+                  ? "Question details"
+                  : "Practice tools"}
+          </h2>
+          <button aria-label="Close panel" onClick={() => setPanel(null)}>
+            ×
+          </button>
+        </div>
+        {panel === "tools" && (
+          <div className="tool-menu">
             <p className="small muted">
-              Filled squares are answered. You can skip and return.
+              Use A–D to choose an answer, then Enter to check it. After
+              feedback, Enter advances. Timing pauses when you leave practice or
+              switch tabs.
             </p>
-          </section>
+            <button onClick={() => setPanel("overview")}>
+              Question overview
+            </button>
+            <button onClick={() => setPanel("notes")}>
+              {note ? "Edit note" : "Add note"}
+            </button>
+            <label>
+              <input
+                type="checkbox"
+                checked={showTime}
+                onChange={(e) => setShowTime(e.target.checked)}
+              />{" "}
+              Show timer
+            </label>
+            <button
+              onClick={() =>
+                void run(async () => {
+                  await timer.flush();
+                  await mutate((d) => {
+                    const s = d.sessions.find((s) => s.id === session.id)!;
+                    s.paused = !s.paused;
+                  });
+                })
+              }
+            >
+              {session.paused ? "Resume timer" : "Pause timer"}
+            </button>
+            <button onClick={() => setPanel("details")}>
+              Question details
+            </button>
+            <button
+              onClick={() => {
+                setPanel(null);
+                void finish();
+              }}
+              disabled={pending}
+            >
+              Finish session
+            </button>
+          </div>
+        )}
+        {panel === "overview" && (
+          <>
+            <section className="utility">
+              <h3>Session map</h3>
+              <div className="question-map">
+                {session.questionIds.map((id, index) => {
+                  const a = attempts.find((a) => a.questionId === id);
+                  return (
+                    <button
+                      key={id}
+                      aria-label={`Go to question ${index + 1}${a ? (a.correct ? ", correct" : ", incorrect") : ""}`}
+                      aria-current={
+                        index === session.index ? "step" : undefined
+                      }
+                      className={`${a ? (a.correct ? "map-correct" : "map-incorrect") : ""} ${index === session.index ? "current" : ""}`}
+                      disabled={pending}
+                      onClick={() => {
+                        setPanel(null);
+                        void navigate(index);
+                      }}
+                    >
+                      {index + 1}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="small muted">
+                Filled squares are answered. You can skip and return.
+              </p>
+            </section>
+            <button
+              onClick={() => {
+                setPanel(null);
+                void finish();
+              }}
+              disabled={pending}
+            >
+              Finish session
+            </button>
+          </>
+        )}
+        {panel === "notes" && (
           <section className="utility">
             <label htmlFor="question-note">
               <h3>My notes</h3>
@@ -425,19 +602,10 @@ export function Practice({
             />
             <p className="small muted">Saved locally as you type.</p>
           </section>
-          {question.section === "math" && (
-            <>
-              <button
-                className="calculator-toggle"
-                aria-expanded={calculator}
-                onClick={() => setCalculator(!calculator)}
-              >
-                {calculator ? "Hide calculator" : "Show calculator"}
-              </button>
-              {calculator && <Calculator />}
-            </>
-          )}
+        )}
+        {panel === "details" && (
           <div className="source-details">
+            <p>Difficulty: {question.difficulty || "Unspecified"}</p>
             <p>{question.skill || "Skill unspecified"}</p>
             <p>
               {question.source || "Source unspecified"}
@@ -459,8 +627,8 @@ export function Practice({
               </details>
             )}
           </div>
-        </aside>
-      </div>
+        )}
+      </dialog>
     </main>
   );
 }

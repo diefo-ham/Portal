@@ -24,7 +24,7 @@ const counts = {};
 try {
   await page.goto("http://127.0.0.1:4317");
   await page
-    .getByRole("heading", { name: /Question library/ })
+    .getByRole("heading", { name: /Questions available/ })
     .waitFor({ timeout: 240000 });
   const stored = await page.evaluate(async () => {
     const db = await new Promise((resolve, reject) => {
@@ -78,9 +78,9 @@ try {
     ),
   ];
   for (const q of examples) {
-    await page
-      .getByRole("button", { name: "Question library", exact: true })
-      .click();
+    if (await page.getByRole("button", { name: "← Exit", exact: true }).count())
+      await page.getByRole("button", { name: "← Exit", exact: true }).click();
+    await page.getByRole("button", { name: "Browse", exact: true }).click();
     await page
       .getByRole("textbox", { name: "Search questions" })
       .fill(q.sourceId);
@@ -109,7 +109,7 @@ try {
         .getByRole("radio")
         .nth(q.choices.findIndex((c) => c.id === q.answer.value))
         .check();
-    await page.getByRole("button", { name: "Submit answer" }).click();
+    await page.getByRole("button", { name: "Check answer" }).click();
     await page.getByText("Correct. Nicely done.").waitFor();
     await page.getByLabel("Original PDF explanation").waitFor();
     await page.waitForFunction(() =>

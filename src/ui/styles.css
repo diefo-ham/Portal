@@ -1191,8 +1191,173 @@ figcaption {
     font-size: 13px;
   }
 }
+.refine-selection {
+  margin-top: 20px;
+}
+.settings-link {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+}
+.refine-selection summary,
+.maintenance > summary {
+  cursor: pointer;
+  padding: 10px 0;
+}
+.refine-selection .filters {
+  margin-top: 16px;
+}
+.maintenance {
+  margin-top: 28px;
+}
+.focused-practice {
+  max-width: 1000px;
+  padding-top: 22px;
+}
+.focused-practice .practice-layout {
+  display: block;
+}
+.focused-practice .practice-toolbar {
+  gap: 20px;
+}
+.focused-practice .question-card {
+  min-height: 0;
+  padding: 28px 48px;
+}
+.focused-practice .question-card:focus {
+  outline: none;
+}
+.focused-practice .question-heading {
+  margin-bottom: 22px;
+  gap: 16px;
+  align-items: center;
+}
+.focused-practice .question-heading > div {
+  margin-right: auto;
+}
+.focused-practice .bookmark {
+  font-size: 23px;
+  min-width: 36px;
+  min-height: 36px;
+}
+.focused-practice .question-footer {
+  margin-top: 24px;
+}
+.focused-practice .answer-choice {
+  transition:
+    background 0.16s,
+    border-color 0.16s;
+}
+.focused-practice .wrong-answer {
+  border-color: var(--rust);
+  background: #fbf1e8;
+}
+.focused-practice .feedback {
+  animation: feedback-in 0.18s ease-out;
+}
+.practice-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: 85dvh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  color: inherit;
+  box-shadow: 0 20px 70px #172c2933;
+}
+.practice-dialog::backdrop {
+  background: #172c294d;
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.dialog-heading button {
+  font-size: 20px;
+  padding: 2px 10px;
+}
+.practice-dialog .utility {
+  margin-bottom: 18px;
+}
+.practice-dialog .source-details {
+  font-size: 13px;
+}
+.tool-menu {
+  display: grid;
+  gap: 10px;
+}
+.tool-menu > button,
+.tool-menu > label {
+  text-align: left;
+  padding: 12px;
+}
+.with-calculator {
+  max-width: 1340px;
+}
+.with-calculator .practice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+}
+.calculator-sheet {
+  position: sticky;
+  top: 20px;
+  width: 310px;
+  min-width: 240px;
+  max-width: 40vw;
+  resize: horizontal;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.calculator-sheet .utility {
+  margin-top: 12px;
+}
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 740px) {
+  .focused-practice .question-card {
+    padding: 22px;
+  }
+  .focused-practice .practice-toolbar {
+    flex-wrap: nowrap;
+    gap: 12px;
+  }
+  .focused-practice .toolbar-right {
+    width: auto;
+    margin-left: auto;
+  }
+  .focused-practice .toolbar-right button {
+    padding: 7px;
+  }
+  .with-calculator .practice-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .calculator-sheet {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    resize: none;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+    animation: none !important;
   }
 }

@@ -15,9 +15,18 @@ import { Filters, sectionName } from "./Filters";
 import { Practice } from "./Practice";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 export function App() {
-  const { data, mutate, error, setError, saving, loadingMessage } = useStudy();
-  const [page, setPage] = useState("library");
-  const [filters, setFilters] = useState<FilterValues>({ ...defaultFilters });
+  const { data, mutate, error, setError, loadingMessage } = useStudy();
+  const [page, setPage] = useState("home");
+  const [protectedTests, setProtectedTests] = useState(
+    () => localStorage.getItem("sat-protect-tests") !== "false",
+  );
+  const [filters, setFilters] = useState<FilterValues>(() => ({
+    ...defaultFilters,
+    active:
+      localStorage.getItem("sat-protect-tests") === "false"
+        ? "include"
+        : "hide",
+  }));
   const [sessionId, setSessionId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -77,6 +86,15 @@ export function App() {
     });
   const start = async (ids: string[]) => {
     if (!ids.length) return;
+    if (
+      data?.questions.some(
+        (q) => ids.includes(q.id) && q.testStatus === "active",
+      ) &&
+      !window.confirm(
+        "This session includes active practice-test questions and may spoil a future Bluebook test. Begin anyway?",
+      )
+    )
+      return;
     await run(async () => {
       let id = "";
       await mutate((d) => {
@@ -109,40 +127,45 @@ export function App() {
   };
   return (
     <>
-      <header className="app-header">
-        <button className="brand" onClick={() => setPage("library")}>
-          <span className="brand-icon">S</span>
-          <span>
-            SAT <b>Study</b>
-          </span>
-        </button>
-        <nav aria-label="Main navigation">
-          {[
-            ["library", "Question library"],
-            ["review", "Review & progress"],
-            ["data", "My data"],
-          ].map(([id, label]) => (
-            <button
-              className={page === id ? "active" : ""}
-              key={id}
-              onClick={() => {
-                setPage(id);
-                setMessage("");
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
-        <span className="local-indicator">
-          <i />{" "}
-          {error
-            ? "Save needs attention"
-            : saving
-              ? "Saving locally…"
-              : "Local workspace"}
-        </span>
-      </header>
+      {!(page === "practice" && current && !current.finishedAt) && (
+        <header className="app-header">
+          <button className="brand" onClick={() => setPage("home")}>
+            <span className="brand-icon">S</span>
+            <span>
+              SAT <b>Study</b>
+            </span>
+          </button>
+          <nav aria-label="Main navigation">
+            {[
+              ["home", "Practice"],
+              ["review", "Review"],
+              ["library", "Browse"],
+            ].map(([id, label]) => (
+              <button
+                className={page === id ? "active" : ""}
+                key={id}
+                onClick={() => {
+                  setPage(id);
+                  setMessage("");
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+          <button
+            className="settings-link"
+            aria-label="Settings"
+            title="Settings"
+            onClick={() => {
+              setPage("data");
+              setMessage("");
+            }}
+          >
+            ⚙
+          </button>
+        </header>
+      )}
       {error && (
         <div role="alert" className="banner error">
           {error}
@@ -165,20 +188,23 @@ export function App() {
           data={data}
           session={current}
           mutate={mutate}
-          onBack={() => setPage("library")}
+          onBack={() => setPage("home")}
           onRetry={(ids) => void start(ids)}
         />
-      ) : page === "library" ? (
+      ) : page === "library" || page === "home" ? (
         <main className="page">
           <div className="page-heading">
             <div>
               <p className="eyebrow">YOUR DAILY PRACTICE</p>
-              <h1>Make room for a little progress.</h1>
+              <h1>
+                {page === "library"
+                  ? "Browse questions."
+                  : "Make room for a little progress."}
+              </h1>
               <p className="muted">
                 Choose a focus. Take your time. Learn from every answer.
               </p>
             </div>
-            <button onClick={() => setPage("data")}>＋ Import questions</button>
           </div>
           {ongoing && (
             <div className="resume-strip">
@@ -230,32 +256,81 @@ export function App() {
                   <h2>Find your focus</h2>
                   <button
                     className="text-button"
-                    onClick={() => changeFilters({ ...defaultFilters })}
+                    onClick={() =>
+                      changeFilters({
+                        ...defaultFilters,
+                        active: protectedTests ? "hide" : "include",
+                      })
+                    }
                   >
                     Reset filters
                   </button>
                 </div>
-                <Filters data={data} value={filters} onChange={changeFilters} />
-                <div className="filter-bottom">
-                  <label className="search">
-                    <span className="sr-only">Search questions</span>
-                    <input
-                      placeholder="Search questions, skills, or source IDs…"
-                      value={filters.search}
-                      onChange={(e) =>
-                        changeFilters({ ...filters, search: e.target.value })
-                      }
+                <Filters
+                  data={data}
+                  value={filters}
+                  onChange={changeFilters}
+                  compact={page === "home"}
+                />
+                {page === "home" && (
+                  <details className="refine-selection">
+                    <summary>
+                      Refine selection
+                      {filters.skill ||
+                      filters.difficulty ||
+                      filters.status ||
+                      filters.bookmark ||
+                      filters.search ||
+                      filters.active !== (protectedTests ? "hide" : "include")
+                        ? " · custom filters"
+                        : ""}
+                    </summary>
+                    <Filters
+                      data={data}
+                      value={filters}
+                      onChange={changeFilters}
+                      advanced
                     />
-                  </label>
-                  <span className="small muted">
-                    Unknown status is included when active questions are hidden.
-                  </span>
-                </div>
+                    {filters.search && (
+                      <p className="small">
+                        Search: {filters.search}{" "}
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            changeFilters({ ...filters, search: "" })
+                          }
+                        >
+                          Clear search
+                        </button>
+                      </p>
+                    )}
+                  </details>
+                )}
+                {page === "library" && (
+                  <div className="filter-bottom">
+                    <label className="search">
+                      <span className="sr-only">Search questions</span>
+                      <input
+                        placeholder="Search questions, skills, or source IDs…"
+                        value={filters.search}
+                        onChange={(e) =>
+                          changeFilters({ ...filters, search: e.target.value })
+                        }
+                      />
+                    </label>
+                    <span className="small muted">
+                      Unknown status is included when active questions are
+                      hidden.
+                    </span>
+                  </div>
+                )}
               </section>
               <div className="library-toolbar">
                 <div>
                   <h2>
-                    Question library{" "}
+                    {page === "home"
+                      ? "Questions available"
+                      : "Question library"}{" "}
                     <span className="count">{filtered.length}</span>
                   </h2>
                   <p className="small muted">
@@ -302,50 +377,60 @@ export function App() {
                   submitted answers and notes.
                 </p>
               )}
-              <div className="question-list">
-                {filtered.slice(0, visible).map((q, index) => {
-                  const a = latestAttempt(data, q.id);
-                  const marked = data.annotations[q.id]?.bookmarked;
-                  return (
-                    <button
-                      className="question-row"
-                      key={q.id}
-                      onClick={() => void start([q.id])}
-                    >
-                      <span className="row-number">
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-                      <span className="row-body">
-                        <span className="row-meta">
-                          {sectionName(q.section)}
-                          <span> / </span>
-                          {q.domain || "Domain unspecified"}
+              {page === "home" && (
+                <button
+                  className="text-button"
+                  onClick={() => setPage("library")}
+                >
+                  Browse individual questions →
+                </button>
+              )}
+              {page === "library" && (
+                <div className="question-list">
+                  {filtered.slice(0, visible).map((q, index) => {
+                    const a = latestAttempt(data, q.id);
+                    const marked = data.annotations[q.id]?.bookmarked;
+                    return (
+                      <button
+                        className="question-row"
+                        key={q.id}
+                        onClick={() => void start([q.id])}
+                      >
+                        <span className="row-number">
+                          {String(index + 1).padStart(2, "0")}
                         </span>
-                        <span className="row-title">{q.stem}</span>
-                        <span className="small muted">
-                          {q.skill || "Skill unspecified"}
-                          {marked ? " · ★ Bookmarked" : ""}
+                        <span className="row-body">
+                          <span className="row-meta">
+                            {sectionName(q.section)}
+                            <span> / </span>
+                            {q.domain || "Domain unspecified"}
+                          </span>
+                          <span className="row-title">{q.stem}</span>
+                          <span className="small muted">
+                            {q.skill || "Skill unspecified"}
+                            {marked ? " · ★ Bookmarked" : ""}
+                          </span>
                         </span>
-                      </span>
-                      <span className="row-tags">
-                        <span
-                          className={`status ${a ? (a.correct ? "correct" : "incorrect") : ""}`}
-                        >
-                          {a
-                            ? a.correct
-                              ? "Correct"
-                              : "Incorrect"
-                            : "Unanswered"}
+                        <span className="row-tags">
+                          <span
+                            className={`status ${a ? (a.correct ? "correct" : "incorrect") : ""}`}
+                          >
+                            {a
+                              ? a.correct
+                                ? "Correct"
+                                : "Incorrect"
+                              : "Unanswered"}
+                          </span>
+                          <span className="small muted">
+                            {q.difficulty || "Unspecified"} · {q.testStatus}
+                          </span>
                         </span>
-                        <span className="small muted">
-                          {q.difficulty || "Unspecified"} · {q.testStatus}
-                        </span>
-                      </span>
-                      <span className="row-arrow">↗</span>
-                    </button>
-                  );
-                })}
-              </div>
+                        <span className="row-arrow">↗</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {!filtered.length && (
                 <div className="empty-state">
                   <h2>No questions match yet.</h2>
@@ -357,7 +442,7 @@ export function App() {
                   </button>
                 </div>
               )}
-              {filtered.length > visible && (
+              {page === "library" && filtered.length > visible && (
                 <button
                   className="load-more"
                   onClick={() => setVisible(visible + 40)}
@@ -471,171 +556,198 @@ export function App() {
         </main>
       ) : (
         <main className="page narrow">
-          <p className="eyebrow">A LIBRARY THAT STAYS WITH YOU</p>
-          <h1>Your questions. Your laptop.</h1>
-          <p className="muted">
-            Question content and study history stay in this browser. No account,
-            uploads, or cloud sync.
-          </p>
-          <div className="data-grid">
-            <section className="data-card">
-              <h2>Import a question set</h2>
-              <p>
-                Choose normalized JSON in the documented schema. Imports are
-                validated before saving; existing source IDs are skipped.
-              </p>
-              <label className={`file-button ${busy ? "disabled" : ""}`}>
-                Choose question JSON
-                <input
-                  aria-label="Import question JSON"
-                  type="file"
-                  accept=".json,application/json"
-                  disabled={busy}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    void run(() => readFile(file));
-                  }}
-                />
-              </label>
-              <p className="small muted">
-                Prepared PDF libraries are loaded automatically from this
-                laptop. Keep original exports and private library files outside
-                Git.
-              </p>
-              <button
-                className="text-button"
-                disabled={busy}
-                onClick={() =>
-                  void run(() => importData(synthetic, "synthetic.json"))
-                }
-              >
-                Load synthetic sample
-              </button>
-              <button
-                className="text-button"
-                onClick={() =>
-                  downloadJson(synthetic, "synthetic-questions.json")
-                }
-              >
-                Download example JSON
-              </button>
-            </section>
-            <section className="data-card">
-              <h2>Back up your work</h2>
-              <p>
-                Export questions, answers, notes, bookmarks, and sessions
-                together. Keep backups somewhere you control.
-              </p>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() =>
-                  exportBackup(
-                    `sat-study-${new Date().toISOString().slice(0, 10)}.backup.json`,
-                  )
-                }
-              >
-                Export full backup
-              </button>
-              <label className="file-button secondary">
-                Restore a backup
-                <input
-                  aria-label="Restore backup JSON"
-                  type="file"
-                  accept=".json,application/json"
-                  disabled={busy}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    void run(() => readFile(file, true));
-                  }}
-                />
-              </label>
-              <p className="small muted">
-                Use the same browser and http://127.0.0.1:4317 each time.
-                Clearing site data or using private browsing can remove your
-                library.
-              </p>
-            </section>
-          </div>
-          {restore && (
-            <section className="restore-confirm" role="alert">
-              <h2>Replace local data with this backup?</h2>
-              <p>
-                {restore.questions.length} questions, {restore.attempts.length}{" "}
-                attempts, {restore.sessions.length} sessions. This replaces the
-                current library and history.
-              </p>
-              <button
-                disabled={busy}
-                onClick={() => exportBackup("before-restore.backup.json")}
-              >
-                Back up current data first
-              </button>
-              <button
-                className="danger"
-                disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    const normalized = await storeInlineDocuments(restore);
-                    await mutate((d) => {
-                      Object.assign(d, normalized);
-                    });
-                    setRestore(undefined);
-                    setSessionId("");
-                    setMessage(
-                      "Backup restored. Saved session timers are paused.",
-                    );
-                  })
-                }
-              >
-                Replace with backup
-              </button>
-              <button onClick={() => setRestore(undefined)}>Cancel</button>
-            </section>
-          )}
-          <section className="local-storage-note">
-            <h3>Stored on this device</h3>
-            <p>
-              {data.questions.length} questions · {data.attempts.length}{" "}
-              attempts ·{" "}
-              {
-                Object.values(data.annotations).filter((a) => a.bookmarked)
-                  .length
-              }{" "}
-              bookmarks
-            </p>
+          <h1>Settings</h1>
+          <section className="utility">
+            <label>
+              <input
+                type="checkbox"
+                checked={protectedTests}
+                onChange={(e) => {
+                  const protect = e.target.checked;
+                  setProtectedTests(protect);
+                  localStorage.setItem("sat-protect-tests", String(protect));
+                  changeFilters({
+                    ...filters,
+                    active: protect ? "hide" : "include",
+                  });
+                }}
+              />{" "}
+              Protect unused practice-test questions
+            </label>
             <p className="small muted">
-              IndexedDB database: sat-study-local. A running local server is
-              required; an internet connection is not.
+              Active questions are hidden by default. You can override this for
+              a session in Refine selection. Unknown questions may still appear
+              in a practice test.
             </p>
           </section>
-          <h2>Import history</h2>
-          {data.imports.length ? (
-            data.imports
-              .slice()
-              .reverse()
-              .map((x) => (
-                <div className="import-row" key={x.id}>
-                  <span>
-                    {x.filename}
-                    <small>{new Date(x.importedAt).toLocaleString()}</small>
-                  </span>
-                  <span>
-                    {x.added} added · {x.skipped} skipped
-                  </span>
-                </div>
-              ))
-          ) : (
-            <p className="muted">No imports yet.</p>
-          )}
+          <details className="maintenance">
+            <summary>Library & maintenance</summary>
+            <p className="muted">
+              Question content and study history stay in this browser. No
+              account, uploads, or cloud sync.
+            </p>
+            <div className="data-grid">
+              <section className="data-card">
+                <h2>Import a question set</h2>
+                <p>
+                  Choose normalized JSON in the documented schema. Imports are
+                  validated before saving; existing source IDs are skipped.
+                </p>
+                <label className={`file-button ${busy ? "disabled" : ""}`}>
+                  Choose question JSON
+                  <input
+                    aria-label="Import question JSON"
+                    type="file"
+                    accept=".json,application/json"
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      void run(() => readFile(file));
+                    }}
+                  />
+                </label>
+                <p className="small muted">
+                  Prepared PDF libraries are loaded automatically from this
+                  laptop. Keep original exports and private library files
+                  outside Git.
+                </p>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(() => importData(synthetic, "synthetic.json"))
+                  }
+                >
+                  Load synthetic sample
+                </button>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    downloadJson(synthetic, "synthetic-questions.json")
+                  }
+                >
+                  Download example JSON
+                </button>
+              </section>
+              <section className="data-card">
+                <h2>Back up your work</h2>
+                <p>
+                  Export questions, answers, notes, bookmarks, and sessions
+                  together. Keep backups somewhere you control.
+                </p>
+                <button
+                  className="primary"
+                  disabled={busy}
+                  onClick={() =>
+                    exportBackup(
+                      `sat-study-${new Date().toISOString().slice(0, 10)}.backup.json`,
+                    )
+                  }
+                >
+                  Export full backup
+                </button>
+                <label className="file-button secondary">
+                  Restore a backup
+                  <input
+                    aria-label="Restore backup JSON"
+                    type="file"
+                    accept=".json,application/json"
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = "";
+                      void run(() => readFile(file, true));
+                    }}
+                  />
+                </label>
+                <p className="small muted">
+                  Use the same browser and http://127.0.0.1:4317 each time.
+                  Clearing site data or using private browsing can remove your
+                  library.
+                </p>
+              </section>
+            </div>
+            {restore && (
+              <section className="restore-confirm" role="alert">
+                <h2>Replace local data with this backup?</h2>
+                <p>
+                  {restore.questions.length} questions,{" "}
+                  {restore.attempts.length} attempts, {restore.sessions.length}{" "}
+                  sessions. This replaces the current library and history.
+                </p>
+                <button
+                  disabled={busy}
+                  onClick={() => exportBackup("before-restore.backup.json")}
+                >
+                  Back up current data first
+                </button>
+                <button
+                  className="danger"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      const normalized = await storeInlineDocuments(restore);
+                      await mutate((d) => {
+                        Object.assign(d, normalized);
+                      });
+                      setRestore(undefined);
+                      setSessionId("");
+                      setMessage(
+                        "Backup restored. Saved session timers are paused.",
+                      );
+                    })
+                  }
+                >
+                  Replace with backup
+                </button>
+                <button onClick={() => setRestore(undefined)}>Cancel</button>
+              </section>
+            )}
+            <section className="local-storage-note">
+              <h3>Stored on this device</h3>
+              <p>
+                {data.questions.length} questions · {data.attempts.length}{" "}
+                attempts ·{" "}
+                {
+                  Object.values(data.annotations).filter((a) => a.bookmarked)
+                    .length
+                }{" "}
+                bookmarks
+              </p>
+              <p className="small muted">
+                IndexedDB database: sat-study-local. A running local server is
+                required; an internet connection is not.
+              </p>
+            </section>
+            <h2>Import history</h2>
+            {data.imports.length ? (
+              data.imports
+                .slice()
+                .reverse()
+                .map((x) => (
+                  <div className="import-row" key={x.id}>
+                    <span>
+                      {x.filename}
+                      <small>{new Date(x.importedAt).toLocaleString()}</small>
+                    </span>
+                    <span>
+                      {x.added} added · {x.skipped} skipped
+                    </span>
+                  </div>
+                ))
+            ) : (
+              <p className="muted">No imports yet.</p>
+            )}
+          </details>
         </main>
       )}
-      <footer className="app-footer">
-        <span>Made for focused, independent study.</span>
-        <span>Personal practice · Not affiliated with College Board</span>
-      </footer>
+      {page === "data" && (
+        <footer className="app-footer">
+          <span>Made for focused, independent study.</span>
+          <span>Personal practice · Not affiliated with College Board</span>
+        </footer>
+      )}
     </>
   );
 }

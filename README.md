@@ -27,11 +27,14 @@ For frontend changes, stop the production server and run `npm.cmd run dev` at th
 ## First session
 
 1. Your prepared PDF library loads automatically on first launch in a browser profile. Allow the local image-import progress to finish. If no prepared library exists, **Load synthetic sample** provides 12 original examples.
-2. Choose section, domain, skill, difficulty, answer status, bookmark, and practice-test status filters. Active questions are hidden by default. Choose **Inactive only** if you also want to exclude uncertain questions.
-3. Start a session (the first 5, 10, 20, or all matching questions, in library order), or open an individual question. A new session ends the previous one while retaining its submitted answers.
-4. Submit an answer, read the explanation, bookmark, and take notes. Skip and return using the session map. Numeric questions accept equivalent decimal/fraction values.
-5. Finish to review results. **Review & progress** shows recent sessions, latest mistakes, historical mistakes, accuracy, response time, and missed skills.
-6. Export a full backup from **My data** periodically. Restore validates the backup and asks before replacing current data.
+2. On **Practice**, choose a section and domain. **Refine selection** reveals skill, difficulty, answer status, bookmarks, and practice-test status. Active questions are hidden by default. Choose **Inactive only** to also exclude uncertain questions.
+3. Start a session (the first 5, 10, 20, or all matching questions, in library order). **Browse** retains the complete searchable library and individual-question access. A new session ends the previous one while retaining its submitted answers.
+4. Choose an answer and **Check answer**, then read the explanation and continue. A–D selects a choice; Enter checks it and, after feedback, advances. Numeric entries also support Enter. Numeric questions accept equivalent decimal/fraction values.
+5. The star bookmarks a question; the pencil opens notes. Click the question count for an overview, or **•••** for timing, notes, question details, and early completion. Notes save as you type. Timing is collected quietly and stops when you leave practice or switch tabs. The Math calculator opens alongside the question and retains its working values across consecutive Math questions.
+6. Finish to review results. **Review** retains recent sessions, latest mistakes, historical mistakes, accuracy, response time, and missed skills.
+7. The gear opens **Settings**. Practice-test protection is a local preference; starting an active-question session asks once for confirmation. **Library & maintenance** contains all existing import, backup, restore, and storage tools. Restore still validates and confirms before replacing data.
+
+The first redesign milestone changes navigation and practice presentation. Home and session-results layouts remain provisional; the fuller Home/Results redesign and automatic light/dark themes are deferred. See [milestone notes](docs/practice-redesign.md).
 
 ## Technology and storage
 
