@@ -45,10 +45,7 @@ test("version-one study data survives the image-store migration", async ({
   await expect(
     page.getByRole("button", { name: "Remove bookmark" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Edit note", exact: true }).click();
-  await expect(page.getByLabel("My notes")).toHaveValue(
-    "Existing note from the MVP",
-  );
+  await expect(page.getByRole("button", { name: /note/i })).toHaveCount(0);
 });
 
 test("PDF image storage, spoiler separation, portable backup and restore", async ({
@@ -150,9 +147,11 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByText("Library & maintenance", { exact: true }).click();
-  page.once("dialog", (dialog) => dialog.accept());
   await page
     .getByRole("button", { name: "Reset study progress", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm reset", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Study progress reset");
   await page.reload();

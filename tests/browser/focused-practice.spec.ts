@@ -92,7 +92,7 @@ test("practice-test protection persists and active overrides require a session c
   ).toBeChecked();
   await expect(
     page.getByRole("button", { name: "Export full backup" }),
-  ).not.toBeVisible();
+  ).toBeVisible();
   await page.getByLabel("Protect unused practice-test questions").uncheck();
   await page.reload();
   await page.getByText("Refine selection", { exact: true }).click();

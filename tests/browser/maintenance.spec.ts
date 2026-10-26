@@ -81,9 +81,6 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   await page
     .getByRole("button", { name: "Bookmark question", exact: true })
     .click();
-  await page.getByRole("button", { name: "Add note", exact: true }).click();
-  await page.getByLabel("My notes").fill("Reset me");
-  await page.getByRole("button", { name: "Close panel" }).click();
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Check answer" }).click();
   await page.getByRole("button", { name: "Practice tools" }).click();
@@ -98,26 +95,31 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   await page.getByLabel("Protect unused practice-test questions").uncheck();
   await expect(
     page.getByRole("button", { name: "Reset study progress", exact: true }),
-  ).not.toBeVisible();
-  await page.getByText("Library & maintenance", { exact: true }).click();
+  ).toBeVisible();
   const before = await state(page);
   expect(before.attempts).toHaveLength(1);
   expect(before.sessions).toHaveLength(2);
   expect(before.sessions.some((s) => !s.finishedAt)).toBe(true);
-  expect(before.annotations["demo-m01"].note).toBe("Reset me");
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain(
-      "Your question bank and interface preferences will remain available",
-    );
-    await dialog.dismiss();
-  });
+  expect(before.annotations["demo-m01"].bookmarked).toBe(true);
   await page
     .getByRole("button", { name: "Reset study progress", exact: true })
     .click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "Your question bank and interface preferences will remain available",
+  );
+  await expect(
+    page.getByRole("button", { name: "Cancel", exact: true }),
+  ).toBeFocused();
+  await expect(page.getByLabel("Also clear bookmarks")).not.toBeChecked();
+  await page.getByLabel("Also clear bookmarks").check();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
   expect(await state(page)).toEqual(before);
-  page.once("dialog", (dialog) => dialog.accept());
   await page
     .getByRole("button", { name: "Reset study progress", exact: true })
+    .click();
+  await expect(page.getByLabel("Also clear bookmarks")).not.toBeChecked();
+  await page
+    .getByRole("button", { name: "Confirm reset", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Study progress reset");
   const after = await state(page);
@@ -125,7 +127,9 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   expect(after.imports).toEqual(before.imports);
   expect(after.attempts).toEqual([]);
   expect(after.sessions).toEqual([]);
-  expect(after.annotations).toEqual({});
+  expect(after.annotations).toEqual({
+    "demo-m01": { bookmarked: true, note: "" },
+  });
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Resume practice" }),
@@ -135,6 +139,14 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   await expect(
     page.getByLabel("Protect unused practice-test questions"),
   ).not.toBeChecked();
+  await page
+    .getByRole("button", { name: "Reset study progress", exact: true })
+    .click();
+  await page.getByLabel("Also clear bookmarks").check();
+  await page
+    .getByRole("button", { name: "Confirm reset", exact: true })
+    .click();
+  await expect.poll(async () => (await state(page)).annotations).toEqual({});
   await page.getByRole("button", { name: "Practice", exact: true }).click();
   // Return to protected questions before practicing, without changing the saved preference.
   await page.getByText("Refine selection", { exact: true }).click();

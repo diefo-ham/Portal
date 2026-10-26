@@ -83,7 +83,7 @@ describe("question integrity and practice rules", () => {
       skipped: 0,
     });
     await updateData((current) => Object.assign(current, d));
-    await updateData(resetStudyProgress);
+    await updateData((d) => resetStudyProgress(d, true));
     const fresh = await readData();
     expect(fresh.questions).toEqual(questions);
     expect(fresh.imports).toEqual(d.imports);
@@ -96,6 +96,11 @@ describe("question integrity and practice rules", () => {
       filterQuestions(fresh, { ...defaultFilters, status: "incorrect" }),
     ).toEqual([]);
     expect(await readAsset(key)).toBeDefined();
+    await updateData((current) => Object.assign(current, d));
+    await updateData(resetStudyProgress);
+    expect((await readData()).annotations).toEqual({
+      [questions[0].id]: { bookmarked: true, note: "" },
+    });
   });
   it("guards session membership and records only one submission per question", () => {
     const d = { ...emptyData(), questions };

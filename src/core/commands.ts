@@ -72,8 +72,14 @@ export function finishSession(data: StudyData, sessionId: string) {
  * The storage adapter commits this as one atomic state transaction; image assets
  * and interface preferences are outside these fields and are never touched.
  */
-export function resetStudyProgress(data: StudyData) {
+export function resetStudyProgress(data: StudyData, clearBookmarks = false) {
   data.attempts = [];
   data.sessions = [];
-  data.annotations = {};
+  data.annotations = clearBookmarks
+    ? {}
+    : Object.fromEntries(
+        Object.entries(data.annotations)
+          .filter(([, annotation]) => annotation.bookmarked)
+          .map(([id]) => [id, { bookmarked: true, note: "" }]),
+      );
 }

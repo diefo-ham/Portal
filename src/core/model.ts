@@ -43,6 +43,7 @@ export interface Attempt {
 }
 export interface Annotation {
   bookmarked: boolean;
+  /** Legacy backup compatibility only. Notes have no editing or display UI. */
   note: string;
 }
 export interface Filters {

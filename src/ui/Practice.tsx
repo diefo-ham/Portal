@@ -30,9 +30,9 @@ export function Practice({
   );
   const [pending, setPending] = useState(false);
   const [calculator, setCalculator] = useState(false);
-  const [panel, setPanel] = useState<
-    "overview" | "notes" | "details" | "tools" | null
-  >(null);
+  const [panel, setPanel] = useState<"overview" | "details" | "tools" | null>(
+    null,
+  );
   const [showTime, setShowTime] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const questionTop = useRef<HTMLElement>(null);
@@ -54,7 +54,6 @@ export function Practice({
     if (attempt) nextButton.current?.focus({ preventScroll: true });
   }, [attempt?.id]);
   const [draft, setDraft] = useState<{ id: string; value: string }>();
-  const [noteDraft, setNoteDraft] = useState<{ id: string; value: string }>();
   const timer = useQuestionTimer(
     session.id,
     question.id,
@@ -67,8 +66,6 @@ export function Practice({
     bookmarked: false,
     note: "",
   };
-  const note =
-    noteDraft?.id === question.id ? noteDraft.value : annotation.note;
   const run = async (fn: () => Promise<unknown>) => {
     setPending(true);
     try {
@@ -179,8 +176,12 @@ export function Practice({
           e.altKey ||
           e.ctrlKey ||
           e.metaKey ||
+          e.shiftKey ||
+          e.repeat ||
           (e.target instanceof HTMLElement &&
-            e.target.matches('input:not([type="radio"]),textarea,select'))
+            e.target.closest(
+              'textarea,select,input:not([type="radio"]),[contenteditable="true"],[role="textbox"]',
+            ))
         )
           return;
         const choice = question.choices?.find(
@@ -190,12 +191,44 @@ export function Practice({
           e.preventDefault();
           choose(choice.id);
         } else if (
+          (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+          !(
+            e.target instanceof HTMLElement &&
+            e.target.closest(
+              'input,[role="slider"],[role="spinbutton"],[role="listbox"],[role="combobox"]',
+            )
+          )
+        ) {
+          const index = session.index + (e.key === "ArrowLeft" ? -1 : 1);
+          if (index >= 0 && index < session.questionIds.length) {
+            e.preventDefault();
+            void navigate(index);
+          }
+        } else if (!(
+          e.target instanceof HTMLElement &&
+          e.target.closest(
+            'button,input,a,[role="button"],[role="slider"],[role="spinbutton"]',
+          )
+        )) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            if (attempt) {
+              if (session.index < session.questionIds.length - 1)
+                void navigate(session.index + 1);
+              else void finish();
+            } else if (
+              answer &&
+              (question.answer.type === "choice" ||
+                numericValue(answer) !== undefined)
+            )
+              void submit();
+          }
+        } else if (
           e.key === "Enter" &&
-          !(e.target instanceof HTMLElement && e.target.closest("button")) &&
+          e.target instanceof HTMLInputElement &&
+          e.target.type === "radio" &&
           answer &&
-          !attempt &&
-          (question.answer.type === "choice" ||
-            numericValue(answer) !== undefined)
+          !attempt
         ) {
           e.preventDefault();
           void submit();
@@ -291,14 +324,6 @@ export function Practice({
               }
             >
               {annotation.bookmarked ? "★" : "☆"}
-            </button>
-            <button
-              className="bookmark"
-              aria-label={note ? "Edit note" : "Add note"}
-              title={note ? "Edit note" : "Add note"}
-              onClick={() => openPanel("notes")}
-            >
-              {note ? "✎ •" : "✎"}
             </button>
           </div>
           {question.passage && (
@@ -481,11 +506,9 @@ export function Practice({
           <h2>
             {panel === "overview"
               ? "Question overview"
-              : panel === "notes"
-                ? "My notes"
-                : panel === "details"
-                  ? "Question details"
-                  : "Practice tools"}
+              : panel === "details"
+                ? "Question details"
+                : "Practice tools"}
           </h2>
           <button aria-label="Close panel" onClick={() => setPanel(null)}>
             ×
@@ -494,15 +517,13 @@ export function Practice({
         {panel === "tools" && (
           <div className="tool-menu">
             <p className="small muted">
-              Use A–D to choose an answer, then Enter to check it. After
-              feedback, Enter advances. Timing pauses when you leave practice or
-              switch tabs.
+              Use A–D to choose an answer. Enter or Space checks it and advances
+              after feedback. Left and Right move between questions. These
+              shortcuts leave focused form controls and buttons their normal
+              behavior. Timing pauses when you leave practice or switch tabs.
             </p>
             <button onClick={() => setPanel("overview")}>
               Question overview
-            </button>
-            <button onClick={() => setPanel("notes")}>
-              {note ? "Edit note" : "Add note"}
             </button>
             <label>
               <input
@@ -579,29 +600,6 @@ export function Practice({
               Finish session
             </button>
           </>
-        )}
-        {panel === "notes" && (
-          <section className="utility">
-            <label htmlFor="question-note">
-              <h3>My notes</h3>
-            </label>
-            <textarea
-              id="question-note"
-              value={note}
-              placeholder="What will you remember next time?"
-              onChange={(e) => {
-                const note = e.target.value;
-                setNoteDraft({ id: question.id, value: note });
-                void mutate((d) => {
-                  d.annotations[question.id] = {
-                    bookmarked: d.annotations[question.id]?.bookmarked || false,
-                    note,
-                  };
-                }).catch(() => {});
-              }}
-            />
-            <p className="small muted">Saved locally as you type.</p>
-          </section>
         )}
         {panel === "details" && (
           <div className="source-details">

@@ -46,29 +46,8 @@ test("offline local workflow, history, reload persistence and backup restore", a
   await page
     .getByRole("button", { name: "Bookmark question", exact: true })
     .click();
-  await page.getByRole("button", { name: "Add note", exact: true }).click();
-  await page.getByLabel("My notes").fill("Subtract before dividing.");
-  await expect
-    .poll(async () =>
-      page.evaluate(async () => {
-        const db = await new Promise<IDBDatabase>((r) => {
-          const q = indexedDB.open("sat-study-local");
-          q.onsuccess = () => r(q.result);
-        });
-        return await new Promise((r) => {
-          const q = db.transaction("state").objectStore("state").get("current");
-          q.onsuccess = () => r(q.result.annotations["demo-m01"]?.note);
-        });
-      }),
-    )
-    .toBe("Subtract before dividing.");
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).click();
-  await page.getByRole("button", { name: "Edit note", exact: true }).click();
-  await expect(page.getByLabel("My notes")).toHaveValue(
-    "Subtract before dividing.",
-  );
-  await page.getByRole("button", { name: "Close panel" }).click();
   await expect(
     page.getByRole("button", { name: "Remove bookmark" }),
   ).toBeVisible();

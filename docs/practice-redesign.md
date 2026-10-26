@@ -1,5 +1,17 @@
 # Focused practice milestone — Stages 1 and 2
 
+## Current follow-up (2026-10-26)
+
+The sections below record earlier checkpoints. This follow-up supersedes their notes UI, maintenance disclosure, reset-bookmark policy, and keyboard details:
+
+- Removed all note buttons, the notes dialog, editing state, save handlers, and unused note-editor CSS. Retained the legacy `Annotation.note` field and existing values for compatibility with current IndexedDB records and old backups. Nothing silently deletes existing legacy notes on upgrade. Either reset option clears legacy notes.
+- Reset now opens an accessible native dialog with Cancel focused first. It explains the cleared progress and preserved corpus/preferences, and offers one unchecked checkbox: Also clear bookmarks. Default reset keeps bookmarked IDs and clears all other annotation data; selecting the checkbox clears all annotations. Escape/Cancel perform no mutation. The choice resets to unchecked each time the dialog opens.
+- Settings is a subdued text item next to Browse, with a current-page indicator. Library & maintenance is an ordinary section directly on Settings, without an expansion toggle. This removes a layer of nesting while keeping maintenance outside practice.
+- Left/Right navigate question positions without submission. Space matches the primary Enter action while reading: check an answer, advance after feedback, or review at the end. Arrow navigation also works on navigation buttons. Text/select/calculator controls, radio groups, checkboxes, links, dialog controls, and editable regions keep their normal keys. Focused buttons retain native Enter/Space activation. Numeric Enter submission remains supported.
+- The single-session rule is explicit in `beginSession`: it finishes every existing open session before appending a new one. The data model stores many historical sessions; this is a current product rule, not a storage constraint. Multiple resumable sessions would require a picker and additional lifecycle rules. No such management is introduced for the current sequential practice workflow.
+
+Verification: production build, 15 core/storage tests, and ten Edge workflow tests, including shuffle/resume, retained/cleared bookmarks, reset cancellation, legacy-data compatibility, Space/arrow actions and native control exceptions, PDF practice after reset, narrow-screen layout, offline operation, and backup/restore.
+
 Implemented on `codex/focused-practice`, starting from the unchanged checkpoint `0f92e81`.
 
 ## Scope

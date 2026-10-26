@@ -18,6 +18,7 @@ import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
 import { Filters, sectionName } from "./Filters";
 import { Practice } from "./Practice";
+import { ResetProgress } from "./ResetProgress";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 export function App() {
   const { data, mutate, error, setError, loadingMessage } = useStudy();
@@ -162,18 +163,19 @@ export function App() {
                 {label}
               </button>
             ))}
+            <button
+              className={`settings-link ${page === "data" ? "active" : ""}`}
+              aria-current={page === "data" ? "page" : undefined}
+              aria-label="Settings"
+              title="Settings"
+              onClick={() => {
+                setPage("data");
+                setMessage("");
+              }}
+            >
+              Settings
+            </button>
           </nav>
-          <button
-            className="settings-link"
-            aria-label="Settings"
-            title="Settings"
-            onClick={() => {
-              setPage("data");
-              setMessage("");
-            }}
-          >
-            ⚙
-          </button>
         </header>
       )}
       {error && (
@@ -383,7 +385,7 @@ export function App() {
               {ongoing && (
                 <p className="small muted">
                   Starting a new session ends the current session and keeps all
-                  submitted answers and notes.
+                  submitted answers and bookmarks.
                 </p>
               )}
               {page === "home" && (
@@ -589,42 +591,29 @@ export function App() {
               in a practice test.
             </p>
           </section>
-          <details className="maintenance">
-            <summary>Library & maintenance</summary>
-            <section className="data-card spaced">
-              <h2>Reset study progress</h2>
-              <p>
-                Start fresh by clearing answers, sessions, bookmarks, notes, and
-                recorded practice time. Your question bank and interface
-                preferences stay available.
-              </p>
-              <button
-                disabled={busy}
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      "Reset all study progress? This clears all answers, completed and unfinished sessions, bookmarks, notes, and recorded practice time. Your question bank and interface preferences will remain available.",
-                    )
-                  )
-                    return;
-                  void run(async () => {
-                    await mutate(resetStudyProgress);
-                    setSessionId("");
-                    setRestore(undefined);
-                    changeFilters({
-                      ...filters,
-                      status: "",
-                      bookmark: "",
-                    });
-                    setMessage(
-                      "Study progress reset. Your question bank is ready to use.",
-                    );
+          <section
+            className="maintenance"
+            aria-labelledby="maintenance-heading"
+          >
+            <h2 id="maintenance-heading">Library & maintenance</h2>
+            <ResetProgress
+              busy={busy}
+              onConfirm={(clearBookmarks) =>
+                run(async () => {
+                  await mutate((d) => resetStudyProgress(d, clearBookmarks));
+                  setSessionId("");
+                  setRestore(undefined);
+                  changeFilters({
+                    ...filters,
+                    status: "",
+                    bookmark: "",
                   });
-                }}
-              >
-                Reset study progress
-              </button>
-            </section>
+                  setMessage(
+                    "Study progress reset. Your question bank is ready to use.",
+                  );
+                })
+              }
+            />
             <p className="muted">
               Question content and study history stay in this browser. No
               account, uploads, or cloud sync.
@@ -676,8 +665,8 @@ export function App() {
               <section className="data-card">
                 <h2>Back up your work</h2>
                 <p>
-                  Export questions, answers, notes, bookmarks, and sessions
-                  together. Keep backups somewhere you control.
+                  Export questions, answers, bookmarks, and sessions together.
+                  Keep backups somewhere you control.
                 </p>
                 <button
                   className="primary"
@@ -782,7 +771,7 @@ export function App() {
             ) : (
               <p className="muted">No imports yet.</p>
             )}
-          </details>
+          </section>
         </main>
       )}
       {page === "data" && (
