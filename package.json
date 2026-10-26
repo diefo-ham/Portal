@@ -7,15 +7,21 @@
     "dev": "vite --host 127.0.0.1 --port 4317 --strictPort",
     "build": "tsc -b && vite build",
     "start": "node scripts/serve.mjs",
-    "test": "vitest run tests/core.test.ts tests/pdf.test.ts",
-    "test:e2e": "playwright test"
+    "test": "vitest run tests/core.test.ts tests/pdf.test.ts tests/calculator.test.ts",
+    "test:e2e": "playwright test",
+    "prebuild": "node scripts/update-notices.mjs",
+    "licenses": "node scripts/update-notices.mjs"
   },
   "dependencies": {
+    "katex": "0.19.1",
+    "mathjs": "15.2.0",
+    "ml-matrix": "6.15.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
+    "@types/katex": "0.16.8",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.0",

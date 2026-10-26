@@ -190,7 +190,10 @@ try {
     }
   }
   await page.reload();
-  await page.getByRole("button", { name: "Resume practice" }).click();
+  await page
+    .getByRole("button", { name: "Practice", exact: true })
+    .waitFor({ timeout: 60000 });
+  await page.getByRole("button", { name: "Resume practice" }).first().click();
   await page.getByText("Correct. Nicely done.").waitFor();
   if (errors.length) throw new Error(errors.join("\n"));
   console.log(

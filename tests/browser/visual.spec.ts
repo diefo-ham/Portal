@@ -130,10 +130,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByRole("article")).toBeFocused();
     await shot(page, `${theme}-practice`);
     await page.getByRole("button", { name: "Calculator", exact: true }).click();
-    await page.getByLabel("First number").fill("6");
-    await page.getByLabel("Second number").fill("7");
-    await page.getByLabel("Operation").selectOption("×");
-    await expect(page.locator(".calculator-result")).toHaveText("42");
+    await page
+      .getByRole("textbox", { name: "Expression 1", exact: true })
+      .fill("6*7");
+    await expect(page.locator(".calc-numeric-result")).toHaveText("= 42");
     for (const width of [1024, 1280, 1366, 1920, 820, 390]) {
       await page.setViewportSize({ width, height: 768 });
       expect(await overflow(page), `Calculator at ${width}`).toBe(false);

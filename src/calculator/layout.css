@@ -1,0 +1,61 @@
+/* Practice integration is loaded before the calculator engine to avoid a width jump. */
+main.with-calculator {
+  max-width: 1800px;
+}
+main.with-calculator .practice-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: start;
+}
+.practice-page .calculator-sheet {
+  position: sticky;
+  top: 14px;
+  width: clamp(460px, 52vw, 800px);
+  min-width: 380px;
+  max-width: 70vw;
+  max-height: calc(100dvh - 28px);
+  overflow: auto;
+  resize: horizontal;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  z-index: 5;
+  scrollbar-gutter: stable;
+}
+.practice-page .calculator-sheet.calc-expanded {
+  position: fixed;
+  inset: 14px 14px 14px auto;
+  width: min(1180px, calc(100vw - 28px));
+  min-width: 0;
+  max-width: calc(100vw - 28px);
+  max-height: none;
+  resize: none;
+  box-shadow: var(--dialog-shadow);
+  z-index: 20;
+}
+
+@media (max-width: 850px) {
+  main.with-calculator .practice-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .practice-page .calculator-sheet {
+    position: relative;
+    top: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    max-height: none;
+    resize: none;
+  }
+  .practice-page .calculator-sheet.calc-expanded {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: calc(100vw - 20px);
+    width: calc(100vw - 20px);
+  }
+}

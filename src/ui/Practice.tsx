@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ShortcutHelp } from "./Help";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
 import type { Session, StudyData } from "../core/model";
 import { numericValue } from "../core/practice";
 import { sectionName } from "./Filters";
-import { Calculator } from "../calculator/Calculator";
+import "../calculator/layout.css";
+import { useCalculatorState } from "../calculator/useCalculatorState";
+const Calculator = lazy(() => import("../calculator/Calculator"));
 import { DocumentPanels } from "./DocumentPanels";
 import { SessionResults, displayAnswer, correctAnswer } from "./SessionResults";
 type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
@@ -32,6 +34,12 @@ export function Practice({
   );
   const [pending, setPending] = useState(false);
   const [calculator, setCalculator] = useState(false);
+  const [calculatorExpanded, setCalculatorExpanded] = useState(false);
+  const calculatorWork = useCalculatorState(
+    session.id,
+    session.calculator,
+    mutate,
+  );
   const [panel, setPanel] = useState<"overview" | "details" | "tools" | null>(
     null,
   );
@@ -93,6 +101,7 @@ export function Practice({
   const finish = () =>
     run(async () => {
       await timer.flush();
+      await calculatorWork.flush();
       await mutate((d) => finishSession(d, session.id));
     });
   const choose = (value: string) => {
@@ -112,6 +121,14 @@ export function Practice({
         };
       }),
     );
+  const closeCalculator = () => {
+    void calculatorWork.flush().catch(() => {});
+    setCalculator(false);
+    setCalculatorExpanded(false);
+    requestAnimationFrame(() =>
+      questionTop.current?.focus({ preventScroll: true }),
+    );
+  };
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   if (session.finishedAt)
     return (
@@ -213,12 +230,16 @@ export function Practice({
       }}
       className={`practice-page focused-practice ${calculator && question.section === "math" ? "with-calculator" : ""}`}
     >
-      <div className="practice-toolbar">
+      <div
+        className="practice-toolbar"
+        inert={calculator && calculatorExpanded}
+      >
         <button
           className="text-button"
           onClick={() =>
             void run(async () => {
               await timer.flush();
+              await calculatorWork.flush();
               onBack();
             })
           }
@@ -245,7 +266,10 @@ export function Practice({
           {question.section === "math" && (
             <button
               aria-expanded={calculator}
-              onClick={() => setCalculator(!calculator)}
+              onClick={() => {
+                if (calculator) closeCalculator();
+                else setCalculator(true);
+              }}
             >
               Calculator
             </button>
@@ -267,6 +291,7 @@ export function Practice({
       </div>
       <div className="practice-layout">
         <article
+          inert={calculator && calculatorExpanded}
           className="question-card"
           key={question.id}
           ref={questionTop}
@@ -456,14 +481,62 @@ export function Practice({
           </div>
         </article>
         {calculator && question.section === "math" && (
-          <aside className="calculator-sheet" aria-label="Calculator panel">
-            <button
-              className="text-button"
-              onClick={() => setCalculator(false)}
+          <aside
+            className={`calculator-sheet ${calculatorExpanded ? "calc-expanded" : ""}`}
+            aria-label="Calculator panel"
+            role={calculatorExpanded ? "dialog" : undefined}
+            aria-modal={calculatorExpanded ? true : undefined}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (calculatorExpanded && e.key === "Tab") {
+                const controls = [
+                  ...e.currentTarget.querySelectorAll<HTMLElement>(
+                    'button,input,select,textarea,summary,[tabindex="0"]',
+                  ),
+                ].filter((el) => {
+                  const closedDetails = el.closest("details:not([open])");
+                  return (
+                    !el.hasAttribute("disabled") &&
+                    el.tabIndex >= 0 &&
+                    el.getClientRects().length > 0 &&
+                    (!closedDetails ||
+                      (el.tagName === "SUMMARY" &&
+                        el.parentElement === closedDetails))
+                  );
+                });
+                const target =
+                  e.shiftKey && document.activeElement === controls[0]
+                    ? controls.at(-1)
+                    : !e.shiftKey && document.activeElement === controls.at(-1)
+                      ? controls[0]
+                      : undefined;
+                if (target) {
+                  e.preventDefault();
+                  target.focus();
+                }
+              }
+              if (
+                e.key === "Escape" &&
+                !(e.target instanceof HTMLSelectElement)
+              ) {
+                e.preventDefault();
+                closeCalculator();
+              }
+            }}
+          >
+            <Suspense
+              fallback={
+                <p className="small muted">Opening local calculator…</p>
+              }
             >
-              Close calculator ×
-            </button>
-            <Calculator />
+              <Calculator
+                state={calculatorWork.state}
+                onChange={calculatorWork.change}
+                expanded={calculatorExpanded}
+                onExpand={() => setCalculatorExpanded(!calculatorExpanded)}
+                onClose={closeCalculator}
+              />
+            </Suspense>
           </aside>
         )}
       </div>

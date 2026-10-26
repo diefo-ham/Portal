@@ -1,5 +1,6 @@
 import { type StudyData } from "../core/model";
 import { parseQuestions } from "./json";
+import { validateCalculator } from "../calculator/model";
 export function parseBackup(raw: unknown): StudyData {
   if (!raw || typeof raw !== "object") throw new Error("Invalid backup.");
   const envelope = raw as { format?: string; data?: StudyData };
@@ -28,6 +29,8 @@ export function parseBackup(raw: unknown): StudyData {
   )
     throw new Error("Incomplete backup.");
   for (const s of d.sessions) {
+    if (s?.calculator !== undefined)
+      s.calculator = validateCalculator(s.calculator);
     if (
       !s ||
       !safe(s.id) ||

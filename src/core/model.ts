@@ -79,6 +79,7 @@ export interface Session {
   drafts: Record<string, string>;
   elapsed: Record<string, number>;
   paused: boolean;
+  calculator?: import("../calculator/model").CalculatorState;
 }
 export interface StudyData {
   version: 1;

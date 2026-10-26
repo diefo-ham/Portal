@@ -1057,58 +1057,6 @@ figcaption {
 .source-details p {
   margin-bottom: 12px;
 }
-.with-calculator {
-  max-width: 1340px;
-}
-.with-calculator .practice-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 24px;
-}
-.calculator-sheet {
-  position: sticky;
-  top: 20px;
-  width: 300px;
-  min-width: 260px;
-  max-width: 36vw;
-  resize: horizontal;
-  overflow: auto;
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 18px;
-}
-.calculator-sheet > .text-button {
-  padding-top: 0;
-  min-height: 28px;
-}
-.calculator-sheet .utility {
-  padding-bottom: 0;
-}
-.arithmetic {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 64px minmax(0, 1fr);
-  gap: 6px;
-}
-.arithmetic input,
-.arithmetic select {
-  width: 100%;
-  min-width: 0;
-  padding: 7px 5px;
-  font-size: 13px;
-}
-.calculator-result {
-  display: block;
-  font-family: var(--font-reading);
-  font-size: 30px;
-  line-height: 1.4;
-  text-align: right;
-  padding: 16px 0 12px;
-  border-bottom: 1px solid var(--line);
-  overflow-wrap: anywhere;
-  font-variant-numeric: tabular-nums;
-}
-
 /* Reflective results, not a dashboard. */
 .session-results > .eyebrow {
   margin-top: 22px;
@@ -1516,23 +1464,6 @@ figcaption {
   .banner,
   .app-footer {
     margin-inline: 28px;
-  }
-}
-@media (max-width: 1100px) {
-  .with-calculator .practice-layout {
-    display: flex;
-    flex-direction: column;
-  }
-  .calculator-sheet {
-    position: static;
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-    resize: none;
-  }
-  .calculator-sheet .arithmetic,
-  .calculator-sheet .calculator-result {
-    max-width: 460px;
   }
 }
 @media (max-width: 700px) {

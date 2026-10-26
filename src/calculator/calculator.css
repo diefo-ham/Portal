@@ -1,0 +1,450 @@
+/* The calculator consumes the portal's semantic surfaces; no global theme or
+   study layout is replaced. Its graph palette remains conventional/readable. */
+.calculator-workspace {
+  color: var(--ink);
+  min-width: 0;
+  font-family: var(--font-ui);
+}
+.calculator-workspace button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.calc-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+.calc-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.calc-heading > div {
+  display: flex;
+  gap: 6px;
+}
+.calc-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.calc-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.calc-options select {
+  min-height: 32px;
+  padding: 3px 6px;
+  width: auto;
+  font-size: 12px;
+}
+.calc-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+.calc-expression-area {
+  min-width: 0;
+  padding: 0 12px 12px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
+  scrollbar-gutter: stable;
+}
+.calc-entry-list {
+  min-width: 0;
+}
+.calc-entry {
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.calc-entry-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+.calc-entry-heading .calc-icon {
+  margin-left: auto;
+}
+.calculator-workspace .calc-icon,
+.calculator-workspace .calc-visibility {
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0 5px;
+  border-color: transparent;
+  background: transparent;
+}
+.calculator-workspace .calc-visibility {
+  color: var(--curve);
+  font-size: 19px;
+}
+.calculator-workspace .calc-expression-input {
+  width: 100%;
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+  border-radius: 3px;
+  padding: 7px 8px;
+  min-height: 36px;
+  font-size: 16px;
+  font-family: "Cambria Math", "Segoe UI", sans-serif;
+  color: var(--ink);
+}
+.calculator-workspace .calc-expression-input:hover {
+  background: var(--surface);
+}
+.calculator-workspace .calc-expression-input:focus {
+  border-color: var(--line-strong);
+  background: var(--bg);
+}
+.calc-math {
+  font-size: 16px;
+  padding: 8px;
+  overflow-x: auto;
+  color: var(--ink);
+}
+.calc-math .katex {
+  font-size: 1.08em;
+}
+.calc-numeric-result {
+  display: block;
+  text-align: right;
+  color: var(--ink);
+  font-size: 19px;
+  padding: 0 8px 6px;
+  font-variant-numeric: tabular-nums;
+}
+.calc-error {
+  font-size: 12px;
+  color: var(--incorrect);
+  padding: 6px 8px;
+  overflow-wrap: anywhere;
+}
+.calc-entry > .small {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.calc-slider {
+  display: block;
+  padding: 4px 8px;
+}
+.calc-slider input {
+  width: 100%;
+  min-height: 28px;
+  accent-color: var(--accent);
+}
+.calc-add {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--paper);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.calc-parameters {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding-top: 12px;
+}
+.calc-help {
+  font-size: 12px;
+  margin-top: 14px;
+  color: var(--muted);
+}
+.calc-help p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+.graph-area {
+  padding: 12px;
+  min-width: 0;
+}
+.graph-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.graph-controls button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-selected);
+}
+.graph-plane {
+  width: 100%;
+  height: clamp(240px, 38dvh, 400px);
+  display: block;
+  touch-action: none;
+  cursor: crosshair;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.graph-plane:active {
+  cursor: grabbing;
+}
+.graph-background {
+  fill: var(--paper);
+}
+.graph-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.graph-axes {
+  stroke: var(--muted);
+  stroke-width: 1.4;
+}
+.graph-labels {
+  fill: var(--muted);
+  font: 13px var(--font-ui);
+}
+.graph-curve {
+  stroke: var(--curve);
+  stroke-width: 2.2;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.graph-shade {
+  fill: var(--curve);
+  opacity: 0.13;
+  stroke: none;
+}
+.graph-data-point {
+  fill: var(--curve);
+  stroke: var(--paper);
+  stroke-width: 1.4;
+}
+.graph-interest {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 1.5;
+}
+.graph-selection {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.graph-hint {
+  margin: 8px 0;
+  font-size: 10px;
+  color: var(--muted);
+}
+.graph-coordinate {
+  display: block;
+  padding: 6px 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.interest-list {
+  max-height: 170px;
+  overflow: auto;
+  border-top: 1px solid var(--line);
+  padding: 8px 0;
+}
+.interest-list .small {
+  font-size: 11px;
+}
+.interest-list button {
+  display: block;
+  background: transparent;
+  border: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  width: 100%;
+  padding: 5px;
+}
+.graph-window {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.graph-window form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.graph-window label {
+  display: grid;
+  gap: 4px;
+}
+.graph-window input {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  font-size: 12px;
+  padding: 5px;
+}
+.calc-data-table {
+  max-height: 230px;
+  overflow: auto;
+  margin-top: 8px;
+}
+.calc-data-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.calc-data-table th {
+  font-size: 15px;
+  font-family: var(--font-reading);
+  font-weight: 400;
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+}
+.calc-data-table td,
+.calc-data-table th {
+  border-bottom: 1px solid var(--line);
+  padding: 2px 4px;
+  text-align: center;
+}
+.calc-data-table td:last-child {
+  width: 28px;
+}
+.calc-data-table input {
+  min-width: 0;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  text-align: center;
+}
+.calc-data-table input:focus {
+  border-color: var(--line-strong);
+}
+.calc-fit-label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 5px;
+}
+.calc-fit-label select {
+  min-width: 0;
+  width: 100%;
+  min-height: 34px;
+  font-size: 12px;
+  padding: 5px;
+}
+.calc-fit-result {
+  font-size: 12px;
+  color: var(--ink);
+  padding: 4px;
+}
+.calc-fit-result output {
+  overflow-wrap: anywhere;
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+.calc-fit-result p {
+  margin: 8px 0;
+}
+.calc-fit-result summary {
+  font-size: 11px;
+}
+.calc-residuals {
+  overflow-wrap: anywhere;
+}
+.expanded .calc-body {
+  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.7fr);
+}
+.expanded .graph-plane {
+  height: min(60dvh, 650px);
+}
+.expanded .calc-expression-area {
+  max-height: calc(100dvh - 130px);
+  border-bottom: 0;
+  border-right: 1px solid var(--line);
+}
+.graph-color-0 {
+  --curve: #376344;
+}
+.graph-color-1 {
+  --curve: #275e94;
+}
+.graph-color-2 {
+  --curve: #a34e35;
+}
+.graph-color-3 {
+  --curve: #77558e;
+}
+.graph-color-4 {
+  --curve: #8c6725;
+}
+.graph-color-5 {
+  --curve: #236a70;
+}
+.graph-color-6 {
+  --curve: #91476f;
+}
+.graph-color-7 {
+  --curve: #5c6473;
+}
+:root[data-theme="dark"] .graph-color-0 {
+  --curve: #aac58e;
+}
+:root[data-theme="dark"] .graph-color-1 {
+  --curve: #8ab4e4;
+}
+:root[data-theme="dark"] .graph-color-2 {
+  --curve: #df9b7e;
+}
+:root[data-theme="dark"] .graph-color-3 {
+  --curve: #c4a2d4;
+}
+:root[data-theme="dark"] .graph-color-4 {
+  --curve: #d6bc75;
+}
+:root[data-theme="dark"] .graph-color-5 {
+  --curve: #8bc8c1;
+}
+:root[data-theme="dark"] .graph-color-6 {
+  --curve: #d6a0bb;
+}
+:root[data-theme="dark"] .graph-color-7 {
+  --curve: #bbc1cc;
+}
+@media (min-width: 1500px) {
+  .calc-body {
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.3fr);
+  }
+  .calc-expression-area {
+    max-height: calc(100dvh - 155px);
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+}
+@media (max-width: 850px) {
+  .expanded .calc-body {
+    grid-template-columns: 1fr;
+  }
+  .expanded .calc-expression-area {
+    max-height: 240px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .calculator-workspace * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
