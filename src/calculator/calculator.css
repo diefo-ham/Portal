@@ -444,9 +444,7 @@
   min-height: 25px;
 }
 .calc-structural-input .dcg-mq-empty::before {
-  content: "Expression";
-  font: 14px var(--font-ui);
-  color: var(--muted);
+  content: none;
 }
 .calc-structural-input .dcg-mq-cursor {
   border-color: var(--ink);
@@ -532,14 +530,23 @@
 }
 @container (min-width:680px) {
   .calculator-surface .calc-body {
-    grid-template-columns: minmax(230px, 0.85fr) minmax(0, 1.35fr);
+    grid-template-columns: minmax(230px, var(--calc-expression-width, 39%)) 8px minmax(240px, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
   .calculator-surface .calc-expression-area {
     border-bottom: 0;
-    border-right: 1px solid var(--line);
+    border-right: 0;
   }
+  .calculator-surface .calc-split-divider { display:block; }
 }
+.calc-split-divider { display:none; cursor:col-resize; touch-action:none; position:relative; min-width:8px; user-select:none; }
+.calc-split-divider::before { content:""; position:absolute; inset:0 3px; background:var(--line); }
+.calc-split-divider:hover::before,.calc-split-divider:focus-visible::before { background:var(--accent); }
+.calc-split-divider:focus-visible { outline:2px solid var(--focus); outline-offset:-2px; }
+.calc-color-control { position:relative; pointer-events:auto; }
+.calc-color-menu { position:absolute; z-index:6; top:28px; left:0; display:grid; grid-template-columns:repeat(4,28px); gap:3px; padding:6px; border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--paper); box-shadow:var(--dialog-shadow); }
+.calculator-workspace .calc-color-menu button { color:var(--curve); font-size:21px; padding:0; min-height:28px; border:1px solid transparent; }
+.calculator-workspace .calc-color-menu button[aria-pressed="true"] { border-color:var(--muted); }
 .graph-point-label {
   pointer-events: none;
 }
@@ -587,5 +594,5 @@
 .calculator-workspace .calc-value button { min-height:24px; padding:2px 3px; font-size:10px; }
 .calc-slider { padding:0 30px 0 55px; }
 .calc-slider input { min-height:20px; height:20px; }
-.calc-help > details { margin:8px 0; }
+.calc-help > details { margin:8px 0 8px 12px; }
 .graph-minor-grid { stroke:var(--line); stroke-width:.55; opacity:.55; }

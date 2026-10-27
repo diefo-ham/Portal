@@ -29,6 +29,19 @@ export function rational(
   }
 }
 const fraction = ([n, d]: [number, number]) => (d === 1 ? `${n}` : `${n}/${d}`);
+/** Small square-free radicals with small rational multipliers only. */
+export function radicalForm(
+  value: number,
+  tolerance = 64 * Number.EPSILON,
+): string | undefined {
+  if (!Number.isFinite(value) || value === 0) return;
+  for (const radicand of [2, 3, 5, 6, 7, 10, 11, 13]) {
+    const pair = rational(value / Math.sqrt(radicand), 12, tolerance);
+    if (!pair || !pair[0] || Math.abs(pair[0]) > 12) continue;
+    const [n, d] = pair;
+    return `${n < 0 ? "−" : ""}${Math.abs(n) === 1 ? "" : Math.abs(n)}√${radicand}${d === 1 ? "" : `/${d}`}`;
+  }
+}
 export function exactForm(value: number, source = ""): string | undefined {
   const pair = rational(value);
   if (pair) return fraction(pair);
@@ -53,6 +66,7 @@ export function exactForm(value: number, source = ""): string | undefined {
       ? `${outside}`
       : `${outside === 1 ? "" : outside}√${inside}`;
   }
+  if (/sqrt|sin|cos|tan|√/.test(source)) return radicalForm(value);
 }
 function piForm([n, d]: [number, number]) {
   if (n === 0) return "0";
@@ -64,6 +78,8 @@ export function coordinateForm(value: number): string {
   if (pair) return fraction(pair);
   const pi = rational(value / Math.PI, 24, 2e-9);
   if (pi) return piForm(pi);
+  const radical = radicalForm(value, 5e-11);
+  if (radical) return radical;
   return Number.isFinite(value)
     ? Number(value.toPrecision(6)).toString()
     : "Undefined";

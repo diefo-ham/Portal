@@ -46,9 +46,7 @@ test("compact rows, safe shorthand, exact conversion, angle segments and Add men
   await expect(page.locator(".graph-curve").first()).toBeVisible();
   await page.keyboard.press("Enter");
   await enterExpression(page, 4, "1/3");
-  await page
-    .getByRole("button", { name: "Toggle fraction or exact form" })
-    .click();
+  await page.getByRole("button", { name: "Toggle fraction" }).click();
   await expect(page.locator(".calc-numeric-result").last()).toHaveText("≈ 1/3");
   await enterExpression(page, 4, "sin(90)");
   await page
@@ -257,7 +255,7 @@ test("scalar regressions, forgiving POI targets and equal graph units", async ({
     maxBox.x + maxBox.width / 2,
     maxBox.y + maxBox.height / 2 + 30,
   );
-  await expect(page.locator(".graph-point-label")).toHaveCount(2);
+  await expect(page.locator(".graph-point-label")).toHaveCount(0);
 });
 test("Escape closes utilities first, then confirms leaving without calculator leakage", async ({
   page,

@@ -1,8 +1,17 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import "./calculator.css";
 import { Graph } from "./Graph";
+import { GraphColor } from "./GraphColor";
+import { SplitDivider, useCalculatorSplit } from "./SplitDivider";
 import { TableEditor } from "./TableEditor";
 import { MathEditor, focusMath } from "./MathEditor";
 import { calculateWorkspace } from "./workspace";
@@ -110,11 +119,11 @@ function NumericResult({ value, source }: { value: number; source: string }) {
       {form && form !== fmt(value) && (
         <button
           className="text-button"
-          aria-label="Toggle fraction or exact form"
+          aria-label="Toggle fraction"
           aria-pressed={exact}
           onClick={() => setExact(!exact)}
         >
-          {exact ? "Decimal" : "Fraction / exact"}
+          {exact ? "Decimal" : "Fraction"}
         </button>
       )}
     </div>
@@ -125,7 +134,7 @@ function CalculatorHelp() {
   const topics = [
     [
       "Expressions",
-      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument; use parentheses for compound arguments. Enter adds or advances a row; Backspace removes an empty one. Define a=2 for a slider.",
+      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter advances a row; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list.",
     ],
     [
       "Tables & regressions",
@@ -133,7 +142,7 @@ function CalculatorHelp() {
     ],
     [
       "Graph & angles",
-      "Drag blank space to pan; drag a curve to trace it. Inspect points reveals numerical zeros, intersections and extrema. Click points to keep multiple labels; click again to remove one. Radians/Degrees changes trig units. Fraction/exact shows only recognizable forms, not a symbolic proof.",
+      "Drag blank space to pan; drag a curve to trace it. Inspect points reveals zeros, intersections and extrema. Click points to keep labels; click again to remove one, or click empty space to clear them. Right click or Shift+Enter on a color dot to recolor. Radians/Degrees changes trig units. Fraction converts recognizable forms.",
     ],
   ];
   return (
@@ -169,6 +178,13 @@ export function Calculator({
     [deferred.entries, deferred.angle],
   );
   const root = useRef<HTMLElement>(null);
+  const current = useRef(state);
+  current.current = state;
+  const update = (next: CalculatorState) => {
+    current.current = next;
+    onChange(next);
+  };
+  const split = useCalculatorSplit();
   const [error, setError] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const addMenu = useRef<HTMLDivElement>(null);
@@ -187,9 +203,11 @@ export function Calculator({
     )?.focus();
   }, []);
   const change = (entry: Entry) =>
-    onChange({
-      ...state,
-      entries: state.entries.map((old) => (old.id === entry.id ? entry : old)),
+    update({
+      ...current.current,
+      entries: current.current.entries.map((old) =>
+        old.id === entry.id ? entry : old,
+      ),
     });
   const focus = (id: string) => requestAnimationFrame(() => focusMath(id));
   const add = (entry: Entry, after?: string) => {
@@ -213,7 +231,7 @@ export function Calculator({
         : blankIndex;
     const entries = [...state.entries];
     entries.splice(index, 0, entry);
-    onChange({ ...state, entries });
+    update({ ...current.current, entries });
     setError("");
     focus(entry.id);
   };
@@ -230,7 +248,7 @@ export function Calculator({
       )
     )
       entries.push(newExpression());
-    onChange({ ...state, entries });
+    update({ ...current.current, entries });
     focus(entries[Math.max(0, Math.min(index - 1, entries.length - 1))].id);
   };
   const table = (replace?: string) => {
@@ -275,14 +293,22 @@ export function Calculator({
             <button
               key={angle}
               aria-pressed={state.angle === angle}
-              onClick={() => onChange({ ...state, angle })}
+              onClick={() => update({ ...current.current, angle })}
             >
               {angle === "radians" ? "Radians" : "Degrees"}
             </button>
           ))}
         </div>
       </div>
-      <div className="calc-body">
+      <div
+        className="calc-body"
+        ref={split.body}
+        style={
+          {
+            "--calc-expression-width": `${split.ratio * 100}%`,
+          } as CSSProperties
+        }
+      >
         <section
           className="calc-expression-area"
           aria-label="Expressions and data"
@@ -343,22 +369,21 @@ export function Calculator({
               const result = workspace.results[entry.id];
               return (
                 <section
-                  className={`calc-entry graph-color-${index % 8}`}
+                  className={`calc-entry graph-color-${entry.color ?? index % 8}`}
                   key={entry.id}
                   aria-label={`${entry.type === "table" ? "Data table" : "Expression"} ${index + 1}`}
                 >
                   <div className="calc-entry-heading">
                     {(entry.type === "table" || result?.graphable) && (
-                      <button
-                        className="calc-visibility"
-                        aria-label={`${entry.hidden ? "Show" : "Hide"} ${entry.type} ${index + 1}`}
-                        aria-pressed={!entry.hidden}
-                        onClick={() =>
+                      <GraphColor
+                        hidden={entry.hidden}
+                        color={entry.color ?? index % 8}
+                        label={`${entry.type} ${index + 1}`}
+                        onToggle={() =>
                           change({ ...entry, hidden: !entry.hidden })
                         }
-                      >
-                        {entry.hidden ? "○" : "●"}
-                      </button>
+                        onColor={(color) => change({ ...entry, color })}
+                      />
                     )}
                     <span className="small muted">
                       {entry.type === "table" ? "Data" : index + 1}
@@ -502,15 +527,20 @@ export function Calculator({
           )}
           <CalculatorHelp />
         </section>
+        <SplitDivider
+          ratio={split.ratio}
+          width={split.width}
+          onChange={split.setRatio}
+        />
         <Graph
           graphs={workspace.graphs}
           view={state.view}
-          equalAxes={state.equalAxes !== false}
+          equalAxes
           onView={(view, equalAxes) =>
-            onChange({
-              ...state,
+            update({
+              ...current.current,
               view,
-              equalAxes: equalAxes ?? state.equalAxes ?? true,
+              equalAxes: equalAxes ?? true,
             })
           }
           onParameter={(id, name, value) => {

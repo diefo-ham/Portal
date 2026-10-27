@@ -259,8 +259,17 @@ export function equalScaleViewport(
   view: Viewport,
   width: number,
   height: number,
+  contain = false,
 ): Viewport {
   if (!(width > 0 && height > 0)) return view;
+  if (
+    contain &&
+    ((view.yMax - view.yMin) * width) / height > view.xMax - view.xMin
+  ) {
+    const center = (view.xMin + view.xMax) / 2;
+    const span = ((view.yMax - view.yMin) * width) / height;
+    return { ...view, xMin: center - span / 2, xMax: center + span / 2 };
+  }
   const center = (view.yMin + view.yMax) / 2;
   const span = ((view.xMax - view.xMin) * height) / width;
   return { ...view, yMin: center - span / 2, yMax: center + span / 2 };

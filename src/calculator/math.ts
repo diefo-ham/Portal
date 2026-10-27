@@ -1,5 +1,6 @@
 import { create, parseDependencies } from "mathjs/number";
 import type { MathNode } from "mathjs";
+import { parseListRanges, rangeValues } from "./listRanges";
 const { parse } = create({ parseDependencies });
 
 export type Angle = "radians" | "degrees";
@@ -123,7 +124,7 @@ export function scalar(text: string): Scalar {
     )
       throw new Error("This number is outside the supported numeric range.");
   }
-  const node = parse(normalize(text)) as MathNode;
+  const node = parse(parseListRanges(normalize(text))) as MathNode;
   const symbols = new Set<string>(),
     calls = new Set<string>();
   let count = 0;
@@ -143,6 +144,11 @@ export function scalar(text: string): Scalar {
         break;
       case "ParenthesisNode":
         check(a.content, depth + 1);
+        break;
+      case "RangeNode":
+        check(a.start, depth + 1);
+        check(a.end, depth + 1);
+        if (a.step) check(a.step, depth + 1);
         break;
       case "ArrayNode":
         if (
@@ -191,6 +197,18 @@ export function scalar(text: string): Scalar {
         return v;
       }
       if (n.type === "ParenthesisNode") return visit(n.content);
+      if (n.type === "RangeNode") {
+        const first = visit(n.start),
+          last = visit(n.end);
+        const values = [
+          first,
+          n.step ? visit(n.step) : Number(last) >= Number(first) ? 1 : -1,
+          last,
+        ];
+        if (values.some(Array.isArray))
+          throw new Error("Range endpoints must be scalar numbers.");
+        return rangeValues(...(values as [number, number, number]));
+      }
       if (n.type === "ArrayNode")
         return n.items.map((item: MathNode) => {
           const value = visit(item);
@@ -296,6 +314,21 @@ export function scalarTex(s: Scalar): string {
     parenthesis: "auto",
     handler: (node: MathNode, options: any) => {
       const n = node as any;
+      if (n.type === "ParenthesisNode" && n.content.type === "RangeNode")
+        return n.content.toTex(options);
+      if (n.type === "RangeNode") {
+        const unbox = (a: any): any =>
+          a.type === "ParenthesisNode" ? unbox(a.content) : a;
+        const step = n.step && unbox(n.step);
+        const second = !step
+          ? undefined
+          : step?.type === "OperatorNode" && step.op === "-"
+            ? unbox(step.args[0]).toTex(options)
+            : step?.type === "ConstantNode" && step.value === 1
+              ? undefined
+              : `${n.start.toTex(options)}+${n.step?.toTex(options) ?? "1"}`;
+        return `\\left[${unbox(n.start).toTex(options)}${second ? `,${second}` : ""}\\ldots ${unbox(n.end).toTex(options)}\\right]`;
+      }
       if (n.type === "ArrayNode")
         return `\\left[${n.items.map((item: MathNode) => item.toTex(options)).join(",")}\\right]`;
       if (

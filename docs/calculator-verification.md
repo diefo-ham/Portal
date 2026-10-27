@@ -1,5 +1,27 @@
 # Calculator pass verification — 2026-10-27
 
+## Expression and graph parity refinement
+
+- Production build and all 87 core/math/storage/import tests passed.
+- All 21 calculator and Practice-keyboard Edge workflows passed together.
+  Focused coverage includes typed/pasted range round trips, x-dependent names,
+  downstream updates, divider drag/keyboard bounds/ratio recovery, outer-window
+  resizing, equal circle geometry, narrow fallback, POI toggling/empty clearing/
+  mode disable, radical trig intersections, color/visibility controls and color
+  persistence after session exit/reload.
+- Existing mocked Desmos failure/retry, lazy loading, independent workspace,
+  completion and reset/archive tests remain green. The run exposed a viewport
+  effect overwriting an immediate Offline edit; viewport updates now merge with
+  the latest workspace, and the original engine-switch test passes unchanged.
+- Live official Desmos v1.12 checks verified ascending/descending/stepped lists,
+  endpoint rounding and invalid steps, and the named-expression example's
+  graphability and values. `p(2)=10`, `v(2)=7`; the combined curve gives 57, 17,
+  and 1 at x=2, 0 and −2 respectively. Test math was synthetic; no question data
+  was sent. Both native and Offline graph screenshots were visually inspected.
+- No dependency or database-version changes. Optional per-entry color fields are
+  backwards compatible; the split ratio is a device-local UI preference.
+  See [behavior and limits](calculator-expression-parity.md).
+
 ## Current stabilization pass
 
 - Production build and all 81 core/math/storage/import tests passed.

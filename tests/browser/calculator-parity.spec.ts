@@ -260,6 +260,8 @@ test("Offline curve tracing and parameter dragging label the point on the graph"
   await page.mouse.move(20, 20);
   await expect(graph.locator(".graph-point-label")).toContainText("(2, 0)");
   await graph.click({ position: { x: 15, y: 15 } });
+  await expect(graph.locator(".graph-point-label")).toHaveCount(0);
+  await zero.click();
   await expect(graph.locator(".graph-point-label")).toContainText("(2, 0)");
   await zero.click();
   await expect(graph.locator(".graph-point-label")).toHaveCount(0);

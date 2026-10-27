@@ -83,17 +83,16 @@ export function Graph({
       Math.abs(adjusted.yMax - view.yMax) >
         Math.max(1, Math.abs(view.yMax)) * 1e-12
     )
-      onView(adjusted, true);
-  }, [width, height, equalAxes]);
+      if (validView(adjusted)) onView(adjusted, true);
+  }, [width, height, equalAxes, view]);
   const sx = width / (view.xMax - view.xMin),
     sy = height / (view.yMax - view.yMin);
   const px = (x: number) => (x - view.xMin) * sx,
     py = (y: number) => height - (y - view.yMin) * sy;
-  const changeView = (v: Viewport, equalOverride?: boolean) => {
-    const keepEqual = equalOverride ?? equalAxes;
-    const adjusted = keepEqual ? equalScaleViewport(v, width, height) : v;
+  const changeView = (v: Viewport, contain = false) => {
+    const adjusted = equalScaleViewport(v, width, height, contain);
     if (validView(adjusted)) {
-      onView(adjusted, equalOverride);
+      onView(adjusted, true);
       setSelected(undefined);
       setNotice("");
     } else
@@ -146,7 +145,12 @@ export function Graph({
     [graphs, view, width, height],
   );
   const special = useMemo(
-    () => (inspect ? interests(graphs, view) : []),
+    () =>
+      inspect
+        ? interests(graphs, view).filter(
+            (point) => point.label !== "data point",
+          )
+        : [],
     [graphs, view, inspect],
   );
   useEffect(() => {
@@ -257,6 +261,7 @@ export function Graph({
     const point = nearestAt(p);
     if (point && point.label !== "curve point") togglePoint(point);
     else {
+      if (!point) setKept([]);
       pinned.current = !!point;
       setSelected(point);
     }
@@ -326,9 +331,7 @@ export function Graph({
         <button aria-label="Zoom out" onClick={() => zoom(1 / 0.7)}>
           −
         </button>
-        <button onClick={() => changeView(defaultView(), true)}>
-          Reset view
-        </button>
+        <button onClick={() => changeView(defaultView())}>Reset view</button>
         <button
           disabled={
             !graphs.some(
@@ -340,7 +343,7 @@ export function Graph({
           title="Fit sampled functions and data points"
           onClick={() => {
             const v = fitViewport(graphs, view);
-            if (v) changeView(v, false);
+            if (v) changeView(v, true);
             else
               setNotice(
                 "No finite sampled values are available in this x window. Try changing the graph window.",
@@ -350,26 +353,13 @@ export function Graph({
           Fit
         </button>
         <button
-          onClick={() => {
-            const center = (view.yMax + view.yMin) / 2;
-            const span = ((view.xMax - view.xMin) * height) / width;
-            changeView(
-              {
-                ...view,
-                yMin: center - span / 2,
-                yMax: center + span / 2,
-              },
-              true,
-            );
-          }}
-        >
-          Square axes
-        </button>
-        <button
           aria-pressed={inspect}
           onClick={() => {
             setInspect(!inspect);
             setSelected(undefined);
+            setKept([]);
+            pinned.current = false;
+            suppressedHover.current = undefined;
           }}
         >
           Inspect points
@@ -436,7 +426,7 @@ export function Graph({
             zoom(1 / 0.7);
           } else if (e.key === "Home") {
             e.preventDefault();
-            changeView(defaultView(), true);
+            changeView(defaultView());
           }
         }}
         onPointerDown={(e) => {
@@ -461,6 +451,8 @@ export function Graph({
           if (nearest) selectPoint(nearest);
           else {
             setSelected(undefined);
+            setKept([]);
+            suppressedHover.current = undefined;
             pinned.current = false;
           }
           drag.current = {
@@ -804,10 +796,11 @@ export function Graph({
       )}
       <details className="graph-window">
         <summary>Graph window</summary>
+        <p>Bounds expand as needed to keep equal x/y unit scale.</p>
         <WindowFields
           key={JSON.stringify(view)}
           view={view}
-          onView={(next) => changeView(next, false)}
+          onView={(next) => changeView(next, true)}
         />
       </details>
     </section>

@@ -28,6 +28,22 @@ function assertAffineParameters(node: MathNode, names: string[]): void {
     if (n.type === "ConstantNode") return 0;
     if (n.type === "SymbolNode") return names.includes(n.name) ? 1 : 0;
     if (n.type === "ParenthesisNode") return degree(n.content);
+    if (n.type === "RangeNode") {
+      const range = node as MathNode & {
+        start: MathNode;
+        end: MathNode;
+        step?: MathNode;
+      };
+      if (
+        [range.start, range.end, range.step].some(
+          (part) => part && degree(part),
+        )
+      )
+        throw new Error(
+          "Regression parameters cannot determine list range lengths.",
+        );
+      return 0;
+    }
     if (n.type === "ArrayNode") return Math.max(0, ...n.items.map(degree));
     if (n.type === "FunctionNode") {
       if (n.args.some((a) => degree(a)))

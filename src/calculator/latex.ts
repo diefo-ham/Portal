@@ -58,6 +58,7 @@ export function latexToText(latex: string): string {
       else if (command === "le" || command === "leq") out += "<=";
       else if (command === "ge" || command === "geq") out += ">=";
       else if (command === "sim") out += "~";
+      else if (["ldots", "dots", "cdots"].includes(command)) out += "...";
       else if (command === "lvert" || command === "rvert" || command === "vert")
         out += "|";
       else if (
@@ -110,11 +111,26 @@ export function textToLatex(text: string): string {
       .map((part) => {
         if (/^[=~<>]$/.test(part)) return part === "~" ? "\\sim " : part;
         if (!part.trim()) return "";
+        const trimmed = part.trim();
+        if (trimmed.startsWith("(") && trimmed.endsWith(")")) {
+          const body = trimmed.slice(1, -1);
+          let depth = 0;
+          for (let i = 0; i < body.length; i++) {
+            if ("([".includes(body[i])) depth++;
+            if (")]".includes(body[i])) depth--;
+            if (body[i] === "," && depth === 0)
+              return `\\left(${scalarTex(scalar(body.slice(0, i)))},${scalarTex(scalar(body.slice(i + 1)))}\\right)`.replace(
+                /~/g,
+                " ",
+              );
+          }
+        }
         // Math.js uses literal ~ as TeX spacing for implicit multiplication.
         // DesQuill treats ~ as the regression operator, so use ordinary spacing.
         return scalarTex(scalar(part)).replace(/~/g, " ");
       })
       .join("")
+      .replace(/\\ldots\s*/g, "...")
       .replace(/\\mathrm\{([a-z])_([0-9]+)\}/g, "$1_{$2}");
   } catch {
     return text

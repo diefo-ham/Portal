@@ -23,7 +23,12 @@ import {
   displayedCoefficients,
   fittedExpression,
 } from "../src/calculator/fitDisplay";
-import { rational, exactForm, coordinateForm } from "../src/calculator/exact";
+import {
+  rational,
+  exactForm,
+  coordinateForm,
+  radicalForm,
+} from "../src/calculator/exact";
 import { parsePastedData } from "../src/calculator/TableEditor";
 import { emptyData } from "../src/core/model";
 import { parseBackup } from "../src/importing/backup";
@@ -43,6 +48,112 @@ const workspace = (...texts: string[]) =>
     ...emptyCalculator(),
     entries: texts.map((t) => newExpression(t)),
   });
+describe("Offline expression semantics", () => {
+  it("evaluates range ASTs, inferred steps and descending lists like Desmos", () => {
+    const list = (source: string) => scalar(source).evaluate({}, {}, "radians");
+    expect(list("[1...10]")).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(list("[1...100]")).toHaveLength(100);
+    expect(list("[1,3...11]")).toEqual([1, 3, 5, 7, 9, 11]);
+    expect(list("[1,3...10]")).toEqual([1, 3, 5, 7, 9, 11]);
+    expect(list("[1,3...9.1]")).toEqual([1, 3, 5, 7, 9]);
+    expect(list("[5...1]")).toEqual([5, 4, 3, 2, 1]);
+    expect(list("[5,3...1]")).toEqual([5, 3, 1]);
+    expect(list("[1.5...4.5]")).toEqual([1.5, 2.5, 3.5, 4.5]);
+    expect(list("[1,3,...,11]")).toEqual([1, 3, 5, 7, 9, 11]);
+    expect(() => list("[1...1000000000]")).toThrow("200");
+    expect(() => list("[1,1...5]")).toThrow("nonzero");
+    expect(() => list("[5,4...8]")).toThrow("toward");
+    for (const source of ["[1...10]", "[5...1]", "[1,3...11]"])
+      expect(list(latexToText(textToLatex(source)))).toEqual(list(source));
+    const w = workspace("a=2", "L=[a,a+2...10]", "L^2", "(L,L^2)");
+    expect(Object.values(w.results)[2].values).toEqual([4, 16, 36, 64, 100]);
+    expect(w.graphs[0]).toMatchObject({
+      kind: "points",
+      points: [
+        { x: 2, y: 4 },
+        { x: 4, y: 16 },
+        { x: 6, y: 36 },
+        { x: 8, y: 64 },
+        { x: 10, y: 100 },
+      ],
+    });
+    const fit = Object.values(
+      workspace("x_1=[1...10]", "y_1=3x_1+2", "y_1~mx_1+b").results,
+    ).find((result) => result.fit);
+    expect(fit?.parameters?.m).toBeCloseTo(3, 10);
+    expect(fit?.parameters?.b).toBeCloseTo(2, 10);
+  });
+  it("models transitive x-dependent names without caching a sample as a scalar", () => {
+    for (const p of ["p=3x+4", "p=4x+1"]) {
+      const w = workspace(p, "v=x+5", "pv-2p+v", "f(x)=pv-2p+v", "f(2)");
+      expect(Object.values(w.results).every((result) => !result.error)).toBe(
+        true,
+      );
+      const functions = w.graphs.filter((graph) => graph.kind === "function");
+      expect(functions).toHaveLength(4);
+      const pf = (x: number) => (p === "p=3x+4" ? 3 * x + 4 : 4 * x + 1);
+      for (const x of [-2, 0, 2, 3]) {
+        expect(functions[0].fn(x)).toBe(pf(x));
+        expect(functions[1].fn(x)).toBe(x + 5);
+        expect(functions[2].fn(x)).toBe(pf(x) * (x + 5) - 2 * pf(x) + x + 5);
+        expect(functions[3].fn(x)).toBe(functions[2].fn(x));
+      }
+      expect(Object.values(w.results)[4].value).toBe(functions[2].fn(2));
+    }
+    expect(
+      Object.values(workspace("a=2", "b=a+2", "b^2").results)[2].value,
+    ).toBe(16);
+    expect(
+      Object.values(workspace("p=2", "v=3", "pv=7", "pv+1").results)[3].value,
+    ).toBe(8);
+    const chained = workspace("q=p+1", "p=3x+4", "q^2");
+    expect(chained.graphs.filter((g) => g.kind === "function")[0].fn(2)).toBe(
+      11,
+    );
+    const product = workspace("p=3x+4", "v=x+5", "2pv");
+    expect(product.graphs.filter((g) => g.kind === "function")[2].fn(2)).toBe(
+      140,
+    );
+    for (const sources of [["p=v+x", "v=p+2"], ["p=p+x"], ["f(x)=f(x)+1"]])
+      expect(
+        Object.values(workspace(...sources).results).some((result) =>
+          result.error?.includes("Circular"),
+        ),
+      ).toBe(true);
+    expect(Object.values(workspace("p=3x+a").results)[0].error).toContain(
+      "Define a",
+    );
+  });
+  it("recognizes conservative small radical coordinates without guessing arbitrary decimals", () => {
+    for (const [value, form] of [
+      [Math.SQRT2 / 2, "√2/2"],
+      [-Math.SQRT2 / 2, "−√2/2"],
+      [Math.sqrt(3) / 2, "√3/2"],
+      [-Math.sqrt(3) / 2, "−√3/2"],
+      [Math.SQRT2, "√2"],
+      [Math.sqrt(3), "√3"],
+      [(3 * Math.sqrt(2)) / 4, "3√2/4"],
+      [0.25, "1/4"],
+      [Math.PI / 2, "π/2"],
+    ] as const)
+      expect(coordinateForm(value)).toBe(form);
+    expect(radicalForm(0.7071)).toBeUndefined();
+    expect(coordinateForm(0.1234567)).toBe("0.123457");
+    expect(coordinateForm(1e-12)).toBe("1e-12");
+    const source = "(sqrt(2)/2,-sqrt(3)/2)";
+    const point = workspace(latexToText(textToLatex(source))).graphs[0];
+    expect(point).toMatchObject({
+      kind: "points",
+      points: [{ x: Math.SQRT2 / 2, y: -Math.sqrt(3) / 2 }],
+    });
+    const productPoint = workspace("a=2", latexToText(textToLatex("(a,2a)")))
+      .graphs[0];
+    expect(productPoint).toMatchObject({
+      kind: "points",
+      points: [{ x: 2, y: 4 }],
+    });
+  });
+});
 describe("floating window bounds and parameter points", () => {
   it("solves scalar residual regressions without requiring table columns", () => {
     for (const [source, expected] of [
@@ -695,6 +806,14 @@ describe("tables and persisted calculator work", () => {
     delete legacy.equalAxes;
     expect(validateCalculator(legacy)).toEqual(legacy);
     expect(() => validateCalculator({ ...state, equalAxes: "yes" })).toThrow();
+    const colored = { ...state, entries: [{ ...state.entries[0], color: 3 }] };
+    expect(validateCalculator(colored).entries[0].color).toBe(3);
+    expect(() =>
+      validateCalculator({
+        ...state,
+        entries: [{ ...state.entries[0], color: 10 }],
+      }),
+    ).toThrow();
     const dual = {
       ...state,
       mode: "desmos" as const,

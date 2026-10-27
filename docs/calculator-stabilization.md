@@ -1,5 +1,8 @@
 # Calculator stabilization — 2026-10-27
 
+The subsequent [expression and graph refinement](calculator-expression-parity.md)
+adds range syntax, x-dependent names, a split divider, colors and selection fixes.
+
 ## Official Desmos and local key
 
 The supplied personal-project key is stored only in ignored `.env.local` as
@@ -103,8 +106,8 @@ Equal physical x/y unit scale is now the default and is persisted as a graph
 viewport mode. Initial/Reset view, ordinary pan/zoom and calculator resizing
 preserve it by adapting the y range to the rendered aspect ratio; a rectangular
 graph therefore shows more of one axis without stretching circles. Fit and
-manual graph-window bounds may intentionally turn equal scaling off. Square axes
-restores it explicitly.
+manual graph-window bounds now expand one axis enough to retain equal units.
+The redundant Square axes button has been removed.
 
 ## Compact input and tables
 
@@ -112,14 +115,14 @@ restores it explicitly.
   Escape. Typing `table` still creates a table.
 - Scalar rows have no irrelevant visibility dot. `a=2` has its compact slider;
   dependent `b=a+2` displays its value without a slider. Graphable objects retain
-  visibility controls, including while hidden. Extra graph color controls were
-  deliberately deferred.
+  visibility controls, including while hidden. Right click, long press or
+  Shift+Enter on the dot opens the restrained color palette.
 - “Saved on this device” is removed. Angle mode is an exclusive Radians/Degrees
   selector. Mathematical input remains locally bundled DesQuill.
 - Function shorthand accepts an unambiguous atomic argument, including `sinx`
   and `sinx^2` (meaning `sin(x^2)`). Compound products need parentheses; unrelated
   longer identifiers are not split. Explicit-parentheses input is unchanged.
-- **Fraction / exact** recognizes bounded rational approximations, simple
+- **Fraction** recognizes bounded rational approximations, simple
   source-supported square roots and π multiples. It uses `≈` and does not claim
   arbitrary floating-point values have exact symbolic forms.
 - Backspace edits content first; from an empty cell it moves backward with the

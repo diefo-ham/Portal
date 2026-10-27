@@ -13,12 +13,14 @@ export interface ExpressionEntry {
   /** Optional structural source; legacy text-only expressions remain readable. */
   latex?: string;
   hidden: boolean;
+  color?: number;
 }
 export interface TableEntry {
   id: string;
   type: "table";
   rows: [string, string][];
   hidden: boolean;
+  color?: number;
   fit: FitModel;
   /** Stable session-local list identifiers, e.g. x_1 and y_1. */
   columns?: [string, string];
@@ -86,7 +88,9 @@ export function validateCalculator(raw: unknown): CalculatorState {
       typeof e.id !== "string" ||
       !/^[\w-]{1,80}$/.test(e.id) ||
       ids.has(e.id) ||
-      typeof e.hidden !== "boolean"
+      typeof e.hidden !== "boolean" ||
+      (e.color !== undefined &&
+        (!Number.isInteger(e.color) || e.color < 0 || e.color > 7))
     )
       throw new Error("Invalid calculator entry.");
     ids.add(e.id);

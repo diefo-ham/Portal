@@ -135,6 +135,43 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
   const parsed = new Map<string, Parsed>(),
     definitions = new Map<string, { id: string; parsed: Parsed }>();
   const missing = new Set<string>();
+  // Adjacent defined one-letter names are products (pv means p*v). Longer
+  // explicit identifiers and built-in function names remain intact.
+  const sources = new Map<string, string>();
+  const names = new Set(["x", "y"]);
+  const identifiers = new Set<string>();
+  for (const entry of state.entries) {
+    if (entry.type !== "expression") continue;
+    try {
+      const source =
+        entry.latex === undefined ? entry.text : latexToText(entry.latex);
+      sources.set(entry.id, source);
+      const name = normalize(source).match(
+        /^([a-z][a-z0-9_]{0,15})(?:\([a-z]\))?\s*=/i,
+      )?.[1];
+      if (name) {
+        identifiers.add(name);
+        if (name.length === 1) names.add(name);
+      }
+    } catch (error) {
+      failSource(entry.id, error);
+    }
+  }
+  function failSource(id: string, error: unknown) {
+    results[id] = {
+      error:
+        error instanceof Error ? error.message : "Invalid mathematical input.",
+    };
+  }
+  const products = (source: string) =>
+    normalize(source).replace(/[a-z][a-z0-9_]*/gi, (token) =>
+      token.length > 1 &&
+      !isBuiltin(token) &&
+      !identifiers.has(token) &&
+      [...token].every((name) => names.has(name))
+        ? [...token].join("*")
+        : token,
+    );
   const regressions = new Map<string, ReturnType<typeof regressionSpec>>();
   const fail = (id: string, error: unknown) => {
     results[id] = {
@@ -145,11 +182,11 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     };
   };
   for (const entry of state.entries) {
+    if (results[entry.id]?.error) continue;
     results[entry.id] = {};
     if (entry.type !== "expression") continue;
     try {
-      const source =
-        entry.latex === undefined ? entry.text : latexToText(entry.latex);
+      const source = products(sources.get(entry.id) ?? "");
       if (!source.trim()) continue;
       if (source.includes("~")) {
         regressions.set(entry.id, regressionSpec(normalize(source)));
@@ -201,6 +238,43 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         )
           missing.add(name);
   }
+  // Resolve dependencies transitively without evaluating at a sample x or
+  // caching a point-specific result as a global scalar.
+  const dependencyCache = new Map<string, Set<string>>();
+  const dependencies = (s: Scalar, active = new Set<string>()): Set<string> => {
+    const out = new Set<string>();
+    const visit = (name: string, call: boolean) => {
+      const def = definitions.get(name);
+      if (
+        !def ||
+        (call ? def.parsed.type !== "function" : def.parsed.type !== "variable")
+      ) {
+        if (!call) out.add(name);
+        return;
+      }
+      const key = `${call ? "fn" : "var"}:${name}`;
+      if (active.has(key))
+        throw new Error(`Circular definition involving ${name}.`);
+      let nested = dependencyCache.get(key);
+      if (!nested) {
+        nested = dependencies(def.parsed.a, new Set([...active, key]));
+        if (def.parsed.type === "function") nested.delete(def.parsed.argument);
+        dependencyCache.set(key, nested);
+      }
+      nested.forEach((name) => out.add(name));
+    };
+    s.symbols.forEach((name) => visit(name, false));
+    s.calls.forEach((name) => visit(name, true));
+    return out;
+  };
+  for (const [id, p] of parsed) {
+    try {
+      dependencies(p.a);
+      if ("b" in p) dependencies(p.b);
+    } catch (error) {
+      fail(id, error);
+    }
+  }
   let depth = 0;
   const evaluateAny = (
     s: Scalar,
@@ -214,7 +288,11 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       const scope: Record<string, Numeric> = { ...locals };
       for (const name of s.symbols)
         if (!Object.hasOwn(scope, name)) {
-          if (Object.hasOwn(values, name)) scope[name] = values[name];
+          if (
+            Object.hasOwn(values, name) &&
+            (!definitions.has(name) || !Object.keys(locals).length)
+          )
+            scope[name] = values[name];
           else if (columns.has(name)) {
             const column = columns.get(name)!;
             if (results[column.id]?.error)
@@ -235,7 +313,11 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             }
             if (results[def.id]?.error)
               throw new Error(`Fix the definition of ${name}.`);
-            scope[name] = values[name] = evaluateAny(def.parsed.a);
+            const value = evaluateAny(def.parsed.a, locals);
+            scope[name] = value;
+            const deps = dependencies(def.parsed.a);
+            if (!deps.has("x") && !deps.has("y") && !Object.keys(locals).length)
+              values[name] = value;
           }
         }
       return s.evaluate(scope, functions, state.angle);
@@ -345,7 +427,8 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       fail(id, error);
     }
   }
-  state.entries.forEach((entry, color) => {
+  state.entries.forEach((entry, index) => {
+    const color = entry.color ?? index;
     if (entry.type === "table") {
       try {
         if (results[entry.id]?.error) return;
@@ -400,6 +483,20 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         if (!entry.hidden) graphs.push(g);
       };
       if (p.type === "variable") {
+        const deps = dependencies(p.a);
+        if (deps.has("y"))
+          throw new Error("Named expressions in y need an explicit equation.");
+        if (deps.has("x")) {
+          evaluate(p.a, { x: 0.731 });
+          results[entry.id].tex = `${p.name} = ${tex(p.a)}`;
+          add({
+            kind: "function",
+            id: entry.id,
+            color,
+            fn: (x) => evaluate(p.a, { x }),
+          });
+          return;
+        }
         const value = evaluateAny(p.a);
         if (Array.isArray(value)) {
           if (value.some((n) => !Number.isFinite(n)))
@@ -464,7 +561,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             : {}),
         });
       } else if (p.type === "value") {
-        const symbols = p.a.symbols;
+        const symbols = dependencies(p.a);
         results[entry.id].tex = tex(p.a);
         if (symbols.has("y"))
           throw new Error("Use an equation such as x^2+y^2=25.");
@@ -493,16 +590,18 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         evaluate(p.b, { x: 0.731, y: 0.619 });
         results[entry.id].tex =
           `${tex(p.a)} ${p.relation.replace("<=", "\\le ").replace(">=", "\\ge ")} ${tex(p.b)}`;
-        const hasX = p.a.symbols.has("x") || p.b.symbols.has("x"),
-          hasY = p.a.symbols.has("y") || p.b.symbols.has("y");
+        const aDeps = dependencies(p.a),
+          bDeps = dependencies(p.b);
+        const hasX = aDeps.has("x") || bDeps.has("x"),
+          hasY = aDeps.has("y") || bDeps.has("y");
         if (
           ["x", "y"].includes(p.left) &&
-          !p.b.symbols.has("x") &&
-          !p.b.symbols.has("y") &&
+          !bDeps.has("x") &&
+          !bDeps.has("y") &&
           !Number.isFinite(evaluate(p.b))
         )
           throw new Error("Undefined or outside the supported numeric range.");
-        if (p.left === "y" && !p.b.symbols.has("y"))
+        if (p.left === "y" && !bDeps.has("y"))
           add({
             kind: "function",
             id: entry.id,
@@ -511,7 +610,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             relation: p.relation === "=" ? undefined : (p.relation as Relation),
           });
         else if (!hasY && hasX) {
-          if (p.relation !== "=" && (p.left !== "x" || p.b.symbols.has("x")))
+          if (p.relation !== "=" && (p.left !== "x" || bDeps.has("x")))
             throw new Error("Write inequalities as y < f(x) or x < a.");
           const fn =
             p.relation === "="
