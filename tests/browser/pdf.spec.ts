@@ -41,7 +41,7 @@ test("version-one study data survives the image-store migration", async ({
   await page.goto("/");
   await page.getByRole("button", { name: "Browse", exact: true }).click();
   await expect(page.locator(".question-row")).toHaveCount(10);
-  await page.locator(".question-row").first().click();
+  await page.locator(".question-row-main").first().click();
   await expect(
     page.getByRole("button", { name: "Remove bookmark" }),
   ).toBeVisible();
@@ -112,6 +112,11 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   await page.goto("/");
   await page.getByRole("button", { name: "Browse", exact: true }).click();
   await expect(page.locator(".question-row")).toHaveCount(1);
+  await page.locator(".question-row-main").click();
+  await expect(page.getByLabel("Original PDF question")).toBeVisible();
+  await expect(page.getByLabel("Original PDF explanation")).toHaveCount(0);
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await page.getByRole("textbox", { name: "Session size" }).fill("1");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByLabel("Original PDF question")).toBeVisible();
   await expect(page.getByLabel("Original PDF explanation")).toHaveCount(0);
@@ -158,6 +163,7 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   await expect(
     page.getByRole("button", { name: "Resume practice" }),
   ).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Session size" }).fill("1");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(
     page.getByLabel("Original PDF question").locator("img"),

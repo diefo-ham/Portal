@@ -21,8 +21,8 @@ export function Home({
   data: StudyData;
   value: FilterValues;
   onChange: (value: FilterValues) => void;
-  limit: number;
-  setLimit: (limit: number) => void;
+  limit: string;
+  setLimit: (limit: string) => void;
   busy: boolean;
   protectTests: boolean;
   onStart: (ids: string[], size: number) => void;
@@ -32,6 +32,13 @@ export function Home({
   onSample: () => void;
 }) {
   const questions = filterQuestions(data, value);
+  const maximum = questions.length;
+  const numericLimit = Number(limit);
+  const validLimit =
+    /^\d+$/.test(limit) &&
+    Number.isInteger(numericLimit) &&
+    numericLimit >= 1 &&
+    numericLimit <= maximum;
   const queues = reviewQueues(data, protectTests);
   const reset = () =>
     onChange({
@@ -104,31 +111,34 @@ export function Home({
             <div className="composer-start">
               <label>
                 Session size
-                <select
+                <input
+                  className="session-size-input"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={limit}
-                  onChange={(e) => setLimit(Number(e.target.value))}
-                >
-                  {[5, 10, 20, 0].map((n) => (
-                    <option key={n} value={n}>
-                      {n || "All"} questions
-                    </option>
-                  ))}
-                </select>
+                  aria-invalid={limit !== "" && !validLimit}
+                  aria-describedby="session-size-maximum"
+                  onChange={(event) => {
+                    if (/^\d*$/.test(event.target.value))
+                      setLimit(event.target.value);
+                  }}
+                />
               </label>
               <button
                 className="primary"
-                disabled={busy || !questions.length}
+                disabled={busy || !validLimit}
                 onClick={() =>
                   onStart(
                     questions.map((q) => q.id),
-                    limit,
+                    numericLimit,
                   )
                 }
               >
                 Start practice →
               </button>
-              <span className="small muted">
-                {questions.length} questions available
+              <span className="small muted" id="session-size-maximum">
+                {maximum ? `Max ${maximum}` : "No questions available"}
               </span>
             </div>
             {!questions.length && (

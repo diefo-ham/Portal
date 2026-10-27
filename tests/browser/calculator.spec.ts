@@ -27,6 +27,7 @@ async function start(page: Page) {
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
   await expect(

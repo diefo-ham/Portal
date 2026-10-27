@@ -20,6 +20,7 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByRole("navigation")).toHaveCount(0);
   await expect(

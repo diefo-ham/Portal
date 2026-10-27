@@ -30,7 +30,7 @@ test("new sessions sample the filtered pool, avoid repeats, and resume the exact
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
-  await page.getByRole("combobox", { name: "Session size" }).selectOption("5");
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   const first = (await state(page)).sessions.at(-1)!;
   expect(first.questionIds).toHaveLength(5);
@@ -56,7 +56,7 @@ test("new sessions sample the filtered pool, avoid repeats, and resume the exact
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
-  await page.getByRole("combobox", { name: "Session size" }).selectOption("5");
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   const second = (await state(page)).sessions.at(-1)!;
   expect(second.id).not.toBe(first.id);
@@ -77,6 +77,7 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page
     .getByRole("button", { name: "Bookmark question", exact: true })

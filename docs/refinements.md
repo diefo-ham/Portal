@@ -60,3 +60,23 @@ calculator state, PDF assets, backups, and session outcome/repractice routes.
 Evaluate whether three visible Continue entries and the new bookmark route feel
 appropriately quiet in daily use, and whether 1–4 feels natural for answer choice
 selection alongside B for bookmarks.
+
+## Question-browser and composer refinement
+
+Practice now accepts a typed whole-number session size from 1 through the live
+filtered count. Invalid, empty, zero, fractional, or over-maximum values cannot
+start a set. Filter changes do not silently rewrite the user's number; the live
+maximum and disabled Start action make a newly invalid value explicit.
+
+Browse no longer starts or resumes sessions. It searches and filters the same
+question corpus, shows answer/bookmark metadata, and opens a read-only question
+surface with bookmarking plus previous/next navigation through the current match
+set. It does not reveal explanations or record answers. Active questions still
+require spoiler confirmation before opening when protection has been overridden.
+
+The header order is Practice, Review, Browse, Help, Settings, aligned toward the
+right at laptop widths. Help explains Practice versus Browse, active-question
+protection, exact answer-status behavior, saved sessions, and shortcuts using
+short expandable sections. Domain/Skill popovers and non-destructive Help and
+Practice dialogs dismiss on outside click. Reset confirmations and the calculator
+remain exempt.

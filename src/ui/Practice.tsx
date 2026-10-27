@@ -544,6 +544,9 @@ export function Practice({
         ref={dialog}
         className="practice-dialog"
         onCancel={() => setPanel(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) setPanel(null);
+        }}
         onClose={() => {
           setPanel(null);
           trigger.current?.focus();

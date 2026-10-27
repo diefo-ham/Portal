@@ -75,6 +75,7 @@ test("compact domain and skill combinations persist in a deterministically resum
   ).toBe(true);
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 1280, height: 900 });
+  await page.getByRole("textbox", { name: "Session size" }).fill("2");
   await page.getByRole("button", { name: "Start practice" }).click();
   const saved = (await state(page)).sessions.at(-1)!;
   expect(saved.questionIds).toEqual(["demo-m01", "demo-m03"]);
@@ -99,6 +100,7 @@ test("results retain three outcomes and offer entire, mistaken and unanswered se
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("radio").nth(1).check();
   await page.getByRole("button", { name: "Check answer" }).click();

@@ -33,6 +33,8 @@ test("offline local workflow, history, reload persistence and backup restore", a
   await page
     .getByRole("combobox", { name: "Section", exact: true })
     .selectOption("math");
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Check answer" }).click();
@@ -147,7 +149,8 @@ test("question import controls are absent and narrow screens remain usable", asy
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "Start practice" }).click();
+  await page.locator(".question-row-main").first().click();
+  await expect(page.getByLabel("Browse question 1")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

@@ -126,6 +126,7 @@ for (const theme of ["light", "dark"] as const) {
     await page
       .getByRole("combobox", { name: "Section", exact: true })
       .selectOption("math");
+    await page.getByRole("textbox", { name: "Session size" }).fill("5");
     await page.getByRole("button", { name: "Start practice" }).click();
     await expect(page.getByRole("article")).toBeFocused();
     await shot(page, `${theme}-practice`);
@@ -264,7 +265,8 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
   for (const theme of ["light", "dark"]) {
     await page.getByLabel("Theme", { exact: true }).selectOption(theme);
     await page.getByRole("button", { name: "Browse", exact: true }).click();
-    await page.locator(".question-row").first().click();
+    await page.getByRole("button", { name: "Reset filters" }).click();
+    await page.locator(".question-row-main").first().click();
     await page.setViewportSize({ width: 1024, height: 768 });
     await expect(page.locator(".passage")).toBeVisible();
     expect(await overflow(page)).toBe(false);
@@ -274,14 +276,21 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
         .evaluate((el) => el.getBoundingClientRect().width),
     ).toBeLessThanOrEqual(860);
     await shot(page, `${theme}-long-reading`);
-    await page.getByRole("button", { name: "← Exit", exact: true }).click();
-    await page.getByRole("button", { name: "Browse", exact: true }).click();
-    await page.locator(".question-row").nth(1).click();
+    await page
+      .getByRole("button", { name: "← Back to questions", exact: true })
+      .click();
+    await page.locator(".question-row-main").nth(1).click();
     await expect(
       page.getByLabel("Original PDF question").locator("img"),
     ).toBeVisible();
     await shot(page, `${theme}-table`);
     expect(await overflow(page)).toBe(false);
+    await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await page
+      .getByRole("combobox", { name: "Section", exact: true })
+      .selectOption("math");
+    await page.getByRole("textbox", { name: "Session size" }).fill("1");
+    await page.getByRole("button", { name: "Start practice" }).click();
     await page.getByRole("radio").nth(1).check();
     await page.getByRole("button", { name: "Check answer" }).click();
     await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
@@ -291,11 +300,18 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
   }
   await page.getByLabel("Keep original PDF colors", { exact: true }).check();
   await page.getByRole("button", { name: "Browse", exact: true }).click();
-  await page.locator(".question-row").nth(1).click();
+  await page.getByRole("button", { name: "Reset filters" }).click();
+  await page.locator(".question-row-main").nth(1).click();
   await expect(
     page.getByLabel("Original PDF question").locator("img"),
   ).toHaveCSS("filter", "none");
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await page
+    .getByRole("combobox", { name: "Section", exact: true })
+    .selectOption("math");
+  await page.getByRole("textbox", { name: "Session size" }).fill("1");
+  await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(page.locator(".feedback")).toHaveCSS("animation-name", "none");

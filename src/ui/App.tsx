@@ -6,16 +6,11 @@ import {
   type StudyData,
   emptyData,
 } from "../core/model";
-import {
-  filterQuestions,
-  latestAttempt,
-  selectSessionQuestions,
-} from "../core/practice";
+import { filterQuestions, selectSessionQuestions } from "../core/practice";
 import { parseQuestions, mergeQuestions } from "../importing/json";
 import { parseBackup, downloadJson } from "../importing/backup";
 import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
-import { Filters, sectionName } from "./Filters";
 import { Practice } from "./Practice";
 import { Home } from "./Home";
 import { Review } from "./Review";
@@ -23,6 +18,7 @@ import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
+import { Browse } from "./Browse";
 export function App() {
   const appearance = useAppearance();
   const { data, archive, mutate, error, setError, loadingMessage } = useStudy();
@@ -40,7 +36,7 @@ export function App() {
   const [sessionId, setSessionId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState("10");
   const [visible, setVisible] = useState(40);
   const [restore, setRestore] = useState<StudyData>();
   const run = async (fn: () => Promise<unknown>) => {
@@ -126,7 +122,6 @@ export function App() {
       </main>
     );
   const filtered = filterQuestions(data, filters);
-  const ongoing = data.sessions.findLast((s) => !s.finishedAt);
   const current = data.sessions.find((s) => s.id === sessionId);
   const changeFilters = (value: FilterValues) => {
     setFilters(value);
@@ -160,6 +155,7 @@ export function App() {
                 {label}
               </button>
             ))}
+            <Help />
             <button
               className={`settings-link ${page === "data" ? "active" : ""}`}
               aria-current={page === "data" ? "page" : undefined}
@@ -172,7 +168,6 @@ export function App() {
             >
               ⚙
             </button>
-            <Help />
           </nav>
         </header>
       )}
@@ -222,199 +217,20 @@ export function App() {
           }
         />
       ) : page === "library" ? (
-        <main className="page">
-          <div className="page-heading">
-            <div>
-              <p className="eyebrow">YOUR DAILY PRACTICE</p>
-              <h1>Browse questions.</h1>
-              <p className="muted">
-                Choose a focus. Take your time. Learn from every answer.
-              </p>
-            </div>
-          </div>
-          {ongoing && (
-            <div className="resume-strip">
-              <div>
-                <strong>Your session is waiting.</strong>
-                <span>
-                  {" "}
-                  {ongoing.questionIds.length} questions · started{" "}
-                  {new Date(ongoing.startedAt).toLocaleDateString()}
-                </span>
-              </div>
-              <button
-                onClick={() => {
-                  setSessionId(ongoing.id);
-                  setPage("practice");
-                }}
-              >
-                Resume practice →
-              </button>
-            </div>
-          )}
-          {!data.questions.length ? (
-            <section className="empty-state">
-              <div className="empty-symbol">¶</div>
-              <h2>Your study space starts here.</h2>
-              <p>
-                Load 12 original sample questions to try the full workflow,
-                <br />
-                Question libraries are prepared locally outside the study
-                interface.
-              </p>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() =>
-                  void run(() => importData(synthetic, "synthetic.json"))
-                }
-              >
-                Load synthetic sample
-              </button>
-              <p className="small muted">
-                Original examples only. No College Board question content is
-                bundled.
-              </p>
-            </section>
-          ) : (
-            <>
-              <section className="filter-panel">
-                <div className="section-heading">
-                  <h2>Find your focus</h2>
-                  <button
-                    className="text-button"
-                    onClick={() =>
-                      changeFilters({
-                        ...defaultFilters,
-                        active: protectedTests ? "hide" : "include",
-                      })
-                    }
-                  >
-                    Reset filters
-                  </button>
-                </div>
-                <Filters data={data} value={filters} onChange={changeFilters} />
-                {page === "library" && (
-                  <div className="filter-bottom">
-                    <label className="search">
-                      <span className="sr-only">Search questions</span>
-                      <input
-                        placeholder="Search questions, skills, or source IDs…"
-                        value={filters.search}
-                        onChange={(e) =>
-                          changeFilters({ ...filters, search: e.target.value })
-                        }
-                      />
-                    </label>
-                  </div>
-                )}
-              </section>
-              <div className="library-toolbar">
-                <div>
-                  <h2>
-                    Question library{" "}
-                    <span className="count">{filtered.length}</span>
-                  </h2>
-                  <p className="small muted">
-                    {filters.active === "hide"
-                      ? "Practice-test protection is on."
-                      : "Practice-test protection is off for this selection."}
-                  </p>
-                </div>
-                <div className="session-controls">
-                  <label>
-                    Session size
-                    <select
-                      value={limit}
-                      onChange={(e) => setLimit(Number(e.target.value))}
-                    >
-                      {[5, 10, 20, 0].map((n) => (
-                        <option value={n} key={n}>
-                          {n || "All"} questions
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <button
-                    className="primary"
-                    disabled={!filtered.length || busy}
-                    onClick={() =>
-                      void start(
-                        filtered.map((q) => q.id),
-                        limit,
-                      )
-                    }
-                  >
-                    Start practice →
-                  </button>
-                </div>
-              </div>
-              {page === "library" && (
-                <div className="question-list">
-                  {filtered.slice(0, visible).map((q, index) => {
-                    const a = latestAttempt(data, q.id);
-                    const marked = data.annotations[q.id]?.bookmarked;
-                    return (
-                      <button
-                        className="question-row"
-                        key={q.id}
-                        onClick={() => void start([q.id])}
-                      >
-                        <span className="row-number">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        <span className="row-body">
-                          <span className="row-meta">
-                            {sectionName(q.section)}
-                            <span> / </span>
-                            {q.domain || "Domain unspecified"}
-                          </span>
-                          <span className="row-title">{q.stem}</span>
-                          <span className="small muted">
-                            {q.skill || "Skill unspecified"}
-                            {marked ? " · ★ Bookmarked" : ""}
-                          </span>
-                        </span>
-                        <span className="row-tags">
-                          <span
-                            className={`status ${a ? (a.correct ? "correct" : "incorrect") : ""}`}
-                          >
-                            {a
-                              ? a.correct
-                                ? "Correct"
-                                : "Incorrect"
-                              : "Unanswered"}
-                          </span>
-                          <span className="small muted">
-                            {q.difficulty || "Unspecified"}
-                          </span>
-                        </span>
-                        <span className="row-arrow">↗</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {!filtered.length && (
-                <div className="empty-state">
-                  <h2>No questions match yet.</h2>
-                  <p>Try broadening your filters.</p>
-                  <button onClick={() => changeFilters({ ...defaultFilters })}>
-                    Reset filters
-                  </button>
-                </div>
-              )}
-              {page === "library" && filtered.length > visible && (
-                <button
-                  className="load-more"
-                  onClick={() => setVisible(visible + 40)}
-                >
-                  Show more questions
-                </button>
-              )}
-            </>
-          )}
-        </main>
+        <Browse
+          data={data}
+          filters={filters}
+          filtered={filtered}
+          visible={visible}
+          onShowMore={() => setVisible(visible + 40)}
+          onChangeFilters={changeFilters}
+          protectTests={protectedTests}
+          busy={busy}
+          onSample={() =>
+            void run(() => importData(synthetic, "synthetic.json"))
+          }
+          mutate={mutate}
+        />
       ) : page === "review" ? (
         <Review
           data={data}
