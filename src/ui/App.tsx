@@ -1,8 +1,14 @@
 import { useState } from "react";
-import { beginSession, resetStudyProgress } from "../core/commands";
+import {
+  beginSession,
+  renameSession,
+  resetStudyProgress,
+  toggleSessionStar,
+} from "../core/commands";
 import {
   defaultFilters,
   type Filters as FilterValues,
+  type Session,
   type StudyData,
   emptyData,
 } from "../core/model";
@@ -19,6 +25,7 @@ import { ResetProgress } from "./ResetProgress";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 import { Browse } from "./Browse";
+import { normalizeSessionName } from "../core/sessions";
 export function App() {
   const appearance = useAppearance();
   const { data, archive, mutate, error, setError, loadingMessage } = useStudy();
@@ -87,7 +94,12 @@ export function App() {
         "Portable backup exported, including PDF question and explanation images.",
       );
     });
-  const start = async (ids: string[], size = 0, sessionFilters = filters) => {
+  const start = async (
+    ids: string[],
+    size = 0,
+    sessionFilters = filters,
+    name?: string,
+  ) => {
     if (!ids.length) return;
     const selected = selectSessionQuestions(
       ids,
@@ -106,7 +118,7 @@ export function App() {
     await run(async () => {
       let id = "";
       await mutate((d) => {
-        id = beginSession(d, selected, sessionFilters).id;
+        id = beginSession(d, selected, sessionFilters, name).id;
       });
       setSessionId(id);
       setMessage("");
@@ -127,6 +139,23 @@ export function App() {
     setFilters(value);
     setVisible(40);
   };
+  const openSession = (id: string) => {
+    setSessionId(id);
+    setPage("practice");
+  };
+  const changeSessionName = (id: string, name: string) =>
+    void run(() => mutate((draft) => renameSession(draft, id, name)));
+  const changeSessionStar = (id: string) =>
+    void run(() => mutate((draft) => toggleSessionStar(draft, id)));
+  const repracticeSession = (session: Session) =>
+    void start(
+      session.questionIds,
+      0,
+      session.filters,
+      session.name
+        ? normalizeSessionName(`${session.name} — Repractice`)
+        : undefined,
+    );
   return (
     <>
       {!(page === "practice" && current && !current.finishedAt) && (
@@ -194,7 +223,22 @@ export function App() {
           session={current}
           mutate={mutate}
           onBack={() => setPage("home")}
-          onRetry={(ids) => void start(ids, 0, current.filters)}
+          onRetry={(ids, kind) =>
+            void start(
+              ids,
+              0,
+              {
+                ...current.filters,
+                ...(kind === "mistakes" ? { status: "incorrect" } : {}),
+                ...(kind === "unanswered" ? { status: "unanswered" } : {}),
+              },
+              current.name
+                ? normalizeSessionName(
+                    `${current.name} — ${kind === "entire" ? "Repractice" : kind === "mistakes" ? "Mistakes" : "Unanswered"}`,
+                  )
+                : undefined,
+            )
+          }
         />
       ) : page === "home" ? (
         <Home
@@ -206,9 +250,11 @@ export function App() {
           busy={busy}
           protectTests={protectedTests}
           onStart={(ids, size) => void start(ids, size)}
-          onResume={(id) => {
-            setSessionId(id);
-            setPage("practice");
+          sessionActions={{
+            onOpen: openSession,
+            onRename: changeSessionName,
+            onToggleStar: changeSessionStar,
+            onRepractice: repracticeSession,
           }}
           onReview={() => setPage("review")}
           onBrowse={() => setPage("library")}
@@ -235,16 +281,20 @@ export function App() {
         <Review
           data={data}
           protectTests={protectedTests}
-          onStart={(ids) =>
+          onStart={(ids, source) =>
             void start(ids, 0, {
               ...defaultFilters,
               active: protectedTests ? "hide" : "include",
+              status:
+                source === "mistakes"
+                  ? "incorrect"
+                  : source === "unanswered"
+                    ? "unanswered"
+                    : "",
+              bookmark: source === "bookmarks" ? "yes" : "",
             })
           }
-          onOpen={(id) => {
-            setSessionId(id);
-            setPage("practice");
-          }}
+          onOpen={openSession}
         />
       ) : (
         <main className="page narrow settings-page">

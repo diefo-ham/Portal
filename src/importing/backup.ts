@@ -1,6 +1,10 @@
 import { type StudyData } from "../core/model";
 import { parseQuestions } from "./json";
 import { validateCalculator } from "../calculator/model";
+import {
+  normalizeSessionName,
+  SESSION_NAME_MAX_LENGTH,
+} from "../core/sessions";
 export function parseBackup(raw: unknown): StudyData {
   if (!raw || typeof raw !== "object") throw new Error("Invalid backup.");
   const envelope = raw as { format?: string; data?: StudyData };
@@ -49,6 +53,14 @@ export function parseBackup(raw: unknown): StudyData {
       !object(s.filters)
     )
       throw new Error("Invalid session in backup.");
+    if (
+      (s.name !== undefined && typeof s.name !== "string") ||
+      (s.starred !== undefined && typeof s.starred !== "boolean") ||
+      (typeof s.name === "string" &&
+        Array.from(s.name).length > SESSION_NAME_MAX_LENGTH)
+    )
+      throw new Error("Invalid session label in backup.");
+    if (typeof s.name === "string") s.name = normalizeSessionName(s.name);
     if (
       [s.filters.domains, s.filters.skills].some(
         (values) =>

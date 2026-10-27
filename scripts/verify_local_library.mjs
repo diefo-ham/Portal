@@ -127,6 +127,14 @@ try {
     await page
       .getByRole("textbox", { name: "Search questions" })
       .fill(q.sourceId);
+    await page.locator(".question-row-main").click();
+    await page
+      .getByLabel("Original PDF question")
+      .locator("img")
+      .first()
+      .waitFor();
+    await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await page.getByRole("textbox", { name: "Session size" }).fill("1");
     await page.getByRole("button", { name: "Start practice" }).click();
     await page
       .getByLabel("Original PDF question")

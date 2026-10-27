@@ -107,8 +107,9 @@ export function Help() {
             <summary>Sessions and saved questions</summary>
             <p>
               New sessions are shuffled; resuming preserves the saved order and
-              your place. Bookmarks are available from Review and do not count
-              as answers.
+              your place. Session stars keep important sets easy to find and are
+              separate from question bookmarks. Bookmarks are available from
+              Review and do not count as answers.
             </p>
           </details>
           <details>

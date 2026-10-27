@@ -3,6 +3,7 @@ import { filterQuestions } from "../core/practice";
 import { reviewQueues } from "../core/review";
 import { ContinueSessions } from "./ContinueSessions";
 import { Filters } from "./Filters";
+import { SessionCollections, type SessionActions } from "./SessionCollections";
 
 export function Home({
   data,
@@ -13,7 +14,7 @@ export function Home({
   busy,
   protectTests,
   onStart,
-  onResume,
+  sessionActions,
   onReview,
   onBrowse,
   onSample,
@@ -26,7 +27,7 @@ export function Home({
   busy: boolean;
   protectTests: boolean;
   onStart: (ids: string[], size: number) => void;
-  onResume: (id: string) => void;
+  sessionActions: SessionActions;
   onReview: () => void;
   onBrowse: () => void;
   onSample: () => void;
@@ -60,7 +61,7 @@ export function Home({
       <p className="muted">
         Choose a focus, settle in, and take it one question at a time.
       </p>
-      <ContinueSessions data={data} onResume={onResume} />
+      <ContinueSessions data={data} actions={sessionActions} />
       {!data.questions.length ? (
         <section className="empty-state">
           <h2>Your practice space is ready.</h2>
@@ -148,6 +149,7 @@ export function Home({
               </p>
             )}
           </section>
+          <SessionCollections data={data} actions={sessionActions} />
           {(queues.mistakes.length > 0 || queues.unanswered.length > 0) && (
             <section className="gentle-review">
               <h2>Something to revisit</h2>

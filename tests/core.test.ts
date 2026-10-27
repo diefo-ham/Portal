@@ -19,9 +19,11 @@ import {
 import sample from "../src/data/synthetic.json";
 import {
   beginSession,
+  renameSession,
   submitAnswer,
   finishSession,
   resetStudyProgress,
+  toggleSessionStar,
 } from "../src/core/commands";
 import { domainKey, skillKey, taxonomyOptions } from "../src/core/taxonomy";
 import { reviewQueues, sessionOutcomes } from "../src/core/review";
@@ -29,6 +31,11 @@ import {
   createResetArchive,
   validateResetArchive,
 } from "../src/storage/resetArchive";
+import {
+  normalizeSessionName,
+  sessionDefaultName,
+  sessionDisplayName,
+} from "../src/core/sessions";
 describe("question integrity and practice rules", () => {
   const questions = parseQuestions(sample);
   it("retains multiple unfinished sets without changing their order or drafts", () => {
@@ -45,6 +52,32 @@ describe("question integrity and practice rules", () => {
     expect(d.sessions.filter((s) => !s.finishedAt)).toHaveLength(2);
     expect(first).toEqual(saved);
   });
+  it("derives useful session labels and persists optional names and stars", () => {
+    const d = { ...emptyData(), questions };
+    const session = beginSession(
+      d,
+      [questions[0].id, questions[1].id],
+      defaultFilters,
+    );
+    expect(sessionDefaultName(d, session)).toBe("Math · Algebra · 2 questions");
+    renameSession(d, session.id, "  Functions   Review ✓  ");
+    toggleSessionStar(d, session.id);
+    expect(session.name).toBe("Functions Review ✓");
+    expect(session.starred).toBe(true);
+    expect(sessionDisplayName(d, session)).toBe("Functions Review ✓");
+    renameSession(d, session.id, "   ");
+    expect(session.name).toBeUndefined();
+    expect(sessionDisplayName(d, session)).toBe("Math · Algebra · 2 questions");
+    session.filters.status = "incorrect";
+    expect(sessionDefaultName(d, session)).toBe(
+      "Mistakes · Math · Algebra · 2 questions",
+    );
+    session.filters.status = "";
+    expect(normalizeSessionName("🌿".repeat(100))).toHaveLength(160);
+    expect(Array.from(normalizeSessionName("🌿".repeat(100))!)).toHaveLength(
+      80,
+    );
+  });
   it("atomically replaces one reset archive and restores complete study state without replacing the corpus", async () => {
     const original = { ...emptyData(), questions };
     const s = beginSession(
@@ -52,6 +85,8 @@ describe("question integrity and practice rules", () => {
       [questions[0].id, questions[1].id],
       defaultFilters,
     );
+    s.name = "Archived focus";
+    s.starred = true;
     s.elapsed[questions[0].id] = 1234;
     s.drafts[questions[1].id] = "28";
     s.index = 1;
@@ -93,6 +128,10 @@ describe("question integrity and practice rules", () => {
     expect((await readResetArchive())?.study.attempts).toEqual(
       original.attempts,
     );
+    expect((await readResetArchive())?.study.sessions[0]).toMatchObject({
+      name: "Archived focus",
+      starred: true,
+    });
     expect((await readData()).annotations).toEqual({});
     await updateData((d) => {
       d.questions.push({
@@ -376,6 +415,15 @@ describe("question integrity and practice rules", () => {
       parseBackup({ format: "sat-study-backup-v1", data: d }).sessions[0]
         .paused,
     ).toBe(true);
+    d.sessions[0].name = "  Saved   session  ";
+    d.sessions[0].starred = true;
+    expect(
+      parseBackup({ format: "sat-study-backup-v1", data: d }).sessions[0],
+    ).toMatchObject({ name: "Saved session", starred: true });
+    d.sessions[0].name = "x".repeat(81);
+    expect(() =>
+      parseBackup({ format: "sat-study-backup-v1", data: d }),
+    ).toThrow("session label");
     expect(() =>
       parseBackup({
         format: "sat-study-backup-v1",

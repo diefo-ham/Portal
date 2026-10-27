@@ -24,7 +24,7 @@ export function Practice({
   session: Session;
   mutate: Mutate;
   onBack: () => void;
-  onRetry: (ids: string[]) => void;
+  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
 }) {
   const question = data.questions.find(
     (q) => q.id === session.questionIds[session.index],

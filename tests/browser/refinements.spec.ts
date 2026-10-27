@@ -40,7 +40,7 @@ test("Continue keeps older unfinished sets reachable without exposing a long lis
     await page.getByRole("button", { name: "Start practice" }).click();
     await page.getByRole("button", { name: "← Exit", exact: true }).click();
   }
-  const rows = page.locator(".continue-area .resume-strip");
+  const rows = page.locator(".continue-area .study-session-row");
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(2)).toBeVisible();
   await expect(rows.nth(3)).not.toBeVisible();

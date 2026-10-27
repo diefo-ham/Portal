@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Question, Session, StudyData } from "../core/model";
 import { sessionOutcomes } from "../core/review";
+import { sessionDisplayName } from "../core/sessions";
 import { DocumentPanels } from "./DocumentPanels";
 export const displayAnswer = (q: Question, value: string) =>
   q.document
@@ -22,7 +23,7 @@ export function SessionResults({
   data: StudyData;
   session: Session;
   onBack: () => void;
-  onRetry: (ids: string[]) => void;
+  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
 }) {
   const result = sessionOutcomes(data, session);
   const [view, setView] = useState("all");
@@ -33,7 +34,8 @@ export function SessionResults({
         ← Back to practice
       </button>
       <p className="eyebrow">
-        SESSION REVIEW · {new Date(session.startedAt).toLocaleDateString()}
+        SESSION REVIEW · {sessionDisplayName(data, session)} ·{" "}
+        {new Date(session.startedAt).toLocaleDateString()}
       </p>
       <h1>
         {answered
@@ -72,7 +74,7 @@ export function SessionResults({
           {result.incorrect.length > 0 && (
             <button
               className="primary"
-              onClick={() => onRetry(result.incorrect)}
+              onClick={() => onRetry(result.incorrect, "mistakes")}
             >
               Practice mistakes ({result.incorrect.length})
             </button>
@@ -80,12 +82,12 @@ export function SessionResults({
           {result.unanswered.length > 0 && (
             <button
               className={!result.incorrect.length ? "primary" : ""}
-              onClick={() => onRetry(result.unanswered)}
+              onClick={() => onRetry(result.unanswered, "unanswered")}
             >
               Practice unanswered ({result.unanswered.length})
             </button>
           )}
-          <button onClick={() => onRetry(session.questionIds)}>
+          <button onClick={() => onRetry(session.questionIds, "entire")}>
             Practice entire session again
           </button>
         </div>

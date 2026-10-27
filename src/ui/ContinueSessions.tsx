@@ -1,43 +1,19 @@
 import type { StudyData } from "../core/model";
-import { sessionOutcomes } from "../core/review";
-import { sectionName } from "./Filters";
+import type { SessionActions } from "./SessionCollections";
+import { SessionRow } from "./SessionRow";
 
 export function ContinueSessions({
   data,
-  onResume,
+  actions,
 }: {
   data: StudyData;
-  onResume: (id: string) => void;
+  actions: SessionActions;
 }) {
   const sessions = data.sessions.filter((s) => !s.finishedAt).toReversed();
   if (!sessions.length) return null;
-  const rows = sessions.map((s) => {
-    const left = sessionOutcomes(data, s).unanswered.length;
-    const sections = [
-      ...new Set(
-        s.questionIds.map(
-          (id) => data.questions.find((q) => q.id === id)?.section,
-        ),
-      ),
-    ];
-    return (
-      <div className="resume-strip" key={s.id}>
-        <div>
-          <strong>
-            {sections.length === 1 && sections[0]
-              ? sectionName(sections[0])
-              : "Mixed practice"}{" "}
-            · {s.questionIds.length} questions
-          </strong>
-          <span>
-            {s.questionIds.length - left} answered · {left} left ·{" "}
-            {new Date(s.startedAt).toLocaleString()}
-          </span>
-        </div>
-        <button onClick={() => onResume(s.id)}>Resume practice →</button>
-      </div>
-    );
-  });
+  const rows = sessions.map((session) => (
+    <SessionRow key={session.id} data={data} session={session} {...actions} />
+  ));
   return (
     <section
       className="continue-area"

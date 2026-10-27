@@ -71,6 +71,10 @@ export const defaultFilters: Filters = {
 };
 export interface Session {
   id: string;
+  /** Optional user-facing override; the default label is derived on demand. */
+  name?: string;
+  /** Session favorites are distinct from per-question bookmarks. */
+  starred?: boolean;
   questionIds: string[];
   index: number;
   startedAt: string;

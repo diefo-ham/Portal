@@ -1,11 +1,13 @@
 import type { Filters, Session, StudyData } from "./model";
 import { createSession, isCorrect, numericValue } from "./practice";
+import { normalizeSessionName } from "./sessions";
 
 /** Domain operations mutate a transaction-local snapshot, never UI or storage. */
 export function beginSession(
   data: StudyData,
   questionIds: string[],
   filters: Filters,
+  name?: string,
 ): Session {
   if (
     !questionIds.length ||
@@ -13,8 +15,25 @@ export function beginSession(
   )
     throw new Error("Select existing questions before starting a session.");
   const session = createSession([...new Set(questionIds)], filters);
+  session.name = normalizeSessionName(name || "");
   data.sessions.push(session);
   return session;
+}
+
+export function renameSession(
+  data: StudyData,
+  sessionId: string,
+  name: string,
+) {
+  const session = data.sessions.find((candidate) => candidate.id === sessionId);
+  if (!session) throw new Error("Session no longer exists.");
+  session.name = normalizeSessionName(name);
+}
+
+export function toggleSessionStar(data: StudyData, sessionId: string) {
+  const session = data.sessions.find((candidate) => candidate.id === sessionId);
+  if (!session) throw new Error("Session no longer exists.");
+  session.starred = !session.starred;
 }
 
 export function submitAnswer(

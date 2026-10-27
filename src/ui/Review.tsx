@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { StudyData } from "../core/model";
 import { reviewQueues, sessionOutcomes } from "../core/review";
 import { skillKey, taxonomyOptions } from "../core/taxonomy";
+import { sessionDisplayName } from "../core/sessions";
 
 export function Review({
   data,
@@ -11,7 +12,10 @@ export function Review({
 }: {
   data: StudyData;
   protectTests: boolean;
-  onStart: (ids: string[]) => void;
+  onStart: (
+    ids: string[],
+    source?: "mistakes" | "unanswered" | "bookmarks",
+  ) => void;
   onOpen: (id: string) => void;
 }) {
   const [visible, setVisible] = useState(5);
@@ -51,7 +55,7 @@ export function Review({
           </p>
           <button
             disabled={!queues.mistakes.length}
-            onClick={() => onStart(queues.mistakes)}
+            onClick={() => onStart(queues.mistakes, "mistakes")}
           >
             Practice mistakes
           </button>
@@ -65,7 +69,7 @@ export function Review({
           </p>
           <button
             disabled={!queues.unanswered.length}
-            onClick={() => onStart(queues.unanswered)}
+            onClick={() => onStart(queues.unanswered, "unanswered")}
           >
             Practice unanswered
           </button>
@@ -83,7 +87,10 @@ export function Review({
             ? ` ${protectedBookmarks} saved questions are hidden by practice-test protection.`
             : ""}
         </p>
-        <button disabled={!bookmarks.length} onClick={() => onStart(bookmarks)}>
+        <button
+          disabled={!bookmarks.length}
+          onClick={() => onStart(bookmarks, "bookmarks")}
+        >
           Practice bookmarks
         </button>
       </section>
@@ -122,10 +129,11 @@ export function Review({
             onClick={() => onOpen(session.id)}
           >
             <span>
-              {new Date(session.startedAt).toLocaleString()}
+              <strong>{sessionDisplayName(data, session)}</strong>
               <small className="session-outcomes">
                 {result.correct.length} correct · {result.incorrect.length}{" "}
-                incorrect · {result.unanswered.length} unanswered
+                incorrect · {result.unanswered.length} unanswered ·{" "}
+                {new Date(session.startedAt).toLocaleDateString()}
               </small>
             </span>
             <span>
