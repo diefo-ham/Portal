@@ -8,7 +8,8 @@ main.with-calculator .practice-layout {
   gap: 20px;
   align-items: start;
 }
-.practice-page .calculator-sheet {
+.practice-page .calculator-sheet,
+.completed-calculator-context .calculator-sheet {
   position: sticky;
   top: 14px;
   width: clamp(460px, 52vw, 800px);
@@ -24,7 +25,8 @@ main.with-calculator .practice-layout {
   z-index: 5;
   scrollbar-gutter: stable;
 }
-.practice-page .calculator-sheet.calc-expanded {
+.practice-page .calculator-sheet.calc-expanded,
+.completed-calculator-context .calculator-sheet.calc-expanded {
   position: fixed;
   inset: 14px 14px 14px auto;
   width: min(1180px, calc(100vw - 28px));

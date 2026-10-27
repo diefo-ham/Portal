@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import type { StudyData } from "../../src/core/model";
+import { expression, enterExpression, expectExpression } from "./math-input";
 
 async function state(page: Page): Promise<StudyData> {
   return page.evaluate(async () => {
@@ -32,8 +33,6 @@ async function start(page: Page) {
     page.getByRole("textbox", { name: "Expression 1", exact: true }),
   ).toBeFocused();
 }
-const expression = (page: Page, n: number) =>
-  page.getByRole("textbox", { name: `Expression ${n}`, exact: true });
 const overflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
 
@@ -54,10 +53,10 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
     } else await route.continue();
   });
   await start(page);
-  await expression(page, 1).fill("y=x^2-4");
+  await enterExpression(page, 1, "y=x^2-4");
   await page.keyboard.press("Enter");
   await expect(expression(page, 2)).toBeFocused();
-  await expression(page, 2).fill("y=0");
+  await enterExpression(page, 2, "y=0");
   await expect(page.locator(".graph-curve").first()).toHaveAttribute("d", /M/);
   await page
     .getByRole("button", { name: "Inspect points", exact: true })
@@ -92,13 +91,13 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
   await page.mouse.wheel(0, -120);
   await expect(plane.locator("desc")).not.toHaveText(beforeWheel!);
   await page.getByRole("button", { name: "Reset view", exact: true }).click();
-  await expression(page, 2).fill("b");
+  await enterExpression(page, 2, "b");
   await page.keyboard.press("Space");
   await expect(
     page.getByRole("button", { name: "Bookmark question", exact: true }),
   ).toBeVisible();
   expect((await state(page)).attempts).toEqual([]);
-  await expression(page, 2).fill("345*.17");
+  await enterExpression(page, 2, "345*.17");
   await expect(page.locator(".calc-numeric-result")).toHaveText("= 58.65");
   await page
     .getByRole("button", { name: "Close calculator", exact: true })
@@ -109,8 +108,8 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
     page.getByRole("button", { name: "Open question overview" }),
   ).toContainText("Question 2");
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
-  await expect(expression(page, 1)).toHaveValue("y=x^2-4");
-  await expect(expression(page, 2)).toHaveValue("345*.17");
+  await expectExpression(page, 1, "y=x^2-4");
+  await expectExpression(page, 2, "345*.17");
   await page
     .getByRole("button", { name: "Hide expression 1", exact: true })
     .click();
@@ -119,12 +118,12 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
     .getByRole("button", { name: "Show expression 1", exact: true })
     .click();
   await expect(page.locator(".graph-curve").first()).toBeVisible();
-  await expression(page, 1).fill("x<100");
+  await enterExpression(page, 1, "x<100");
   await expect(page.locator("rect.graph-shade")).toHaveAttribute(
     "width",
     /[1-9]/,
   );
-  await expression(page, 1).fill("y<100");
+  await enterExpression(page, 1, "y<100");
   await expect(page.locator("path.graph-shade").first()).toHaveAttribute(
     "d",
     /M/,
@@ -140,7 +139,7 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   page,
 }) => {
   await start(page);
-  await expression(page, 1).fill("y=ax^2+bx+c");
+  await enterExpression(page, 1, "y=ax^2+bx+c");
   for (const name of ["a", "b", "c"])
     await page
       .getByRole("button", { name: `Add ${name} slider`, exact: true })
@@ -150,7 +149,7 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   ).toBeVisible();
   await page.getByRole("slider", { name: "a slider", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(expression(page, 2)).toHaveValue("a = 1.1");
+  await expectExpression(page, 2, "a = 1.1");
   await page.getByRole("button", { name: "+ Table", exact: true }).click();
   const table = page.getByRole("region", { name: "Data table 5", exact: true });
   const cell = table.getByRole("textbox").first();
@@ -212,10 +211,10 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
     .click();
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
   const first = (await state(page)).sessions[0];
-  expect(first.calculator?.entries).toHaveLength(5);
+  expect(first.calculator?.entries).toHaveLength(6);
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
-  await expect(expression(page, 1)).toHaveValue("");
+  await expectExpression(page, 1, "");
   await page
     .getByRole("button", { name: "Close calculator", exact: true })
     .click();
@@ -223,7 +222,7 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).last().click();
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
-  await expect(expression(page, 1)).toHaveValue("y=ax^2+bx+c");
+  await expectExpression(page, 1, "y=ax^2+bx+c");
   await expect(page.getByLabel("Regression coefficients")).toHaveText(
     "b = 1 · m = 3",
   );
@@ -262,12 +261,14 @@ for (const theme of ["light", "dark"])
       theme,
     );
     await start(page);
-    await expression(page, 1).fill("y=x^2-4");
+    await enterExpression(page, 1, "y=x^2-4");
     await page
       .getByRole("button", { name: "+ Expression", exact: true })
       .click();
-    await expression(page, 2).fill("y=2x+3");
-    await expect(page.locator(".calc-math .katex").first()).toBeVisible();
+    await enterExpression(page, 2, "y=2x+3");
+    await expect(page.locator(".graph-curve")).toHaveCount(2);
+    await expect(page.locator(".calc-error")).toHaveCount(0);
+    await expect(page.locator(".dcg-mq-root-block").first()).toBeVisible();
     mkdirSync("private-data/inspection", { recursive: true });
     for (const width of [1366, 1280, 1024, 1920, 820, 390]) {
       await page.setViewportSize({ width, height: 768 });
@@ -290,7 +291,7 @@ for (const theme of ["light", "dark"])
       fullPage: true,
       animations: "disabled",
     });
-    await expression(page, 2).fill("sqrt(-1)");
+    await enterExpression(page, 2, "sqrt(-1)");
     await expect(page.getByRole("status")).toContainText(
       "Undefined or outside the supported numeric range",
     );

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { enterExpression, expectExpression } from "./math-input";
 
 test("contextual Space and arrow navigation respect focused controls", async ({
   page,
@@ -70,13 +71,9 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
-  await page
-    .getByRole("textbox", { name: "Expression 1", exact: true })
-    .fill("6+7");
+  await enterExpression(page, 1, "6+7");
   await page.keyboard.press("ArrowLeft");
-  await expect(
-    page.getByRole("textbox", { name: "Expression 1", exact: true }),
-  ).toHaveValue("6+7");
+  await expectExpression(page, 1, "6+7");
   await expect(
     page.getByRole("button", { name: "Open question overview" }),
   ).toHaveText(/Question 5/);

@@ -10,9 +10,12 @@
     "test": "vitest run tests/core.test.ts tests/pdf.test.ts tests/calculator.test.ts",
     "test:e2e": "playwright test",
     "prebuild": "node scripts/update-notices.mjs",
-    "licenses": "node scripts/update-notices.mjs"
+    "licenses": "node scripts/update-notices.mjs",
+    "build:editor": "node scripts/build-desquill.mjs"
   },
   "dependencies": {
+    "@fluent/bundle": "0.19.1",
+    "@lukeed/uuid": "2.0.1",
     "katex": "0.19.1",
     "mathjs": "15.2.0",
     "ml-matrix": "6.15.1",
@@ -25,8 +28,10 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.1.0",
+    "esbuild": "0.28.2",
     "fake-indexeddb": "^6.2.4",
     "prettier": "^3.9.10",
+    "sass": "1.93.2",
     "typescript": "~5.9.3",
     "vite": "^7.2.0",
     "vitest": "^5.0.5"

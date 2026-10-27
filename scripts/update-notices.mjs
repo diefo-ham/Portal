@@ -16,7 +16,7 @@ await mkdir(output, { recursive: true });
 const index = [
   "Third-party software notices",
   "",
-  "These libraries are installed/bundled locally. No remote calculator service is used.",
+  "The Offline calculator libraries are bundled locally. Optional Desmos mode loads the official hosted API separately.",
   "",
 ];
 for (const [path, entry] of Object.entries(lock.packages)) {
@@ -66,5 +66,27 @@ index.push(
   "  katex-fonts-LICENSE.txt",
   "",
 );
-await writeFile(join(output, "index.txt"), index.join("\n"));
+await copyFile(
+  join(root, "vendor/desquill/LICENSE"),
+  join(output, "desquill-MPL-2.0.txt"),
+);
+await copyFile(
+  join(root, "vendor/desquill/README.md"),
+  join(output, "desquill-source-notice.txt"),
+);
+for (const file of [
+  "flux-LICENSE",
+  "flux-PATENTS",
+  "underscore-LICENSE",
+  "fluent-LICENSE",
+])
+  await copyFile(
+    join(root, "vendor/desquill", file),
+    join(output, `${file}.txt`),
+  );
+await writeFile(
+  join(output, "index.txt"),
+  index.join("\n") +
+    "\nDesQuill — MPL-2.0, source and provenance: vendor/desquill/\n  desquill-MPL-2.0.txt\n  desquill-source-notice.txt\n",
+);
 console.log("Updated local production dependency notices.");

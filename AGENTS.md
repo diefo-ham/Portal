@@ -6,6 +6,7 @@
 - The question is central. Prefer study usefulness, calm typography, and accessible interaction over gamification or dashboards.
 - Notes are intentionally absent from the product; retain the legacy note field only for stored-data/backup compatibility. Bookmarks remain useful, and progress reset preserves them unless the user explicitly chooses to clear them.
 - Keep presentation highly iterable. Core question rules, import normalization, persistence, calculator providers, and analytics must remain separate from UI.
+- Calculator uses the official hosted Desmos API only when configured/available; the locally bundled Offline engine remains fully usable without external requests. Keep their session workspaces separate and never redistribute/cache the proprietary hosted bundle for offline use.
 - Prefer maintainable, small solutions over enterprise complexity. Preserve progress and working behavior during redesigns.
 - Validate imports as untrusted data. Do not execute imported HTML or fetch remote question assets.
 - Run meaningful core and workflow tests before stable checkpoints. Never commit real exports, backups, or browser profiles.

@@ -20,21 +20,33 @@ export function SessionResults({
   session,
   onBack,
   onRetry,
+  onCalculator,
+  calculatorOpen,
 }: {
   data: StudyData;
   session: Session;
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onCalculator?: () => void;
+  calculatorOpen?: boolean;
 }) {
   const result = sessionOutcomes(data, session);
   const timing = sessionTiming(data, session);
   const [view, setView] = useState("all");
   const answered = result.correct.length + result.incorrect.length;
   return (
-    <main className="page narrow session-results">
+    <main className="page narrow session-results" inert={calculatorOpen}>
       <button className="text-button" onClick={onBack}>
         ← Back to practice
       </button>
+      {onCalculator && (
+        <button
+          className="text-button result-calculator"
+          onClick={onCalculator}
+        >
+          Calculator workspace
+        </button>
+      )}
       <p className="eyebrow">
         SESSION REVIEW · {sessionDisplayName(data, session)} ·{" "}
         {new Date(session.startedAt).toLocaleDateString()}

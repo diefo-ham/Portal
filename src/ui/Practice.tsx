@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShortcutHelp } from "./Help";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
@@ -7,7 +7,7 @@ import { numericValue } from "../core/practice";
 import { sectionName } from "./Filters";
 import "../calculator/layout.css";
 import { useCalculatorState } from "../calculator/useCalculatorState";
-const Calculator = lazy(() => import("../calculator/Calculator"));
+import { CalculatorPanel } from "../calculator/CalculatorPanel";
 import { DocumentPanels } from "./DocumentPanels";
 import { SessionResults, displayAnswer, correctAnswer } from "./SessionResults";
 type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
@@ -135,18 +135,45 @@ export function Practice({
     setCalculator(false);
     setCalculatorExpanded(false);
     requestAnimationFrame(() =>
-      questionTop.current?.focus({ preventScroll: true }),
+      (
+        questionTop.current ??
+        document.querySelector<HTMLElement>(".result-calculator")
+      )?.focus({ preventScroll: true }),
     );
   };
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   if (session.finishedAt)
     return (
-      <SessionResults
-        data={data}
-        session={session}
-        onBack={onBack}
-        onRetry={onRetry}
-      />
+      <div className="completed-calculator-context">
+        <SessionResults
+          data={data}
+          session={session}
+          onBack={onBack}
+          onRetry={onRetry}
+          calculatorOpen={calculator}
+          onCalculator={
+            session.questionIds.some((id) =>
+              data.questions.some(
+                (question) => question.id === id && question.section === "math",
+              ),
+            )
+              ? () => {
+                  setCalculator(true);
+                  setCalculatorExpanded(true);
+                }
+              : undefined
+          }
+        />
+        {calculator && (
+          <CalculatorPanel
+            state={calculatorWork.state}
+            onChange={calculatorWork.change}
+            expanded
+            onExpand={closeCalculator}
+            onClose={closeCalculator}
+          />
+        )}
+      </div>
     );
   return (
     <main
@@ -504,63 +531,13 @@ export function Practice({
           </div>
         </article>
         {calculator && question.section === "math" && (
-          <aside
-            className={`calculator-sheet ${calculatorExpanded ? "calc-expanded" : ""}`}
-            aria-label="Calculator panel"
-            role={calculatorExpanded ? "dialog" : undefined}
-            aria-modal={calculatorExpanded ? true : undefined}
-            onKeyDown={(e) => {
-              e.stopPropagation();
-              if (calculatorExpanded && e.key === "Tab") {
-                const controls = [
-                  ...e.currentTarget.querySelectorAll<HTMLElement>(
-                    'button,input,select,textarea,summary,[tabindex="0"]',
-                  ),
-                ].filter((el) => {
-                  const closedDetails = el.closest("details:not([open])");
-                  return (
-                    !el.hasAttribute("disabled") &&
-                    el.tabIndex >= 0 &&
-                    el.getClientRects().length > 0 &&
-                    (!closedDetails ||
-                      (el.tagName === "SUMMARY" &&
-                        el.parentElement === closedDetails))
-                  );
-                });
-                const target =
-                  e.shiftKey && document.activeElement === controls[0]
-                    ? controls.at(-1)
-                    : !e.shiftKey && document.activeElement === controls.at(-1)
-                      ? controls[0]
-                      : undefined;
-                if (target) {
-                  e.preventDefault();
-                  target.focus();
-                }
-              }
-              if (
-                e.key === "Escape" &&
-                !(e.target instanceof HTMLSelectElement)
-              ) {
-                e.preventDefault();
-                closeCalculator();
-              }
-            }}
-          >
-            <Suspense
-              fallback={
-                <p className="small muted">Opening local calculator…</p>
-              }
-            >
-              <Calculator
-                state={calculatorWork.state}
-                onChange={calculatorWork.change}
-                expanded={calculatorExpanded}
-                onExpand={() => setCalculatorExpanded(!calculatorExpanded)}
-                onClose={closeCalculator}
-              />
-            </Suspense>
-          </aside>
+          <CalculatorPanel
+            state={calculatorWork.state}
+            onChange={calculatorWork.change}
+            expanded={calculatorExpanded}
+            onExpand={() => setCalculatorExpanded(!calculatorExpanded)}
+            onClose={closeCalculator}
+          />
         )}
       </div>
       <dialog

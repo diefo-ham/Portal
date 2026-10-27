@@ -1,6 +1,14 @@
-import { scalar, scalarTex, normalize, isBuiltin, type Scalar } from "./math";
-import type { CalculatorState, Point } from "./model";
-import { regression, type Fit } from "./regression";
+import {
+  scalar,
+  scalarTex,
+  normalize,
+  isBuiltin,
+  type Scalar,
+  type Numeric,
+} from "./math";
+import { tableColumns, type CalculatorState, type Point } from "./model";
+import { regression, regressionSpec, type Fit } from "./regression";
+import { latexToText } from "./latex";
 
 export type Relation = "<" | "<=" | ">" | ">=";
 export type GraphObject =
@@ -29,6 +37,8 @@ export type GraphObject =
 export interface EntryResult {
   error?: string;
   value?: number;
+  values?: number[];
+  parameters?: Record<string, number>;
   tex?: string;
   fit?: Fit;
   points?: Point[];
@@ -93,8 +103,8 @@ function parseEntry(text: string): Parsed {
     const body = text.slice(1, -1);
     let depth = 0;
     for (let i = 0; i < body.length; i++) {
-      if (body[i] === "(") depth++;
-      if (body[i] === ")") depth--;
+      if (body[i] === "(" || body[i] === "[") depth++;
+      if (body[i] === ")" || body[i] === "]") depth--;
       if (body[i] === "," && depth === 0)
         return {
           type: "point",
@@ -111,6 +121,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
   const parsed = new Map<string, Parsed>(),
     definitions = new Map<string, { id: string; parsed: Parsed }>();
   const missing = new Set<string>();
+  const regressions = new Map<string, ReturnType<typeof regressionSpec>>();
   const fail = (id: string, error: unknown) => {
     results[id] = {
       error:
@@ -121,9 +132,16 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
   };
   for (const entry of state.entries) {
     results[entry.id] = {};
-    if (entry.type !== "expression" || !entry.text.trim()) continue;
+    if (entry.type !== "expression") continue;
     try {
-      const p = parseEntry(entry.text);
+      const source =
+        entry.latex === undefined ? entry.text : latexToText(entry.latex);
+      if (!source.trim()) continue;
+      if (source.includes("~")) {
+        regressions.set(entry.id, regressionSpec(normalize(source)));
+        continue;
+      }
+      const p = parseEntry(source);
       parsed.set(entry.id, p);
       if (p.type === "function" || p.type === "variable") {
         if (definitions.has(p.name)) {
@@ -139,8 +157,25 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       fail(entry.id, e);
     }
   }
-  const values: Record<string, number> = Object.create(null),
+  const values: Record<string, Numeric> = Object.create(null),
     functions: Record<string, (x: number) => number> = Object.create(null);
+  const columns = new Map<string, { id: string; cells: string[] }>();
+  for (const entry of state.entries) {
+    if (entry.type !== "table") continue;
+    const names = tableColumns(state, entry.id);
+    for (let col = 0; col < 2; col++) {
+      if (definitions.has(names[col]) || columns.has(names[col])) {
+        fail(entry.id, new Error(`Duplicate definition of ${names[col]}.`));
+        continue;
+      }
+      columns.set(names[col], {
+        id: entry.id,
+        cells: entry.rows
+          .filter((row) => row.some((value) => value.trim()))
+          .map((row) => row[col]),
+      });
+    }
+  }
   for (const p of parsed.values()) {
     const scalars = "b" in p ? [p.a, p.b] : [p.a];
     for (const s of scalars)
@@ -153,17 +188,32 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
           missing.add(name);
   }
   let depth = 0;
-  const evaluate = (s: Scalar, locals: Record<string, number> = {}): number => {
+  const evaluateAny = (
+    s: Scalar,
+    locals: Record<string, Numeric> = {},
+  ): Numeric => {
     if (++depth > 24) {
       depth--;
       throw new Error("Circular or excessively deep definitions.");
     }
     try {
-      const scope: Record<string, number> = { ...locals };
+      const scope: Record<string, Numeric> = { ...locals };
       for (const name of s.symbols)
         if (!Object.hasOwn(scope, name)) {
           if (Object.hasOwn(values, name)) scope[name] = values[name];
-          else {
+          else if (columns.has(name)) {
+            const column = columns.get(name)!;
+            if (results[column.id]?.error)
+              throw new Error(`Fix table ${name} first.`);
+            scope[name] = values[name] = column.cells.map((cell) => {
+              if (!cell.trim())
+                throw new Error(`Complete the ${name} data column.`);
+              const value = evaluateAny(scalar(cell));
+              if (Array.isArray(value))
+                throw new Error("Table cells must be scalar numbers.");
+              return value;
+            });
+          } else {
             const def = definitions.get(name);
             if (!def || def.parsed.type !== "variable") {
               if (/^[a-df-wz]$/.test(name)) missing.add(name);
@@ -171,13 +221,21 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             }
             if (results[def.id]?.error)
               throw new Error(`Fix the definition of ${name}.`);
-            scope[name] = values[name] = evaluate(def.parsed.a);
+            scope[name] = values[name] = evaluateAny(def.parsed.a);
           }
         }
-      return s.value(scope, functions, state.angle);
+      return s.evaluate(scope, functions, state.angle);
     } finally {
       depth--;
     }
+  };
+  const evaluate = (s: Scalar, locals: Record<string, number> = {}): number => {
+    const value = evaluateAny(s, locals);
+    if (Array.isArray(value))
+      throw new Error(
+        "Use scalar values here, or plot paired lists as (x_1,y_1).",
+      );
+    return value;
   };
   for (const [name, d] of definitions)
     if (d.parsed.type === "function") {
@@ -188,9 +246,41 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         return evaluate(p.a, { [p.argument]: x });
       };
     }
+  for (const [id, spec] of regressions) {
+    try {
+      const x = evaluateAny(scalar(spec.x)),
+        y = evaluateAny(scalar(spec.y));
+      if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length)
+        throw new Error("Regression needs equally sized x and y data lists.");
+      if (
+        new Set(spec.names).size !== spec.names.length ||
+        spec.names.some(
+          (name) =>
+            isBuiltin(name) ||
+            definitions.has(name) ||
+            Object.hasOwn(values, name),
+        )
+      )
+        throw new Error(
+          "Regression parameters must be distinct, unreserved, and not already defined.",
+        );
+      const fit = regression(
+        x.map((value, index) => ({ x: value, y: y[index] })),
+        spec.model,
+      );
+      const parameters = Object.fromEntries(
+        spec.names.map((name, index) => [name, fit.coefficients[index]]),
+      );
+      Object.assign(values, parameters);
+      results[id] = { fit, parameters };
+    } catch (error) {
+      fail(id, error);
+    }
+  }
   state.entries.forEach((entry, color) => {
     if (entry.type === "table") {
       try {
+        if (results[entry.id]?.error) return;
         const points = entry.rows
           .filter((r) => r[0].trim() || r[1].trim())
           .map((r, i) => {
@@ -225,6 +315,12 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       }
       return;
     }
+    if (regressions.has(entry.id)) {
+      const fit = results[entry.id]?.fit;
+      if (fit && !entry.hidden)
+        graphs.push({ kind: "function", id: entry.id, color, fn: fit.predict });
+      return;
+    }
     const p = parsed.get(entry.id);
     if (!p || results[entry.id].error) return;
     try {
@@ -233,7 +329,14 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         if (!entry.hidden) graphs.push(g);
       };
       if (p.type === "variable") {
-        const value = evaluate(p.a);
+        const value = evaluateAny(p.a);
+        if (Array.isArray(value)) {
+          if (value.some((n) => !Number.isFinite(n)))
+            throw new Error("A list contains an undefined value.");
+          values[p.name] = value;
+          results[entry.id] = { values: value, tex: `${p.name} = ${tex(p.a)}` };
+          return;
+        }
         if (!Number.isFinite(value))
           throw new Error("Undefined or outside the supported numeric range.");
         values[p.name] = value;
@@ -250,12 +353,25 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         results[entry.id].tex = `${p.name}(${p.argument}) = ${tex(p.a)}`;
         add({ kind: "function", id: entry.id, color, fn: functions[p.name] });
       } else if (p.type === "point") {
-        const x = evaluate(p.a),
-          y = evaluate(p.b);
-        if (![x, y].every(Number.isFinite))
+        const x = evaluateAny(p.a),
+          y = evaluateAny(p.b);
+        const xs = Array.isArray(x)
+          ? x
+          : Array.isArray(y)
+            ? y.map(() => x)
+            : [x];
+        const ys = Array.isArray(y) ? y : xs.map(() => y);
+        if (xs.length !== ys.length)
+          throw new Error("Point lists must have the same length.");
+        if (![...xs, ...ys].every(Number.isFinite))
           throw new Error("Point coordinates must be finite real numbers.");
         results[entry.id] = { tex: `\\left(${tex(p.a)}, ${tex(p.b)}\\right)` };
-        add({ kind: "points", id: entry.id, color, points: [{ x, y }] });
+        add({
+          kind: "points",
+          id: entry.id,
+          color,
+          points: xs.map((value, index) => ({ x: value, y: ys[index] })),
+        });
       } else if (p.type === "value") {
         const symbols = p.a.symbols;
         results[entry.id].tex = tex(p.a);
@@ -270,7 +386,11 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             fn: (x) => evaluate(p.a, { x }),
           });
         } else {
-          const value = evaluate(p.a);
+          const value = evaluateAny(p.a);
+          if (Array.isArray(value)) {
+            results[entry.id].values = value;
+            return;
+          }
           if (!Number.isFinite(value))
             throw new Error(
               "Undefined or outside the supported numeric range.",
@@ -344,5 +464,9 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       fail(entry.id, e);
     }
   });
-  return { graphs, results, missing: [...missing].sort() };
+  return {
+    graphs,
+    results,
+    missing: [...missing].filter((name) => !Object.hasOwn(values, name)).sort(),
+  };
 }

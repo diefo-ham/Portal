@@ -1,9 +1,14 @@
 Third-party software notices
 
-These libraries are installed/bundled locally. No remote calculator service is used.
+The Offline calculator libraries are bundled locally. Optional Desmos mode loads the official hosted API separately.
 
 @babel/runtime 7.29.10 — MIT
   babel-runtime-LICENSE.txt
+@fluent/bundle 0.19.1 — Apache-2.0
+@lukeed/csprng 1.1.0 — MIT
+  lukeed-csprng-license.txt
+@lukeed/uuid 2.0.1 — MIT
+  lukeed-uuid-license.txt
 commander 15.0.0 — MIT
   commander-LICENSE.txt
 complex.js 2.4.3 — MIT
@@ -46,3 +51,7 @@ typed-function 4.2.2 — MIT
 
 KaTeX font source: https://github.com/KaTeX/katex-fonts/blob/master/LICENSE
   katex-fonts-LICENSE.txt
+
+DesQuill — MPL-2.0, source and provenance: vendor/desquill/
+  desquill-MPL-2.0.txt
+  desquill-source-notice.txt

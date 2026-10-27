@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { emptyCalculator, type CalculatorState } from "./model";
+import {
+  emptyCalculator,
+  withBlankExpression,
+  tableColumns,
+  type CalculatorState,
+} from "./model";
 import type { StudyData } from "../core/model";
 
 /** Session-owned state; immediate editing, debounced local writes, explicit
@@ -10,7 +15,17 @@ export function useCalculatorState(
   saved: CalculatorState | undefined,
   mutate: (fn: (d: StudyData) => void) => Promise<StudyData>,
 ) {
-  const [state, setState] = useState(saved ?? emptyCalculator);
+  const [state, setState] = useState(() => {
+    const initial = saved ?? emptyCalculator();
+    return withBlankExpression({
+      ...initial,
+      entries: initial.entries.map((entry) =>
+        entry.type === "table" && !entry.columns
+          ? { ...entry, columns: tableColumns(initial, entry.id) }
+          : entry,
+      ),
+    });
+  });
   const latest = useRef(state),
     dirty = useRef(false);
   const flush = useCallback(async () => {
@@ -28,6 +43,7 @@ export function useCalculatorState(
     }
   }, [sessionId, mutate]);
   const change = (next: CalculatorState) => {
+    next = withBlankExpression(next);
     latest.current = next;
     dirty.current = true;
     setState(next);

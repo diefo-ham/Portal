@@ -10,6 +10,8 @@ export interface ExpressionEntry {
   id: string;
   type: "expression";
   text: string;
+  /** Optional structural source; legacy text-only expressions remain readable. */
+  latex?: string;
   hidden: boolean;
 }
 export interface TableEntry {
@@ -18,6 +20,8 @@ export interface TableEntry {
   rows: [string, string][];
   hidden: boolean;
   fit: FitModel;
+  /** Stable session-local list identifiers, e.g. x_1 and y_1. */
+  columns?: [string, string];
 }
 export type Entry = ExpressionEntry | TableEntry;
 export interface CalculatorState {
@@ -25,6 +29,9 @@ export interface CalculatorState {
   entries: Entry[];
   angle: "radians" | "degrees";
   view: Viewport;
+  mode?: "desmos" | "offline";
+  /** Official getState() JSON, kept opaque and separate from offline entries. */
+  desmos?: Record<string, unknown>;
 }
 export const defaultView = (): Viewport => ({
   xMin: -10,
@@ -57,14 +64,15 @@ export function validView(v: Viewport) {
 /** Small, versioned workspace; safe to include in session backups and reset archives. */
 export function validateCalculator(raw: unknown): CalculatorState {
   const s = raw as CalculatorState;
-  const text = (v: unknown) => typeof v === "string" && v.length <= 240;
+  const text = (v: unknown) => typeof v === "string" && v.length <= 1200;
   if (
     !s ||
     s.version !== 1 ||
     !["radians", "degrees"].includes(s.angle) ||
     !validView(s.view) ||
     !Array.isArray(s.entries) ||
-    s.entries.length > 24
+    s.entries.length > 25 ||
+    (s.mode !== undefined && !["desmos", "offline"].includes(s.mode))
   )
     throw new Error("Invalid calculator workspace.");
   const ids = new Set<string>();
@@ -80,7 +88,9 @@ export function validateCalculator(raw: unknown): CalculatorState {
     ids.add(e.id);
     if (
       e.type === "expression"
-        ? !text(e.text)
+        ? !text(e.text) ||
+          (e.latex !== undefined &&
+            (typeof e.latex !== "string" || e.latex.length > 1500))
         : e.type !== "table" ||
           !["none", "linear", "quadratic", "cubic", "exponential"].includes(
             e.fit,
@@ -89,11 +99,81 @@ export function validateCalculator(raw: unknown): CalculatorState {
           e.rows.length > 200 ||
           e.rows.some(
             (r) => !Array.isArray(r) || r.length !== 2 || !r.every(text),
-          )
+          ) ||
+          (e.columns !== undefined &&
+            (!Array.isArray(e.columns) ||
+              e.columns.length !== 2 ||
+              e.columns.some(
+                (name) => !/^[a-zA-Z]_[1-9][0-9]{0,2}$/.test(name),
+              )))
     )
       throw new Error("Invalid calculator expression or table.");
   }
+  if (s.desmos !== undefined) validateDesmosState(s.desmos);
   return structuredClone(s);
+}
+/** Validate transport safety/size only. Never interpret proprietary state fields. */
+export function validateDesmosState(raw: unknown): Record<string, unknown> {
+  let count = 0;
+  const visit = (value: unknown, depth = 0): void => {
+    if (++count > 100000 || depth > 40)
+      throw new Error("Desmos workspace is too large.");
+    if (value === null || typeof value === "boolean") return;
+    if (typeof value === "number" && Number.isFinite(value)) return;
+    if (typeof value === "string" && value.length <= 500000) return;
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, depth + 1));
+      return;
+    }
+    if (
+      value &&
+      typeof value === "object" &&
+      Object.getPrototypeOf(value) === Object.prototype
+    ) {
+      for (const [key, item] of Object.entries(value)) {
+        if (["__proto__", "constructor", "prototype"].includes(key))
+          throw new Error("Invalid Desmos workspace key.");
+        visit(item, depth + 1);
+      }
+      return;
+    }
+    throw new Error("Invalid Desmos workspace.");
+  };
+  if (!raw || Array.isArray(raw) || typeof raw !== "object")
+    throw new Error("Invalid Desmos workspace.");
+  visit(raw);
+  if (JSON.stringify(raw).length > 2000000)
+    throw new Error("Desmos workspace exceeds 2 MB.");
+  return structuredClone(raw) as Record<string, unknown>;
+}
+
+export function withBlankExpression(state: CalculatorState): CalculatorState {
+  if (
+    state.entries.some(
+      (entry) =>
+        entry.type === "expression" &&
+        !entry.text.trim() &&
+        !entry.latex?.trim(),
+    )
+  )
+    return state;
+  return { ...state, entries: [...state.entries, newExpression()] };
+}
+
+export function tableColumns(
+  state: CalculatorState,
+  id: string,
+): [string, string] {
+  const tables = state.entries.filter(
+    (entry): entry is TableEntry => entry.type === "table",
+  );
+  const table = tables.find((entry) => entry.id === id);
+  return (
+    table?.columns ?? [
+      `x_${tables.findIndex((entry) => entry.id === id) + 1}`,
+      `y_${tables.findIndex((entry) => entry.id === id) + 1}`,
+    ]
+  );
 }
 export interface Point {
   x: number;

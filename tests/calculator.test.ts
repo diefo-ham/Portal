@@ -5,6 +5,7 @@ import {
   newExpression,
   defaultView,
   validateCalculator,
+  validateDesmosState,
   type CalculatorState,
 } from "../src/calculator/model";
 import { calculateWorkspace } from "../src/calculator/workspace";
@@ -22,6 +23,7 @@ import { parseBackup } from "../src/importing/backup";
 import { createSession } from "../src/core/practice";
 import sample from "../src/data/synthetic.json";
 import { parseQuestions } from "../src/importing/json";
+import { latexToText, textToLatex } from "../src/calculator/latex";
 
 const evaluate = (s: string, angle: "radians" | "degrees" = "radians") =>
   scalar(s).value({}, {}, angle);
@@ -56,6 +58,84 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(evaluate("acos(0)", "degrees")).toBeCloseTo(90, 12);
     expect(scalarTex(scalar("log(100)"))).toContain("log_{10}");
     expect(scalarTex(scalar("ln(e)"))).toContain("\\ln");
+  });
+  it("converts supported structural LaTeX without evaluating commands", () => {
+    expect(evaluate(latexToText("\\frac{1}{2}+\\sqrt{81}"))).toBeCloseTo(
+      9.5,
+      12,
+    );
+    expect(
+      evaluate(latexToText("\\sin^{2}\\left(\\frac{\\pi}{2}\\right)")),
+    ).toBeCloseTo(1, 12);
+    expect(latexToText("y_{1}\\sim mx_{1}+b").replace(/\s/g, "")).toBe(
+      "y_1~mx_1+b",
+    );
+    expect(latexToText(textToLatex("L=[1,2,3]"))).toContain("[1,2,3]");
+    const implicit = latexToText(textToLatex("y=2x+3"));
+    expect(implicit).not.toContain("~");
+    expect(
+      scalar(implicit.slice(2)).value({ x: 2 }, {}, "radians"),
+    ).toBeCloseTo(7, 12);
+    expect(() => latexToText("\\href{bad}")).toThrow("Unsupported");
+    expect(evaluate(latexToText(textToLatex("cbrt(-8)")))).toBe(-2);
+    expect(evaluate(latexToText(textToLatex("log(8,2)")))).toBeCloseTo(3, 12);
+    expect(evaluate(latexToText(textToLatex("floor(1.7)")))).toBe(1);
+  });
+  it("supports reciprocal, inverse, powered trig and pole domains in both angle modes", () => {
+    expect(evaluate("sec(0)")).toBeCloseTo(1, 12);
+    expect(evaluate("csc(pi/2)")).toBeCloseTo(1, 12);
+    expect(evaluate("cot(pi/4)")).toBeCloseTo(1, 12);
+    expect(evaluate("arcsin(1)")).toBeCloseTo(Math.PI / 2, 12);
+    expect(evaluate("sin^-1(1)", "degrees")).toBeCloseTo(90, 12);
+    expect(evaluate("sin^2(pi/2)")).toBeCloseTo(1, 12);
+    expect(evaluate("sec(90)", "degrees")).toBeNaN();
+    expect(evaluate("csc(0)")).toBeNaN();
+    expect(evaluate("arcsec(2)", "degrees")).toBeCloseTo(60, 12);
+    expect(evaluate("arccot(-1)", "degrees")).toBeCloseTo(135, 12);
+  });
+  it("evaluates paired lists, elementwise functions/arithmetic, and syntax-based regressions", () => {
+    const result = workspace(
+      "x_1=[1,2,3]",
+      "y_1=[4,7,10]",
+      "(x_1,y_1)",
+      "y_1~m x_1+b",
+      "m+b",
+      "f(x)=x^2",
+      "f(x_1)",
+      "2*x_1+1",
+    );
+    expect(
+      Object.values(result.results).filter((entry) => entry.error),
+    ).toEqual([]);
+    expect(
+      result.graphs.find((graph) => graph.kind === "points"),
+    ).toMatchObject({
+      points: [
+        { x: 1, y: 4 },
+        { x: 2, y: 7 },
+        { x: 3, y: 10 },
+      ],
+    });
+    expect(
+      Object.values(result.results).find((entry) => entry.parameters)
+        ?.parameters,
+    ).toMatchObject({ m: expect.closeTo(3, 10), b: expect.closeTo(1, 10) });
+    expect(
+      Object.values(result.results).some(
+        (entry) => JSON.stringify(entry.values) === "[1,4,9]",
+      ),
+    ).toBe(true);
+    expect(
+      Object.values(result.results).some(
+        (entry) => JSON.stringify(entry.values) === "[3,5,7]",
+      ),
+    ).toBe(true);
+    expect(result.missing).toEqual([]);
+    expect(
+      Object.values(
+        workspace("x_1=[1,2]", "y_1=[1,2,3]", "y_1~m x_1+b").results,
+      ).some((entry) => entry.error?.includes("equally sized")),
+    ).toBe(true);
   });
   it("rejects numeric overflow/underflow and propagates undefined intermediate values", () => {
     expect(() => evaluate("1e-400")).toThrow("numeric range");
@@ -114,6 +194,18 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(Object.values(workspace("f(x)=f(x)").results)[0].error).toContain(
       "Circular",
     );
+  });
+  it("keeps legacy named definitions readable and evaluates structural source consistently", () => {
+    const legacy = workspace("rate=2", "rate+3", "foo(x)=x+1", "foo(2)");
+    expect(
+      Object.values(legacy.results).filter((result) => result.error),
+    ).toEqual([]);
+    expect(
+      Object.values(legacy.results).some((result) => result.value === 5),
+    ).toBe(true);
+    const state = emptyCalculator();
+    state.entries = [{ ...newExpression("2+2"), latex: "3+3" }];
+    expect(Object.values(calculateWorkspace(state).results)[0].value).toBe(6);
   });
   it("keeps inequalities and variable definitions distinct", () => {
     const w = workspace("y<=2x+1", "x>5", "x^2+y^2=25");
@@ -260,8 +352,19 @@ describe("regression uses numerical least squares", () => {
     );
     expect(exponential.coefficients[0]).toBeCloseTo(3, 11);
     expect(exponential.coefficients[1]).toBeCloseTo(2, 11);
-    expect(exponential.logSpace).toBe(true);
+    expect(exponential.logSpace).toBe(false);
     expect(exponential.r2).toBeCloseTo(1, 11);
+  });
+  it("matches the manually checked Desmos original-y exponential fit on noisy data", () => {
+    const fit = regression(
+      [1, 2, 4, 9].map((y, x) => ({ x, y })),
+      "exponential",
+    );
+    // Current public calculator, Log Mode off, verified 2026-10-27.
+    expect(fit.coefficients[0]).toBeCloseTo(0.88812, 4);
+    expect(fit.coefficients[1]).toBeCloseTo(2.16083, 4);
+    expect(fit.r2).toBeCloseTo(0.9989, 4);
+    expect(fit.logSpace).toBe(false);
   });
   it("handles large offsets and rejects insufficient, singular, nonpositive or nonfinite data", () => {
     expect(
@@ -343,6 +446,15 @@ describe("tables and persisted calculator work", () => {
   it("validates portable session work without accepting malformed state", () => {
     const state = emptyCalculator();
     expect(validateCalculator(state)).toEqual(state);
+    const dual = {
+      ...state,
+      mode: "desmos" as const,
+      desmos: { version: 11, expressions: { list: [{ latex: "y=x^2" }] } },
+    };
+    expect(validateCalculator(dual)).toEqual(dual);
+    expect(() => validateDesmosState({ bad: Infinity })).toThrow();
+    expect(() => validateDesmosState({ bad: () => 1 })).toThrow();
+    expect(() => validateDesmosState(JSON.parse('{"__proto__":{}}'))).toThrow();
     const data = { ...emptyData(), questions: parseQuestions(sample) };
     const session = createSession([data.questions[0].id]);
     session.calculator = state;

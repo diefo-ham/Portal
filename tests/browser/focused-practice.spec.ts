@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { enterExpression } from "./math-input";
 // Known question content for these interaction tests, independent of sampling.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -30,9 +31,7 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   await page.keyboard.press("b");
   await expect(page.getByRole("radio").nth(1)).toBeChecked();
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
-  await page
-    .getByRole("textbox", { name: "Expression 1", exact: true })
-    .fill("6*7");
+  await enterExpression(page, 1, "6*7");
   await expect(page.locator(".calc-numeric-result")).toHaveText("= 42");
   await page.getByRole("button", { name: "Open question overview" }).click();
   await page

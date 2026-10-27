@@ -448,3 +448,108 @@
     transition: none !important;
   }
 }
+.calc-provider-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.calc-provider-bar [role="group"] {
+  display: flex;
+  gap: 3px;
+}
+.calc-provider-bar button {
+  font-size: 12px;
+  min-height: 30px;
+  padding: 5px 9px;
+}
+.calc-provider-bar button[aria-pressed="true"] {
+  background: var(--surface-selected);
+  border-color: var(--accent);
+}
+.calc-clear-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  background: var(--surface);
+}
+.calc-clear-confirm button {
+  min-height: 30px;
+  font-size: 12px;
+}
+.calc-provider-status {
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.calc-provider-status button {
+  font-size: 12px;
+}
+.desmos-frame {
+  display: block;
+  border: 0;
+  width: 100%;
+  height: min(660px, 72dvh);
+  visibility: hidden;
+}
+.desmos-frame.ready {
+  visibility: visible;
+}
+.expanded .desmos-frame {
+  height: calc(100dvh - 150px);
+}
+.calc-structural-input {
+  display: block;
+  width: 100%;
+  min-height: 46px;
+  padding: 8px 5px;
+  color: var(--ink);
+  font-size: 20px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+.calc-structural-input:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.calc-structural-input > span {
+  display: block;
+  width: 100%;
+}
+.calc-structural-input .dcg-mq-root-block {
+  min-height: 25px;
+}
+.calc-structural-input .dcg-mq-empty::before {
+  content: "Expression";
+  font: 14px var(--font-ui);
+  color: var(--muted);
+}
+.calc-structural-input .dcg-mq-cursor {
+  border-color: var(--ink);
+}
+.calc-structural-input .dcg-mq-selection {
+  background: var(--surface-selected) !important;
+  color: var(--ink) !important;
+}
+.calc-structural-input textarea {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+.calc-list-result {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  padding: 8px 0;
+}
+.result-calculator {
+  margin-left: 18px;
+}

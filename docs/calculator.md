@@ -1,5 +1,8 @@
 # Offline graphing calculator
 
+> Historical notes from the first calculator implementation. Current behavior,
+> configuration, and limits are documented in [Calculator providers and input](calculator-providers.md).
+
 Implemented 2026-10-26. This replaces the original two-number arithmetic panel.
 It is an independent local calculator, with no Desmos code, assets, branding,
 API key, assessment certification, or runtime service.
