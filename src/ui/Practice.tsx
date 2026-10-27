@@ -36,7 +36,6 @@ export function Practice({
   );
   const [pending, setPending] = useState(false);
   const [calculator, setCalculator] = useState(false);
-  const [calculatorExpanded, setCalculatorExpanded] = useState(false);
   const calculatorWork = useCalculatorState(
     session.id,
     session.calculator,
@@ -133,7 +132,6 @@ export function Practice({
   const closeCalculator = () => {
     void calculatorWork.flush().catch(() => {});
     setCalculator(false);
-    setCalculatorExpanded(false);
     requestAnimationFrame(() =>
       (
         questionTop.current ??
@@ -150,7 +148,6 @@ export function Practice({
           session={session}
           onBack={onBack}
           onRetry={onRetry}
-          calculatorOpen={calculator}
           onCalculator={
             session.questionIds.some((id) =>
               data.questions.some(
@@ -159,7 +156,6 @@ export function Practice({
             )
               ? () => {
                   setCalculator(true);
-                  setCalculatorExpanded(true);
                 }
               : undefined
           }
@@ -168,8 +164,6 @@ export function Practice({
           <CalculatorPanel
             state={calculatorWork.state}
             onChange={calculatorWork.change}
-            expanded
-            onExpand={closeCalculator}
             onClose={closeCalculator}
           />
         )}
@@ -260,12 +254,9 @@ export function Practice({
           void submit();
         }
       }}
-      className={`practice-page focused-practice ${calculator && question.section === "math" ? "with-calculator" : ""}`}
+      className="practice-page focused-practice"
     >
-      <div
-        className="practice-toolbar"
-        inert={calculator && calculatorExpanded}
-      >
+      <div className="practice-toolbar">
         <button
           className="text-button"
           onClick={() =>
@@ -323,7 +314,6 @@ export function Practice({
       </div>
       <div className="practice-layout">
         <article
-          inert={calculator && calculatorExpanded}
           className="question-card"
           key={question.id}
           ref={questionTop}
@@ -534,8 +524,6 @@ export function Practice({
           <CalculatorPanel
             state={calculatorWork.state}
             onChange={calculatorWork.change}
-            expanded={calculatorExpanded}
-            onExpand={() => setCalculatorExpanded(!calculatorExpanded)}
             onClose={closeCalculator}
           />
         )}

@@ -21,7 +21,7 @@ in automated tests; no user key was available for a live-key integration check.
 | q=1                                      | Parameter with slider tools                               | Slider retained; custom ranges/animation omitted                |
 | Enter then Backspace in blank expression | Deletes empty object, returns focus                       | Same neighbor-focus and blank-row behavior                      |
 | Empty-table Backspace                    | Moves toward its editable header first                    | Offline removes an entirely empty table directly; fixed headers |
-| Edit list → Delete All                   | One blank expression, Undo offered                        | Brief confirmation clears active engine; no offline Undo yet    |
+| Edit list → Delete All                   | One blank expression, Undo offered                        | Immediate Clear affects active engine; no offline Undo yet    |
 
 Mouse cursor positioning, selection and structural deletion use upstream DesQuill;
 this is not exhaustive equivalence with every current Desmos input rule. Completion

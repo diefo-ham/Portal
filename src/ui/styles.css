@@ -1949,12 +1949,6 @@ figcaption {
   .filters {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  .with-calculator .question-card {
-    padding: 26px;
-  }
-  .with-calculator .practice-layout {
-    gap: 18px;
-  }
   .banner,
   .app-footer {
     margin-inline: 28px;

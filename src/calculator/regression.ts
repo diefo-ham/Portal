@@ -13,17 +13,32 @@ export interface Fit {
 export function regression(
   points: Point[],
   model: Exclude<FitModel, "none">,
+  powers?: number[],
 ): Fit {
   const degree = model === "quadratic" ? 2 : model === "cubic" ? 3 : 1;
-  if (points.length < degree + 1)
-    throw new Error(`Use at least ${degree + 1} complete points for this fit.`);
+  const terms = powers ?? Array.from({ length: degree + 1 }, (_, i) => i);
+  if (
+    !terms.length ||
+    new Set(terms).size !== terms.length ||
+    terms.some(
+      (power) => !Number.isInteger(power) || power < 0 || power > degree,
+    )
+  )
+    throw new Error("Invalid polynomial fit terms.");
+  if (points.length < terms.length)
+    throw new Error(
+      `Use at least ${terms.length} complete points for this fit.`,
+    );
   if (points.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y)))
     throw new Error("Use finite data values.");
   if (model === "exponential" && points.some((p) => p.y <= 0))
     throw new Error("Exponential fitting requires every y to be positive.");
-  if (new Set(points.map((p) => p.x)).size < degree + 1)
+  if (new Set(points.map((p) => p.x)).size < terms.length)
     throw new Error("Not enough distinct x values for a unique fit.");
-  const center = points.reduce((a, p) => a + p.x / points.length, 0);
+  // Sparse models retain their specified origin (centering would introduce omitted terms).
+  const center = powers
+    ? 0
+    : points.reduce((a, p) => a + p.x / points.length, 0);
   const scale = Math.max(...points.map((p) => Math.abs(p.x - center)));
   if (!Number.isFinite(scale) || scale === 0)
     throw new Error("The data cannot determine this fit.");
@@ -31,10 +46,7 @@ export function regression(
   const qr = new QrDecomposition(
     new Matrix(
       points.map((p) =>
-        Array.from(
-          { length: degree + 1 },
-          (_, i) => ((p.x - center) / scale) ** i,
-        ),
+        terms.map((power) => ((p.x - center) / scale) ** power),
       ),
     ),
   );
@@ -52,12 +64,17 @@ export function regression(
     .to1DArray();
   const binomial = [[1], [1, 1], [1, 2, 1], [1, 3, 3, 1]];
   let coefficients = Array(degree + 1).fill(0) as number[];
-  for (let k = 0; k <= degree; k++)
+  for (let i = 0; i < terms.length; i++) {
+    const k = terms[i];
     for (let j = 0; j <= k; j++)
       coefficients[j] +=
-        (local[k] * binomial[k][j] * (-center) ** (k - j)) / scale ** k;
+        (local[i] * binomial[k][j] * (-center) ** (k - j)) / scale ** k;
+  }
   const polynomial = (x: number) =>
-    local.reduceRight((acc, c) => acc * ((x - center) / scale) + c, 0);
+    local.reduce(
+      (acc, c, i) => acc + c * ((x - center) / scale) ** terms[i],
+      0,
+    );
   let predict =
     model === "exponential"
       ? (x: number) => Math.exp(polynomial(x))
@@ -189,7 +206,35 @@ export function regressionSpec(text: string) {
       model: "exponential" as const,
       names: [found[1], found[2]],
     };
+  // A deliberately bounded family of custom models: user-selected polynomial
+  // terms, including through-origin lines and omitted linear/constant terms.
+  const polynomialTerms = rhs
+    .split("+")
+    .map((term) => term.match(/^([a-zA-Z])(?:X(?:\^([123]))?)?$/));
+  if (polynomialTerms.every((term) => term)) {
+    const pairs = polynomialTerms
+      .map((term) => ({
+        name: term![1],
+        power: term![0].includes("X") ? Number(term![2] || 1) : 0,
+      }))
+      .sort((a, b) => a.power - b.power);
+    if (new Set(pairs.map((pair) => pair.power)).size === pairs.length) {
+      const degree = Math.max(...pairs.map((pair) => pair.power));
+      return {
+        y,
+        x: dataName,
+        model:
+          degree === 3
+            ? ("cubic" as const)
+            : degree === 2
+              ? ("quadratic" as const)
+              : ("linear" as const),
+        names: pairs.map((pair) => pair.name),
+        powers: pairs.map((pair) => pair.power),
+      };
+    }
+  }
   throw new Error(
-    "Supported fits: m x_1 + b, a x_1^2 + b x_1 + c, cubic, or a b^x_1.",
+    "Supported fits: polynomial terms through degree 3 (such as m x_1 or a x_1^2 + c), or a b^x_1. General nonlinear custom fits need Desmos.",
   );
 }

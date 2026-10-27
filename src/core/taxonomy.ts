@@ -5,6 +5,35 @@ import type { Question } from "./model";
 export const metadataName = (value = "") => value.trim().replace(/\s+/g, " ");
 export const metadataKey = (value = "") =>
   metadataName(value).toLocaleLowerCase("en-US");
+// Display only: sentence case for skill phrases; retain established SAT domain
+// names and proper nouns. Keys and imported metadata never change.
+const domainNames = [
+  "Algebra",
+  "Advanced Math",
+  "Problem-Solving and Data Analysis",
+  "Geometry and Trigonometry",
+  "Information and Ideas",
+  "Craft and Structure",
+  "Expression of Ideas",
+  "Standard English Conventions",
+];
+export function checklistMetadataLabel(
+  value: string,
+  kind: "domain" | "skill",
+) {
+  const name = metadataName(value);
+  if (kind === "domain")
+    return (
+      domainNames.find((domain) => metadataKey(domain) === metadataKey(name)) ??
+      name
+    );
+  const sentence = name
+    .toLocaleLowerCase("en-US")
+    .replace(/\b(sat|english)\b/g, (word) =>
+      word === "sat" ? "SAT" : "English",
+    );
+  return sentence.charAt(0).toLocaleUpperCase("en-US") + sentence.slice(1);
+}
 export const domainKey = (q: Question) =>
   JSON.stringify([q.section, metadataKey(q.domain)]);
 export const skillKey = (q: Question) =>
@@ -35,10 +64,13 @@ export function taxonomyOptions(
   }
   const options = [...groups].map(([value, group]) => ({
     value,
-    label: [...group.names].sort(
-      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
-    )[0][0],
-    context: `${group.question.section === "math" ? "Math" : "Reading & Writing"}${kind === "skill" ? ` · ${group.question.domain || "Unspecified domain"}` : ""}`,
+    label: checklistMetadataLabel(
+      [...group.names].sort(
+        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+      )[0][0],
+      kind,
+    ),
+    context: `${group.question.section === "math" ? "Math" : "Reading & Writing"}${kind === "skill" ? ` · ${checklistMetadataLabel(group.question.domain || "Unspecified domain", "domain")}` : ""}`,
   }));
   return options
     .map((option) => ({

@@ -63,8 +63,8 @@ export function MultiSelect({
       <button
         ref={button}
         type="button"
-        title={names.join(", ") || "Any"}
-        aria-label={`${label}: ${value.length ? summary : emptyLabel || "Any"}`}
+        title={summary}
+        aria-label={`${label}: ${summary}`}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => {

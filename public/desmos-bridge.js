@@ -30,6 +30,9 @@ window.addEventListener("message", (event) => {
             pasteGraphLink: false,
             links: false,
             showReducedMotionCover: true,
+            pointsOfInterest: true,
+            trace: true,
+            customRegressions: true,
           },
         );
         if (message.state) calculator.setState(message.state);

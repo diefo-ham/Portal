@@ -61,10 +61,10 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
   await page
     .getByRole("button", { name: "Inspect points", exact: true })
     .click();
-  await expect(page.getByLabel("Points of interest")).toContainText(
-    "intersection",
-  );
-  await expect(page.getByLabel("Points of interest")).toContainText("(2, 0)");
+  await expect(page.locator(".graph-interest").first()).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /intersection ≈ \(2, 0\)/ }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Zoom in", exact: true }).click();
   await page.locator(".graph-plane").focus();
   await page.keyboard.press("ArrowRight");
@@ -76,13 +76,13 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
   const beforeDrag = await plane.locator("desc").textContent();
   const bounds = (await plane.boundingBox())!;
   await page.mouse.move(
-    bounds.x + bounds.width / 2,
-    bounds.y + bounds.height / 2,
+    bounds.x + bounds.width * 0.1,
+    bounds.y + bounds.height * 0.1,
   );
   await page.mouse.down();
   await page.mouse.move(
-    bounds.x + bounds.width / 2 + 30,
-    bounds.y + bounds.height / 2 + 10,
+    bounds.x + bounds.width * 0.1 + 30,
+    bounds.y + bounds.height * 0.1 + 10,
     { steps: 4 },
   );
   await page.mouse.up();
@@ -175,22 +175,11 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   await expect(page.locator(".graph-data-point")).toHaveCount(3);
   await page.getByRole("button", { name: "Fit", exact: true }).click();
   await page
-    .getByRole("button", { name: "Expand calculator", exact: true })
-    .click();
-  await expect(page.locator(".calculator-sheet")).toHaveClass(/calc-expanded/);
-  await page
-    .getByRole("button", { name: "Reduce calculator", exact: true })
+    .getByRole("button", { name: "Resize calculator", exact: true })
     .focus();
-  await page.keyboard.press("Shift+Tab");
-  expect(
-    await page.evaluate(
-      () =>
-        !!document.activeElement?.closest('[aria-label="Calculator panel"]'),
-    ),
-  ).toBe(true);
-  await page.keyboard.press("Tab");
+  await page.keyboard.press("Shift+ArrowLeft");
   await expect(
-    page.getByRole("button", { name: "Reduce calculator", exact: true }),
+    page.getByRole("button", { name: "Resize calculator", exact: true }),
   ).toBeFocused();
   mkdirSync("private-data/inspection", { recursive: true });
   await table.scrollIntoViewIfNeeded();
@@ -281,7 +270,7 @@ for (const theme of ["light", "dark"])
       animations: "disabled",
     });
     await page
-      .getByRole("button", { name: "Expand calculator", exact: true })
+      .getByRole("button", { name: "Reset calculator window", exact: true })
       .click();
     await page
       .getByRole("button", { name: "Inspect points", exact: true })

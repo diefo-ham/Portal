@@ -34,10 +34,12 @@ export function Graph({
   graphs,
   view,
   onView,
+  onParameter,
 }: {
   graphs: GraphObject[];
   view: Viewport;
   onView: (v: Viewport) => void;
+  onParameter?: (id: string, name: string, value: number) => void;
 }) {
   const id = useId().replaceAll(":", "");
   const svg = useRef<SVGSVGElement>(null);
@@ -46,9 +48,11 @@ export function Graph({
     y: number;
     view: Viewport;
     moved: boolean;
+    trace?: GraphObject;
   } | null>(null);
   const [inspect, setInspect] = useState(false);
   const [selected, setSelected] = useState<Interest>();
+  const pinned = useRef(false);
   const [notice, setNotice] = useState("");
   const [{ width, height }, setSize] = useState({ width: 640, height: 300 });
   useEffect(() => {
@@ -121,6 +125,38 @@ export function Graph({
     () => (inspect ? interests(graphs, view) : []),
     [graphs, view, inspect],
   );
+  useEffect(() => {
+    setSelected((point) => {
+      const graph =
+        point && graphs.find((graph) => point.graphIds.includes(graph.id));
+      if (!point || !graph) {
+        pinned.current = false;
+        return undefined;
+      }
+      if (graph.kind === "points") {
+        if (graph.points.length === 1) return { ...point, ...graph.points[0] };
+        return graph.points.some((p) => p.x === point.x && p.y === point.y)
+          ? point
+          : undefined;
+      }
+      if (graph.kind === "function" && point.label === "curve point") {
+        const y = safeValue(graph.fn, point.x);
+        return Number.isFinite(y) ? { ...point, y } : undefined;
+      }
+      // A numerical POI must not retain stale coordinates after math edits.
+      return special
+        .filter(
+          (p) =>
+            p.label === point.label &&
+            p.graphIds.every((id) => point.graphIds.includes(id)),
+        )
+        .sort(
+          (a, b) =>
+            Math.hypot(a.x - point.x, a.y - point.y) -
+            Math.hypot(b.x - point.x, b.y - point.y),
+        )[0];
+    });
+  }, [graphs, special]);
   const path = (p: Point[]) =>
     p
       .map(
@@ -135,7 +171,17 @@ export function Graph({
       y: view.yMax - ((clientY - r.top) / r.height) * (view.yMax - view.yMin),
     };
   };
-  const selectAt = (p: Point) => {
+  const nearestAt = (p: Point): Interest | undefined => {
+    // A real parameter-controlled point takes precedence over a nearby curve.
+    for (const graph of graphs)
+      if (graph.kind === "points" && graph.drag) {
+        const point = graph.points.find(
+          (point) =>
+            Math.hypot((point.x - p.x) * sx, (point.y - p.y) * sy) < 12,
+        );
+        if (point)
+          return { ...point, label: "parameter point", graphIds: [graph.id] };
+      }
     const candidates: Interest[] = [...special];
     for (const g of graphs) {
       if (g.kind === "function")
@@ -160,12 +206,32 @@ export function Graph({
         Math.hypot((b.x - p.x) * sx, (b.y - p.y) * sy),
     );
     const nearest = candidates.find((v) => Number.isFinite(v.y));
-    setSelected(
-      nearest && Math.hypot((nearest.x - p.x) * sx, (nearest.y - p.y) * sy) < 40
-        ? nearest
-        : { ...p, label: "cursor (not snapped to a curve)", graphIds: [] },
-    );
+    return nearest &&
+      Math.hypot((nearest.x - p.x) * sx, (nearest.y - p.y) * sy) < 14
+      ? nearest
+      : undefined;
   };
+  const selectAt = (p: Point) => {
+    pinned.current = true;
+    setSelected(nearestAt(p));
+  };
+  const selectPoint = (p: Interest, pin = true) => {
+    pinned.current = pin;
+    setSelected(p);
+  };
+  // Coordinate inspection is approximate; avoid pixel-motion noise in labels.
+  // Numerical computations and saved slider values retain their full precision.
+  const coordinate = (value: number) => fmt(Number(value.toPrecision(6)));
+  const label = selected
+    ? `≈ (${coordinate(selected.x)}, ${coordinate(selected.y)})`
+    : "";
+  const labelWidth = Math.min(width - 12, label.length * 7 + 18);
+  const labelX = selected
+    ? Math.max(6, Math.min(width - labelWidth - 6, px(selected.x) + 12))
+    : 0;
+  const labelY = selected
+    ? Math.max(6, Math.min(height - 32, py(selected.y) - 37))
+    : 0;
   return (
     <section className="graph-area" aria-label="Graphing plane">
       <div className="graph-controls">
@@ -224,9 +290,32 @@ export function Graph({
         className="graph-plane"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="Cartesian graph. Drag to pan, use zoom buttons or scroll over the focused graph to zoom. Arrow keys pan."
+        aria-label="Cartesian graph. Drag empty space to pan or drag a curve to trace. Use zoom buttons or scroll over the focused graph to zoom. Arrow keys pan; with a curve selected, Left and Right trace it. Escape clears the selection."
         tabIndex={0}
         onKeyDown={(e) => {
+          if (e.key === "Escape" && selected) {
+            e.preventDefault();
+            e.stopPropagation();
+            setSelected(undefined);
+            pinned.current = false;
+            return;
+          }
+          const active =
+            selected && graphs.find((g) => g.id === selected.graphIds[0]);
+          if (
+            (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+            active?.kind === "function" &&
+            selected
+          ) {
+            e.preventDefault();
+            const x =
+              selected.x +
+              ((view.xMax - view.xMin) / 100) *
+                (e.key === "ArrowLeft" ? -1 : 1);
+            const y = safeValue(active.fn, x);
+            setSelected(Number.isFinite(y) ? { ...selected, x, y } : undefined);
+            return;
+          }
           const dx = (view.xMax - view.xMin) * 0.1,
             dy = (view.yMax - view.yMin) * 0.1;
           if (
@@ -258,11 +347,54 @@ export function Graph({
           if (e.button !== 0) return;
           svg.current?.focus();
           e.currentTarget.setPointerCapture(e.pointerId);
-          drag.current = { x: e.clientX, y: e.clientY, view, moved: false };
+          const p = locate(e.clientX, e.clientY);
+          const nearest = nearestAt(p);
+          const object =
+            nearest && graphs.find((g) => g.id === nearest.graphIds[0]);
+          const trace =
+            object?.kind === "function" ||
+            (object?.kind === "points" && object.drag)
+              ? object
+              : undefined;
+          if (nearest) selectPoint(nearest);
+          else {
+            setSelected(undefined);
+            pinned.current = false;
+          }
+          drag.current = {
+            x: e.clientX,
+            y: e.clientY,
+            view,
+            moved: false,
+            trace,
+          };
         }}
         onPointerMove={(e) => {
           const d = drag.current;
           if (!d) return;
+          if (d.trace) {
+            const x = locate(e.clientX, e.clientY).x;
+            const graph = d.trace;
+            const y =
+              graph.kind === "function"
+                ? safeValue(graph.fn, x)
+                : graph.kind === "points" && graph.drag
+                  ? safeValue(graph.drag.y, x)
+                  : NaN;
+            d.moved = true;
+            if (Number.isFinite(y)) {
+              setSelected({
+                x,
+                y,
+                graphIds: [graph.id],
+                label:
+                  graph.kind === "function" ? "curve point" : "parameter point",
+              });
+              if (graph.kind === "points" && graph.drag)
+                onParameter?.(graph.drag.id, graph.drag.name, x);
+            } else setSelected(undefined);
+            return;
+          }
           const r = svg.current!.getBoundingClientRect();
           const dx =
               ((e.clientX - d.x) / r.width) * (d.view.xMax - d.view.xMin),
@@ -290,7 +422,8 @@ export function Graph({
         <desc>
           Numeric window x {fmt(view.xMin)} to {fmt(view.xMax)}, y{" "}
           {fmt(view.yMin)} to {fmt(view.yMax)}. Use Inspect points for
-          keyboard-accessible coordinates.
+          keyboard-accessible points. Drag a curve to trace it; point labels
+          appear on the graph.
         </desc>
         <defs>
           <clipPath id={id}>
@@ -416,6 +549,50 @@ export function Graph({
                     cy={py(p.y)}
                     r={5}
                     className="graph-data-point"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Point (${fmt(p.x)}, ${fmt(p.y)})${g.drag ? `; draggable ${g.drag.name}` : ""}`}
+                    onFocus={() =>
+                      selectPoint({
+                        ...p,
+                        label: "data point",
+                        graphIds: [g.id],
+                      })
+                    }
+                    onPointerEnter={() => {
+                      if (!pinned.current)
+                        selectPoint(
+                          { ...p, label: "data point", graphIds: [g.id] },
+                          false,
+                        );
+                    }}
+                    onPointerLeave={() => {
+                      if (!pinned.current) setSelected(undefined);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectPoint({
+                          ...p,
+                          label: "data point",
+                          graphIds: [g.id],
+                        });
+                      }
+                      if (
+                        g.drag &&
+                        ["ArrowLeft", "ArrowRight"].includes(e.key)
+                      ) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const x =
+                          p.x +
+                          (e.key === "ArrowLeft" ? -1 : 1) *
+                            (e.shiftKey ? 1 : 0.1);
+                        if (Number.isFinite(safeValue(g.drag.y, x)))
+                          onParameter?.(g.drag.id, g.drag.name, x);
+                      }
+                    }}
                   />
                 ))}
             </g>
@@ -427,6 +604,27 @@ export function Graph({
               cy={py(p.y)}
               r={4}
               className="graph-interest"
+              role="button"
+              tabIndex={0}
+              aria-label={`${p.label} ≈ (${fmt(p.x)}, ${fmt(p.y)})`}
+              onFocus={() => selectPoint(p)}
+              onPointerEnter={() => {
+                if (!pinned.current) selectPoint(p, false);
+              }}
+              onPointerLeave={() => {
+                if (!pinned.current) setSelected(undefined);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                selectPoint(p);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  selectPoint(p);
+                }
+              }}
             />
           ))}
           {selected && (
@@ -438,39 +636,37 @@ export function Graph({
             />
           )}
         </g>
+        {selected &&
+          Number.isFinite(selected.y) &&
+          px(selected.x) >= 0 &&
+          px(selected.x) <= width &&
+          py(selected.y) >= 0 &&
+          py(selected.y) <= height && (
+            <g
+              className="graph-point-label"
+              aria-label={`${selected.label} ${label}`}
+            >
+              <rect
+                x={labelX}
+                y={labelY}
+                width={labelWidth}
+                height={29}
+                rx={4}
+              />
+              <text x={labelX + 9} y={labelY + 19}>
+                {label}
+              </text>
+            </g>
+          )}
       </svg>
       <p className="graph-hint">
-        Drag to pan · focus graph to scroll-zoom · click a curve for coordinates
+        Drag empty space to pan · drag a curve to trace · focus graph to
+        scroll-zoom
       </p>
       {notice && (
         <p className="calc-error" role="status">
           {notice}
         </p>
-      )}
-      {selected && (
-        <output className="graph-coordinate">
-          ≈ ({fmt(selected.x)}, {fmt(selected.y)}) · {selected.label}
-        </output>
-      )}
-      {inspect && (
-        <div className="interest-list" aria-label="Points of interest">
-          <p className="small muted">
-            Numerical points in this window; not an exhaustive symbolic
-            solution.
-          </p>
-          {special.length ? (
-            special.map((p, i) => (
-              <button key={i} onClick={() => setSelected(p)}>
-                {p.label} ≈ ({fmt(p.x)}, {fmt(p.y)})
-              </button>
-            ))
-          ) : (
-            <p className="small muted">
-              No isolated points found in this window. Implicit curves do not
-              have automatic points of interest.
-            </p>
-          )}
-        </div>
       )}
       <details className="graph-window">
         <summary>Graph window</summary>

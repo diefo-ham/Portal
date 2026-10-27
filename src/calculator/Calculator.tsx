@@ -418,6 +418,15 @@ export function Calculator({
           graphs={workspace.graphs}
           view={state.view}
           onView={(view) => onChange({ ...state, view })}
+          onParameter={(id, name, value) => {
+            const entry = state.entries.find((entry) => entry.id === id);
+            if (entry?.type === "expression" && Number.isFinite(value))
+              change({
+                ...entry,
+                text: `${name}=${Number(value.toPrecision(12))}`,
+                latex: undefined,
+              });
+          }}
         />
       </div>
     </section>

@@ -51,7 +51,10 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   ).toBeVisible();
   await page.getByRole("button", { name: "Resume timer", exact: true }).click();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.locator("dialog.practice-dialog")).not.toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Calculator panel", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Practice tools" }),
   ).toBeFocused();

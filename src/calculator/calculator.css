@@ -10,21 +10,6 @@
   padding: 6px 10px;
   font-size: 12px;
 }
-.calc-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px 10px;
-}
-.calc-heading h2 {
-  margin: 0;
-  font-size: 22px;
-}
-.calc-heading > div {
-  display: flex;
-  gap: 6px;
-}
 .calc-options {
   display: flex;
   align-items: center;
@@ -188,6 +173,7 @@
   height: clamp(240px, 38dvh, 400px);
   display: block;
   touch-action: none;
+  user-select: none;
   cursor: crosshair;
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -234,6 +220,7 @@
   stroke-width: 1.5;
 }
 .graph-selection {
+  pointer-events: none;
   fill: var(--paper);
   stroke: var(--ink);
   stroke-width: 2;
@@ -242,31 +229,6 @@
   margin: 8px 0;
   font-size: 10px;
   color: var(--muted);
-}
-.graph-coordinate {
-  display: block;
-  padding: 6px 0;
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-.interest-list {
-  max-height: 170px;
-  overflow: auto;
-  border-top: 1px solid var(--line);
-  padding: 8px 0;
-}
-.interest-list .small {
-  font-size: 11px;
-}
-.interest-list button {
-  display: block;
-  background: transparent;
-  border: 0;
-  font-variant-numeric: tabular-nums;
-  text-align: left;
-  width: 100%;
-  padding: 5px;
 }
 .graph-window {
   margin-top: 10px;
@@ -363,17 +325,6 @@
 .calc-residuals {
   overflow-wrap: anywhere;
 }
-.expanded .calc-body {
-  grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.7fr);
-}
-.expanded .graph-plane {
-  height: min(60dvh, 650px);
-}
-.expanded .calc-expression-area {
-  max-height: calc(100dvh - 130px);
-  border-bottom: 0;
-  border-right: 1px solid var(--line);
-}
 .graph-color-0 {
   --curve: #376344;
 }
@@ -422,26 +373,7 @@
 :root[data-theme="dark"] .graph-color-7 {
   --curve: #bbc1cc;
 }
-@media (min-width: 1500px) {
-  .calc-body {
-    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1.3fr);
-  }
-  .calc-expression-area {
-    max-height: calc(100dvh - 155px);
-    border-bottom: 0;
-    border-right: 1px solid var(--line);
-  }
-}
-@media (max-width: 850px) {
-  .expanded .calc-body {
-    grid-template-columns: 1fr;
-  }
-  .expanded .calc-expression-area {
-    max-height: 240px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-}
+
 @media (prefers-reduced-motion: reduce) {
   .calculator-workspace * {
     animation: none !important;
@@ -470,19 +402,6 @@
   background: var(--surface-selected);
   border-color: var(--accent);
 }
-.calc-clear-confirm {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  font-size: 12px;
-  background: var(--surface);
-}
-.calc-clear-confirm button {
-  min-height: 30px;
-  font-size: 12px;
-}
 .calc-provider-status {
   margin: 0;
   padding: 8px 12px;
@@ -501,9 +420,6 @@
 }
 .desmos-frame.ready {
   visibility: visible;
-}
-.expanded .desmos-frame {
-  height: calc(100dvh - 150px);
 }
 .calc-structural-input {
   display: block;
@@ -552,4 +468,100 @@
 }
 .result-calculator {
   margin-left: 18px;
+}
+
+/* Window contents respond to the calculator's own size, independently of Practice. */
+.calculator-surface {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.calc-provider-bar {
+  flex-shrink: 0;
+}
+.calculator-surface .offline-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.calculator-surface .calc-options {
+  padding: 8px 12px;
+  flex-shrink: 0;
+}
+.calculator-surface .calc-body {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(100px, 0.8fr) minmax(200px, 1.2fr);
+}
+.calculator-surface .calc-expression-area {
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+  border-right: 0;
+  border-bottom: 1px solid var(--line);
+}
+.calculator-surface .graph-area {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.calculator-surface .graph-plane {
+  flex: 1 0 150px;
+  height: auto;
+  min-height: 150px;
+}
+.calculator-surface .graph-controls {
+  flex-shrink: 0;
+}
+.calculator-surface .desmos-frame {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+.calc-provider-status {
+  line-height: 1.6;
+}
+.calc-provider-status p {
+  margin: 10px 0;
+}
+@container (min-width:680px) {
+  .calculator-surface .calc-body {
+    grid-template-columns: minmax(230px, 0.85fr) minmax(0, 1.35fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .calculator-surface .calc-expression-area {
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+  }
+}
+.graph-point-label {
+  pointer-events: none;
+}
+.graph-plane:focus {
+  outline: none;
+}
+.graph-plane:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.graph-point-label rect {
+  fill: var(--paper);
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.graph-point-label text {
+  fill: var(--ink);
+  font: 12px var(--font-ui);
+}
+.graph-interest:focus-visible,
+.graph-data-point:focus-visible {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 4;
 }

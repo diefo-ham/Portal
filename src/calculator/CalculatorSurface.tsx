@@ -10,15 +10,9 @@ import "./calculator.css";
 export function CalculatorSurface({
   state,
   onChange,
-  onClose,
-  expanded,
-  onExpand,
 }: {
   state: CalculatorState;
   onChange: (state: CalculatorState) => void;
-  onClose: () => void;
-  expanded: boolean;
-  onExpand: () => void;
 }) {
   const [apiKey, setApiKey] = useState(
     (import.meta.env.VITE_DESMOS_API_KEY || "").trim(),
@@ -26,11 +20,10 @@ export function CalculatorSurface({
   const [failed, setFailed] = useState("");
   const [ready, setReady] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [confirmClear, setConfirmClear] = useState(false);
+  // Explicit Offline choice persists. Otherwise configured Desmos is primary.
   const desired = state.mode ?? (apiKey ? "desmos" : "offline");
-  const online = desired === "desmos" && !!apiKey && !failed;
+  const connecting = desired === "desmos" && !!apiKey && !failed;
   const frame = useRef<HTMLIFrameElement>(null);
-  const clearButton = useRef<HTMLButtonElement>(null);
   const latest = useRef(state);
   latest.current = state;
   const change = useRef(onChange);
@@ -44,6 +37,7 @@ export function CalculatorSurface({
     if (apiKey) return;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1500);
+    // Local configuration only; never a connectivity probe.
     void fetch("/calculator-config.json", {
       signal: controller.signal,
       cache: "no-store",
@@ -64,11 +58,13 @@ export function CalculatorSurface({
     };
   }, []);
   useEffect(() => {
-    if (!online) return;
+    if (!connecting) return;
     setReady(false);
     const timeout = setTimeout(
       () =>
-        setFailed("Desmos did not respond. Your Offline workspace is ready."),
+        setFailed(
+          "Desmos did not respond. Try again when connected, or use Offline.",
+        ),
       6500,
     );
     const receive = (event: MessageEvent) => {
@@ -87,7 +83,9 @@ export function CalculatorSurface({
       }
       if (message.type === "error") {
         clearTimeout(timeout);
-        setFailed("Desmos is unavailable. Your Offline workspace is ready.");
+        setFailed(
+          "Desmos is unavailable. Try again when connected, or use Offline.",
+        );
       }
       if (message.type === "state") {
         try {
@@ -103,160 +101,109 @@ export function CalculatorSurface({
       }
     };
     window.addEventListener("message", receive);
-    const disconnected = () =>
-      setFailed(
-        "Connection lost. Your saved Desmos work is retained; Offline is ready.",
-      );
-    window.addEventListener("offline", disconnected);
+    // A loaded calculator may continue working without connectivity. Do not destroy it.
     return () => {
       clearTimeout(timeout);
       window.removeEventListener("message", receive);
-      window.removeEventListener("offline", disconnected);
     };
-  }, [online, apiKey, retry]);
+  }, [connecting, apiKey, retry]);
   const switchMode = (mode: "offline" | "desmos") => {
-    setConfirmClear(false);
+    if (mode === desired && ready && !failed) return;
     setReady(false);
     setFailed("");
     onChange({ ...latest.current, mode });
     if (mode === "desmos") setRetry((value) => value + 1);
   };
+  const clear = () => {
+    if (desired === "desmos") {
+      if (ready) post("clear");
+      return;
+    }
+    onChange({ ...emptyCalculator(), mode: "offline", desmos: state.desmos });
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(".offline-workspace textarea")
+        ?.focus(),
+    );
+  };
   return (
     <section
-      className={`calculator-workspace calculator-surface ${expanded ? "expanded" : ""}`}
+      className="calculator-workspace calculator-surface"
       aria-label="Calculator workspace"
     >
-      <div className="calc-heading">
-        <h2>Calculator</h2>
-        <div>
-          <button
-            aria-label={expanded ? "Reduce calculator" : "Expand calculator"}
-            onClick={onExpand}
-          >
-            {expanded ? "Reduce ↙" : "Expand ↗"}
-          </button>
-          <button aria-label="Close calculator" onClick={onClose}>
-            ×
-          </button>
-        </div>
-      </div>
       <div className="calc-provider-bar">
         <div role="group" aria-label="Calculator engine">
           <button
-            aria-pressed={online}
-            disabled={!apiKey}
-            title={
-              !apiKey
-                ? "A Desmos API key is not configured."
-                : "Official online calculator"
-            }
+            aria-pressed={desired === "desmos"}
+            title="Official online calculator"
             onClick={() => switchMode("desmos")}
           >
             Desmos
           </button>
-          <button aria-pressed={!online} onClick={() => switchMode("offline")}>
+          <button
+            aria-pressed={desired === "offline"}
+            title="Local fallback; no internet needed"
+            onClick={() => switchMode("offline")}
+          >
             Offline
           </button>
         </div>
         <button
-          ref={clearButton}
           className="text-button"
-          onClick={() => setConfirmClear(true)}
+          disabled={desired === "desmos" && !ready}
+          onClick={clear}
         >
           Clear calculator
         </button>
       </div>
-      {confirmClear && (
-        <div
-          className="calc-clear-confirm"
-          role="group"
-          aria-label="Clear calculator confirmation"
-        >
-          <span>Clear this {online ? "Desmos" : "Offline"} workspace?</span>
-          <button
-            onClick={() => {
-              if (online && ready) post("clear");
-              else
-                onChange({
-                  ...emptyCalculator(),
-                  mode: state.mode,
-                  desmos: state.desmos,
-                });
-              setConfirmClear(false);
-              if (!online)
-                requestAnimationFrame(() =>
-                  document
-                    .querySelector<HTMLElement>(".offline-workspace textarea")
-                    ?.focus(),
-                );
-            }}
-            disabled={online && !ready}
-          >
-            Clear
-          </button>
-          <button
-            onClick={() => {
-              setConfirmClear(false);
-              clearButton.current?.focus();
-            }}
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-      {online ? (
+      {desired === "desmos" ? (
         <>
-          {!ready && (
-            <p className="calc-provider-status" role="status">
-              Connecting to Desmos…{" "}
+          {!apiKey || failed ? (
+            <div className="calc-provider-status" role="status">
+              <p>
+                {failed ||
+                  "Desmos needs an API key. Offline is available without one."}
+              </p>
+              {apiKey && (
+                <button onClick={() => switchMode("desmos")}>
+                  Retry Desmos
+                </button>
+              )}
               <button
                 className="text-button"
                 onClick={() => switchMode("offline")}
               >
-                Use Offline now
+                Use Offline
               </button>
-            </p>
+            </div>
+          ) : (
+            <>
+              {!ready && (
+                <p className="calc-provider-status" role="status">
+                  Connecting to Desmos…{" "}
+                  <button
+                    className="text-button"
+                    onClick={() => switchMode("offline")}
+                  >
+                    Use Offline now
+                  </button>
+                </p>
+              )}
+              <iframe
+                key={retry}
+                ref={frame}
+                className={`desmos-frame ${ready ? "ready" : ""}`}
+                title="Official Desmos graphing calculator"
+                src="/desmos.html"
+                onLoad={() =>
+                  post("init", { key: apiKey, state: latest.current.desmos })
+                }
+              />
+            </>
           )}
-          <iframe
-            key={retry}
-            ref={frame}
-            className={`desmos-frame ${ready ? "ready" : ""}`}
-            title="Official Desmos graphing calculator"
-            src="/desmos.html"
-            onLoad={() =>
-              post("init", { key: apiKey, state: latest.current.desmos })
-            }
-          />
         </>
       ) : (
-        <>
-          {(failed || (desired === "desmos" && !apiKey)) && (
-            <p className="calc-provider-status" role="status">
-              {failed || "No Desmos API key configured. Using Offline."}
-              {apiKey && (
-                <button
-                  className="text-button"
-                  onClick={() => switchMode("desmos")}
-                >
-                  Retry Desmos
-                </button>
-              )}
-            </p>
-          )}
-          <Calculator
-            state={state}
-            onChange={(next) =>
-              onChange(
-                online
-                  ? next
-                  : {
-                      ...next,
-                      ...(failed ? {} : { mode: "offline" as const }),
-                    },
-              )
-            }
-          />
-        </>
+        <Calculator state={state} onChange={onChange} />
       )}
     </section>
   );

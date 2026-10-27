@@ -1,63 +1,97 @@
-/* Practice integration is loaded before the calculator engine to avoid a width jump. */
-main.with-calculator {
-  max-width: 1800px;
-}
-main.with-calculator .practice-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: start;
-}
-.practice-page .calculator-sheet,
-.completed-calculator-context .calculator-sheet {
-  position: sticky;
-  top: 14px;
-  width: clamp(460px, 52vw, 800px);
-  min-width: 380px;
-  max-width: 70vw;
-  max-height: calc(100dvh - 28px);
-  overflow: auto;
-  resize: horizontal;
+/* A nonmodal utility window. It never reserves space in the question layout. */
+.calculator-sheet {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
   padding: 0;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-lg);
   background: var(--paper);
-  z-index: 5;
-  scrollbar-gutter: stable;
-}
-.practice-page .calculator-sheet.calc-expanded,
-.completed-calculator-context .calculator-sheet.calc-expanded {
-  position: fixed;
-  inset: 14px 14px 14px auto;
-  width: min(1180px, calc(100vw - 28px));
-  min-width: 0;
-  max-width: calc(100vw - 28px);
-  max-height: none;
-  resize: none;
+  color: var(--ink);
   box-shadow: var(--dialog-shadow);
   z-index: 20;
+  container-type: inline-size;
+  overflow: hidden;
 }
-
-@media (max-width: 850px) {
-  main.with-calculator .practice-layout {
-    display: flex;
-    flex-direction: column;
+.calc-window-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+}
+.calc-window-heading button {
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.calc-drag-handle {
+  flex: 1;
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+  padding: 7px 2px;
+}
+.calc-drag-handle h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.calc-resize {
+  position: absolute;
+  touch-action: none;
+  z-index: 4;
+}
+.calc-resize-e {
+  right: 0;
+  top: 52px;
+  bottom: 16px;
+  width: 7px;
+  cursor: ew-resize;
+}
+.calc-resize-s {
+  bottom: 0;
+  left: 8px;
+  right: 16px;
+  height: 7px;
+  cursor: ns-resize;
+}
+.calc-resize-se {
+  bottom: 0;
+  right: 0;
+  width: 17px;
+  height: 17px;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 55%,
+    var(--line-strong) 57%,
+    var(--line-strong) 62%,
+    transparent 64%,
+    transparent 74%,
+    var(--line-strong) 76%,
+    var(--line-strong) 81%,
+    transparent 83%
+  );
+}
+.window-moving iframe {
+  pointer-events: none;
+}
+.calc-drag-handle:focus-visible,
+.calc-resize:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+@media (max-width: 619px) {
+  .calculator-sheet {
+    inset: 8px;
+    width: auto;
+    height: auto;
   }
-  .practice-page .calculator-sheet {
-    position: relative;
-    top: 0;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    max-height: none;
-    resize: none;
+  .calc-drag-handle {
+    cursor: default;
   }
-  .practice-page .calculator-sheet.calc-expanded {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    bottom: 10px;
-    max-width: calc(100vw - 20px);
-    width: calc(100vw - 20px);
+  .calc-window-heading button[aria-label="Reset calculator window"] {
+    display: none;
   }
 }

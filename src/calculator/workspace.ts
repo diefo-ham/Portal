@@ -33,7 +33,13 @@ export type GraphObject =
       color: number;
       fn: (x: number, y: number) => number;
     }
-  | { kind: "points"; id: string; color: number; points: Point[] };
+  | {
+      kind: "points";
+      id: string;
+      color: number;
+      points: Point[];
+      drag?: { id: string; name: string; y: (x: number) => number };
+    };
 export interface EntryResult {
   error?: string;
   value?: number;
@@ -267,9 +273,13 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       const fit = regression(
         x.map((value, index) => ({ x: value, y: y[index] })),
         spec.model,
+        spec.powers,
       );
       const parameters = Object.fromEntries(
-        spec.names.map((name, index) => [name, fit.coefficients[index]]),
+        spec.names.map((name, index) => [
+          name,
+          fit.coefficients[spec.powers?.[index] ?? index],
+        ]),
       );
       Object.assign(values, parameters);
       results[id] = { fit, parameters };
@@ -366,11 +376,31 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         if (![...xs, ...ys].every(Number.isFinite))
           throw new Error("Point coordinates must be finite real numbers.");
         results[entry.id] = { tex: `\\left(${tex(p.a)}, ${tex(p.b)}\\right)` };
+        const parameterName =
+          p.a.node.type === "SymbolNode" ? [...p.a.symbols][0] : undefined;
+        const definition = parameterName
+          ? definitions.get(parameterName)
+          : undefined;
+        const draggable =
+          xs.length === 1 &&
+          definition?.parsed.type === "variable" &&
+          definition.parsed.a.symbols.size === 0 &&
+          definition.parsed.a.calls.size === 0;
         add({
           kind: "points",
           id: entry.id,
           color,
           points: xs.map((value, index) => ({ x: value, y: ys[index] })),
+          ...(draggable && parameterName && definition
+            ? {
+                drag: {
+                  id: definition.id,
+                  name: parameterName,
+                  y: (value: number) =>
+                    evaluate(p.b, { [parameterName]: value }),
+                },
+              }
+            : {}),
         });
       } else if (p.type === "value") {
         const symbols = p.a.symbols;

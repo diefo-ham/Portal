@@ -23,10 +23,12 @@ with documented `getState`, `setState`, `setBlank`, change observation, focus an
 destruction methods. No proprietary hosted bundle is redistributed, reverse
 engineered, or placed in an offline cache.
 
-Loading has a **6.5-second deadline**. Script/constructor failure, timeout, or a
-browser offline event reveals the saved Offline workspace and Retry Desmos.
-Use Offline now interrupts loading immediately. Reconnection never interrupts
-offline typing: retry deliberately. `navigator.onLine` alone never declares the
+Loading has a **6.5-second deadline**. Script/constructor failure or timeout stays
+inside the selected Desmos tab with Retry and Use Offline actions. The Desmos tab
+always remains selectable, including without a key. Selecting it after failure
+starts a fresh attempt. Use Offline interrupts loading immediately; there are no
+background probes, reconnect listeners, or periodic retries. A loaded Desmos
+instance is not destroyed merely because the browser reports an internet outage. `navigator.onLine` alone never declares the
 API available. Official Desmos uses its own readable presentation inside the
 portal's themed frame; this is not a claim to reproduce the restricted SAT app.
 
@@ -58,7 +60,7 @@ upstream revision and in this project.
   Functions use parentheses. Typing `table` creates a table.
 - Backspace/Delete edits math first; in an empty expression it removes the object
   and focuses a neighbor. A usable blank expression always remains.
-- Clear calculator briefly confirms, clears only the active engine, and preserves
+- Clear calculator acts immediately, clears only the active engine, and preserves
   the other workspace. Offline returns to default view/radians and one blank row;
   Desmos uses official `setBlank()`.
 
@@ -132,8 +134,8 @@ the final unsaved fraction of a second. API keys are configuration, not progress
 
 Native calculator keys never reach Practice: E does not bookmark, arrows do not
 move questions, and Enter/Space do not submit. Desmos handles its own keys inside
-the iframe. Closing restores question/result-trigger focus. Expanded mode keeps
-keyboard focus inside the calculator; the ordinary side panel allows focus out.
+the iframe. Closing restores question/result-trigger focus. The floating window
+is nonmodal and allows keyboard focus back into Practice.
 
 ## Validation and remaining differences
 
@@ -160,3 +162,9 @@ Conservative limits: 24 working entries plus a blank row, 200 table/list values,
 depth/size, ±10¹⁰ graph bounds, 10⁻⁷ minimum spans, IEEE-754 numbers with 10-significant-
 digit display. Desmos state is limited to 2 MB. The lazy local calculator is about
 200 KB gzip JS and 21 KB gzip CSS; the initial study-screen load excludes it.
+
+
+## Floating-window follow-up
+
+See [floating window, connection rules and graph interaction](calculator-floating.md).
+This supersedes earlier descriptions of a side panel or expanded modal.

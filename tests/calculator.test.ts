@@ -24,6 +24,10 @@ import { createSession } from "../src/core/practice";
 import sample from "../src/data/synthetic.json";
 import { parseQuestions } from "../src/importing/json";
 import { latexToText, textToLatex } from "../src/calculator/latex";
+import {
+  clampGeometry,
+  defaultGeometry,
+} from "../src/calculator/windowGeometry";
 
 const evaluate = (s: string, angle: "radians" | "degrees" = "radians") =>
   scalar(s).value({}, {}, angle);
@@ -32,6 +36,55 @@ const workspace = (...texts: string[]) =>
     ...emptyCalculator(),
     entries: texts.map((t) => newExpression(t)),
   });
+describe("floating window bounds and parameter points", () => {
+  it("clamps stale/large/tiny geometry without stranding the title or close control", () => {
+    const bounds = { width: 1024, height: 600 };
+    expect(
+      clampGeometry({ x: 3000, y: -500, width: 2000, height: 10 }, bounds),
+    ).toEqual({ x: 8, y: 8, width: 1008, height: 360 });
+    const narrow = clampGeometry(defaultGeometry(bounds), {
+      width: 390,
+      height: 300,
+    });
+    expect(narrow.width).toBe(374);
+    expect(narrow.height).toBe(284);
+    expect(narrow.x).toBe(8);
+    expect(narrow.y).toBe(8);
+  });
+  it("only makes scalar horizontal parameters draggable, without making trace points expressions", () => {
+    const w = workspace("a=2", "f(x)=x^2", "(a,f(a))", "(2,4)", "(a+1,4)");
+    const points = w.graphs.filter((graph) => graph.kind === "points");
+    expect(points[0].drag?.name).toBe("a");
+    expect(points[0].drag?.y(3)).toBe(9);
+    expect(points[1].drag).toBeUndefined();
+    expect(points[2].drag).toBeUndefined();
+  });
+  it("fits supported custom sparse polynomial models in y space", () => {
+    const throughOrigin = workspace("x_1=[1,2,3]", "y_1=[3,6,9]", "y_1~m*x_1");
+    const fit = Object.values(throughOrigin.results).find(
+      (result) => result.fit,
+    );
+    expect(fit?.parameters?.m).toBeCloseTo(3, 10);
+    const quadratic = workspace(
+      "x_1=[-2,-1,0,1,2]",
+      "y_1=[9,3,1,3,9]",
+      "y_1~a*x_1^2+c",
+    );
+    const result = Object.values(quadratic.results).find(
+      (result) => result.fit,
+    );
+    expect(result?.parameters?.a).toBeCloseTo(2, 10);
+    expect(result?.parameters?.c).toBeCloseTo(1, 10);
+    expect(result?.fit?.r2).toBeCloseTo(1, 10);
+    expect(result?.fit?.predict(3)).toBeCloseTo(19, 10);
+    const invalid = workspace("x_1=[1,2,3]", "y_1=[2,4,8]", "y_1~a*sin(b*x_1)");
+    expect(
+      Object.values(invalid.results).some((result) =>
+        result.error?.includes("General nonlinear"),
+      ),
+    ).toBe(true);
+  });
+});
 describe("offline calculator arithmetic and syntax", () => {
   it.each([
     ["1/2+1/3", 5 / 6],

@@ -1,5 +1,34 @@
 # Calculator pass verification — 2026-10-27
 
+## Floating-window follow-up
+
+- Production build and 76 core/math/storage/import tests passed. New numerical
+  checks cover through-origin and sparse quadratic fits, restricted custom model
+  rejection, real parameter-point metadata, and window bounds.
+- The complete 43-workflow installed-Edge suite passed with one worker, including
+  unchanged Practice/Review/Browse, timer, filters, sessions, reset/archive and
+  keyboard checks. A prior parallel run again reproduced the previously documented
+  timer snapshot mismatch (2770 ms submitted vs 3019 ms elapsed); timer logic and
+  its assertion were not changed. It passed in the complete serial recheck.
+- Calculator tests cover unchanged question geometry, pointer title dragging,
+  width/height/diagonal resize, keyboard resize, min/max bounds, reopening,
+  viewport recovery, narrow overlays, immediate Clear, graph-local tracing,
+  POI labels and slider-controlled point dragging. Light/dark screenshots were
+  visually inspected at laptop sizes, including attached coordinate labels.
+  All 11 calculator-specific Edge workflows passed again after final coordinate
+  rounding/focus styling, including POI hover/pinning/focus/dismissal checks.
+- Hosted API boundary mocks verify primary/default Desmos with a configured key,
+  the always-enabled Desmos button without a key, no external requests while
+  Offline is selected, retry-only connection attempts, failed/slow scripts,
+  preservation of an already-loaded instance after an offline event, independent
+  saved work, completed-session reopening and reset/archive recovery.
+- Live embedded Desmos regression/tracing/POI behavior still requires a real API
+  key for acceptance. No genuine key was supplied. Documented official options
+  were checked against current API v1.12 docs; no claim of new live-key testing.
+- No new dependencies, source-PDF conversions or study logic changes.
+
+## Original dual-engine pass
+
 - Production TypeScript/Vite build passed.
 - 73 core/math/storage/import tests passed, including independent known fits,
   noisy original-y exponential fitting checked against current Desmos, structural
