@@ -33,6 +33,8 @@ window.addEventListener("message", (event) => {
             pointsOfInterest: true,
             trace: true,
             customRegressions: true,
+            regressionTemplates: true,
+            decimalToFraction: true,
           },
         );
         if (message.state) calculator.setState(message.state);

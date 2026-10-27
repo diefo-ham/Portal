@@ -77,15 +77,37 @@ export function CalculatorPanel({
     if (!d) return;
     const dx = e.clientX - d.x,
       dy = e.clientY - d.y;
-    set(
-      d.kind === "move"
-        ? { ...d.geometry, x: d.geometry.x + dx, y: d.geometry.y + dy }
-        : {
-            ...d.geometry,
-            width: d.geometry.width + (d.kind.includes("e") ? dx : 0),
-            height: d.geometry.height + (d.kind.includes("s") ? dy : 0),
-          },
-    );
+    if (d.kind !== "move") {
+      const v = viewport(),
+        g = d.geometry;
+      const left = d.kind.includes("w")
+        ? Math.max(
+            8,
+            Math.min(g.x + dx, g.x + g.width - Math.min(440, v.width - 16)),
+          )
+        : g.x;
+      const top = d.kind.includes("n")
+        ? Math.max(
+            8,
+            Math.min(g.y + dy, g.y + g.height - Math.min(360, v.height - 16)),
+          )
+        : g.y;
+      const right = d.kind.includes("e")
+        ? Math.min(
+            v.width - 8,
+            Math.max(g.x + Math.min(440, v.width - 16), g.x + g.width + dx),
+          )
+        : g.x + g.width;
+      const bottom = d.kind.includes("s")
+        ? Math.min(
+            v.height - 8,
+            Math.max(g.y + Math.min(360, v.height - 16), g.y + g.height + dy),
+          )
+        : g.y + g.height;
+      set({ x: left, y: top, width: right - left, height: bottom - top });
+      return;
+    }
+    set({ ...d.geometry, x: d.geometry.x + dx, y: d.geometry.y + dy });
   };
   const stop = () => {
     drag.current = null;
@@ -175,6 +197,11 @@ export function CalculatorPanel({
             ["e", "Resize calculator width"],
             ["s", "Resize calculator height"],
             ["se", "Resize calculator"],
+            ["w", "Resize calculator left edge"],
+            ["n", "Resize calculator top edge"],
+            ["nw", "Resize calculator top left corner"],
+            ["ne", "Resize calculator top right corner"],
+            ["sw", "Resize calculator bottom left corner"],
           ] as const
         ).map(([kind, label]) => (
           <div

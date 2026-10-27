@@ -240,10 +240,14 @@ export function sampleFunction(
 ): Point[][] {
   const segments: [Point, Point][] = [],
     span = view.yMax - view.yMin;
-  let budget = Math.max(1800, width * 5);
+  let budget = Math.max(2400, width * 7);
+  const cache = new Map<number, number>();
   const sample = (x: number) => {
-    budget--;
-    return safeValue(fn, x);
+    if (cache.has(x)) return cache.get(x)!;
+    if (--budget < 0) return NaN;
+    const y = safeValue(fn, x);
+    cache.set(x, y);
+    return y;
   };
   const visit = (
     a: number,
@@ -254,30 +258,47 @@ export function sampleFunction(
   ) => {
     if (budget < 0) return;
     const m = (a + b) / 2,
-      fm = sample(m);
-    const valid = [fa, fm, fb].every(Number.isFinite);
+      fm = sample(m),
+      valid = [fa, fm, fb].every(Number.isFinite);
+    const pixelWidth = ((b - a) / (view.xMax - view.xMin)) * width;
+    const outsideAbove =
+      valid && Math.min(fa, fm, fb) > view.yMax + span * 0.05;
+    const outsideBelow =
+      valid && Math.max(fa, fm, fb) < view.yMin - span * 0.05;
+    if (outsideAbove || outsideBelow) {
+      // Estimate a possible off-center turning point before pruning. This
+      // recovers narrow parabolas whose vertex lies between the coarse samples.
+      const A = 2 * (fa + fb - 2 * fm),
+        B = 4 * fm - 3 * fa - fb;
+      const t = A ? -B / (2 * A) : -1;
+      const vertex =
+        t > 0 && t < 1
+          ? fa + B * t + A * t * t
+          : outsideAbove
+            ? Infinity
+            : -Infinity;
+      const mayEnter = outsideAbove ? vertex <= view.yMax : vertex >= view.yMin;
+      if (!mayEnter) {
+        if (includeOutside) {
+          const y = outsideAbove ? view.yMax + span : view.yMin - span;
+          segments.push([
+            { x: a, y },
+            { x: b, y },
+          ]);
+        }
+        return;
+      }
+    }
     const error = valid
       ? (Math.abs(fm - (fa + fb) / 2) / span) * height
       : Infinity;
-    const jump = valid && Math.abs(fa - fb) > span * 0.8;
-    if (
-      (!valid || error > 0.65 || jump) &&
-      depth < 8 &&
-      ((b - a) / (view.xMax - view.xMin)) * width > 0.15
-    ) {
+    if ((!valid || error > 0.45) && depth < 20 && pixelWidth > 0.02) {
       visit(a, fa, m, fm, depth + 1);
       visit(m, fm, b, fb, depth + 1);
       return;
     }
-    if (
-      !valid ||
-      error > 2 ||
-      jump ||
-      (!includeOutside &&
-        (Math.max(fa, fm, fb) < view.yMin - span ||
-          Math.min(fa, fm, fb) > view.yMax + span))
-    )
-      return;
+    // Unresolved curvature/domain holes are gaps, not bridges across poles.
+    if (!valid || error > 2) return;
     segments.push(
       [
         { x: a, y: fa },
@@ -289,7 +310,7 @@ export function sampleFunction(
       ],
     );
   };
-  const n = Math.min(420, Math.max(100, Math.round(width / 3)));
+  const n = Math.min(320, Math.max(80, Math.round(width / 4)));
   for (let i = 0; i < n && budget > 0; i++) {
     const a = view.xMin + ((view.xMax - view.xMin) * i) / n,
       b = view.xMin + ((view.xMax - view.xMin) * (i + 1)) / n;

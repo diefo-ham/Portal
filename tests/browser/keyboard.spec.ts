@@ -65,8 +65,17 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   await page.getByRole("button", { name: "Practice tools" }).click();
   await expect(page.getByRole("button", { name: /note/i })).toHaveCount(0);
   await page.getByLabel("Show timer", { exact: true }).focus();
+  const timerWasVisible = await page
+    .getByLabel("Show timer", { exact: true })
+    .isChecked();
   await page.keyboard.press("Space");
-  await expect(page.getByLabel("Show timer", { exact: true })).toBeChecked();
+  await expect
+    .poll(() => page.getByLabel("Show timer", { exact: true }).isChecked())
+    .toBe(!timerWasVisible);
+  await page.keyboard.press("Space");
+  await expect
+    .poll(() => page.getByLabel("Show timer", { exact: true }).isChecked())
+    .toBe(timerWasVisible);
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");

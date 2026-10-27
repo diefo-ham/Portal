@@ -1,5 +1,7 @@
 import { Matrix, QrDecomposition } from "ml-matrix";
 import type { FitModel, Point } from "./model";
+import { scalar, type Angle } from "./math";
+import type { MathNode } from "mathjs";
 
 export interface Fit {
   coefficients: number[]; // increasing powers of x; exponential: a, b in a*b^x
@@ -9,6 +11,114 @@ export interface Fit {
   residuals: number[];
   logSpace: boolean;
   exponential?: boolean;
+  /** Estimated numerical resolution per coefficient, for presentation only. */
+  coefficientTolerance?: number[];
+  custom?: { formula: string; names: string[] };
+}
+
+/** Custom functions linear in their parameters, solved directly rather than
+ * guessed by a nonlinear optimizer. Nonlinear parameter use is rejected. */
+export function customRegression(
+  points: Point[],
+  formula: string,
+  names: string[],
+  angle: Angle,
+): Fit {
+  const expression = scalar(formula);
+  if (names.length < 1 || names.length > 5 || expression.calls.size)
+    throw new Error(
+      "Use up to five single-letter parameters and built-in functions.",
+    );
+  const degree = (node: MathNode): number => {
+    const n = node as MathNode & {
+      name: string;
+      args: MathNode[];
+      content: MathNode;
+      op: string;
+      value: number;
+    };
+    if (n.type === "ConstantNode") return 0;
+    if (n.type === "SymbolNode") return names.includes(n.name) ? 1 : 0;
+    if (n.type === "ParenthesisNode") return degree(n.content);
+    if (n.type === "FunctionNode") {
+      if (n.args.some((a) => degree(a)))
+        throw new Error(
+          "General nonlinear custom fits need Desmos; parameters inside functions are not supported Offline.",
+        );
+      return 0;
+    }
+    if (n.type === "OperatorNode") {
+      const ds = n.args.map(degree);
+      if (["+", "-"].includes(n.op)) return Math.max(...ds);
+      if (n.op === "*" && ds.reduce((a, b) => a + b, 0) <= 1)
+        return Math.max(...ds);
+      if (n.op === "/" && !ds[1]) return ds[0];
+      if (n.op === "^" && !ds.some(Boolean)) return 0;
+    }
+    throw new Error(
+      "General nonlinear custom fits need Desmos. Offline custom parameters must enter linearly.",
+    );
+  };
+  degree(expression.node);
+  if (
+    points.length < names.length ||
+    points.some((p) => ![p.x, p.y].every(Number.isFinite))
+  )
+    throw new Error(`Use at least ${names.length} complete finite points.`);
+  const zero = Object.fromEntries(names.map((name) => [name, 0]));
+  const evaluate = (x: number, parameters: Record<string, number>) =>
+    expression.value({ ...parameters, x }, {}, angle);
+  const offset = points.map((p) => evaluate(p.x, zero));
+  const rows = points.map((p, i) =>
+    names.map((name) => evaluate(p.x, { ...zero, [name]: 1 }) - offset[i]),
+  );
+  const scales = names.map((_, i) =>
+    Math.max(...rows.map((row) => Math.abs(row[i]))),
+  );
+  if (
+    [...offset, ...rows.flat(), ...scales].some((v) => !Number.isFinite(v)) ||
+    scales.some((v) => v === 0)
+  )
+    throw new Error("The data cannot determine this model in its domain.");
+  const qr = new QrDecomposition(
+    new Matrix(rows.map((row) => row.map((v, i) => v / scales[i]))),
+  );
+  const diagonal = qr.upperTriangularMatrix.diag().map(Math.abs);
+  if (!qr.isFullRank() || Math.min(...diagonal) < Math.max(...diagonal) * 1e-10)
+    throw new Error("The custom fit is underdetermined or ill-conditioned.");
+  const coefficients = qr
+    .solve(Matrix.columnVector(points.map((p, i) => p.y - offset[i])))
+    .to1DArray()
+    .map((v, i) => v / scales[i]);
+  const parameters = Object.fromEntries(
+    names.map((name, i) => [name, coefficients[i]]),
+  );
+  const predict = (x: number) => evaluate(x, parameters);
+  const residuals = points.map((p) => p.y - predict(p.x));
+  const mean = points.reduce((sum, p) => sum + p.y / points.length, 0);
+  const sse = residuals.reduce((sum, r) => sum + r * r, 0),
+    sst = points.reduce((sum, p) => sum + (p.y - mean) ** 2, 0);
+  if ([...coefficients, sse, sst].some((v) => !Number.isFinite(v)))
+    throw new Error("The fit exceeds the supported numeric range.");
+  return {
+    coefficients,
+    predict,
+    residuals,
+    rmse: Math.sqrt(sse / points.length),
+    r2: sst > 0 ? 1 - sse / sst : undefined,
+    logSpace: false,
+    custom: { formula, names },
+    coefficientTolerance: scales.map(
+      (scale) =>
+        (4 *
+          Number.EPSILON *
+          names.length *
+          Math.max(...points.map((p) => Math.abs(p.y))) *
+          Math.max(...diagonal)) /
+        Math.min(...diagonal) /
+        scale,
+    ),
+  };
 }
 export function regression(
   points: Point[],
@@ -141,6 +251,20 @@ export function regression(
     ];
   }
   const residuals = points.map((p) => p.y - predict(p.x));
+  const localResolution =
+    (4 *
+      Number.EPSILON *
+      terms.length *
+      Math.max(...points.map((p) => Math.abs(p.y))) *
+      Math.max(...diagonal)) /
+    Math.min(...diagonal);
+  const coefficientTolerance = Array(degree + 1).fill(0) as number[];
+  if (model !== "exponential")
+    for (const k of terms)
+      for (let j = 0; j <= k; j++)
+        coefficientTolerance[j] +=
+          localResolution *
+          Math.abs((binomial[k][j] * (-center) ** (k - j)) / scale ** k);
   const mean = points.reduce((a, p) => a + p.y / points.length, 0);
   const sse = residuals.reduce((a, r) => a + r * r, 0),
     sst = points.reduce((a, p) => a + (p.y - mean) ** 2, 0);
@@ -157,6 +281,8 @@ export function regression(
         : undefined,
     logSpace: false,
     exponential: model === "exponential",
+    coefficientTolerance:
+      model === "exponential" ? undefined : coefficientTolerance,
   };
 }
 
@@ -206,6 +332,17 @@ export function regressionSpec(text: string) {
       model: "exponential" as const,
       names: [found[1], found[2]],
     };
+  found =
+    rhs.match(/^([a-z])exp\(([a-z])X\)$/) ??
+    rhs.match(/^([a-z])e\^\(([a-z])X\)$/);
+  if (found)
+    return {
+      y,
+      x: dataName,
+      model: "exponential" as const,
+      names: [found[1], found[2]],
+      exponentialRate: true,
+    };
   // A deliberately bounded family of custom models: user-selected polynomial
   // terms, including through-origin lines and omitted linear/constant terms.
   const polynomialTerms = rhs
@@ -234,6 +371,17 @@ export function regressionSpec(text: string) {
       };
     }
   }
+  const customFormula = formula.replaceAll(dataName, "x");
+  const expression = scalar(customFormula);
+  const names = [...expression.symbols].filter((name) => name !== "x");
+  if (names.length && names.every((name) => /^[a-df-wz]$/.test(name)))
+    return {
+      y,
+      x: dataName,
+      model: "custom" as const,
+      names,
+      formula: customFormula,
+    };
   throw new Error(
     "Supported fits: polynomial terms through degree 3 (such as m x_1 or a x_1^2 + c), or a b^x_1. General nonlinear custom fits need Desmos.",
   );

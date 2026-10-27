@@ -87,7 +87,12 @@ export function latexToText(latex: string): string {
           "theta",
         ].includes(command)
       )
-        out += command;
+        out +=
+          command +
+          (["pi", "theta"].includes(command) ||
+          ["_", "^"].includes(latex[index])
+            ? ""
+            : " ");
       else throw new Error(`Unsupported math command: ${command}.`);
     }
     if (closing) throw new Error("Complete the mathematical structure.");

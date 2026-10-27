@@ -42,10 +42,19 @@ export function TableEditor({
       return [...rows, ["", ""]] as [string, string][];
     return rows;
   };
-  const focusCell = (row: number, col: number) =>
-    requestAnimationFrame(() =>
-      document.getElementById(`cell-${entry.id}-${row}-${col}`)?.focus(),
-    );
+  const focusCell = (row: number, col: number, atEnd = false) => {
+    const focus = () => {
+      const input = document.getElementById(
+        `cell-${entry.id}-${row}-${col}`,
+      ) as HTMLInputElement | null;
+      input?.focus();
+      if (input && atEnd)
+        input.setSelectionRange(input.value.length, input.value.length);
+      return !!input;
+    };
+    // Existing cells move synchronously so repeated Backspace cannot outrun focus.
+    if (!focus()) requestAnimationFrame(focus);
+  };
   return (
     <>
       <div className="calc-data-table">
@@ -115,7 +124,26 @@ export function TableEditor({
                                 (_, index) => index !== i,
                               ),
                             });
-                            focusCell(Math.max(0, i - 1), col);
+                            focusCell(
+                              Math.max(0, i - 1),
+                              col,
+                              e.key === "Backspace",
+                            );
+                            return;
+                          }
+                          if (e.key === "Backspace") {
+                            e.preventDefault();
+                            let previous = i * 2 + col - 1;
+                            if (previous < 0)
+                              previous = entry.rows
+                                .flat()
+                                .findLastIndex((cell) => !!cell);
+                            if (previous >= 0)
+                              focusCell(
+                                Math.floor(previous / 2),
+                                previous % 2,
+                                true,
+                              );
                             return;
                           }
                         }

@@ -1,5 +1,7 @@
 # Floating calculator follow-up — 2026-10-27
 
+Current stabilization changes and live-key verification are documented in [Calculator stabilization](calculator-stabilization.md); those details supersede earlier interaction limits below.
+
 ## Desmos is primary; Offline is local fallback
 
 - With a configured key and no explicit saved engine choice, opening Calculator

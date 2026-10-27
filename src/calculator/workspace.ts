@@ -7,7 +7,12 @@ import {
   type Numeric,
 } from "./math";
 import { tableColumns, type CalculatorState, type Point } from "./model";
-import { regression, regressionSpec, type Fit } from "./regression";
+import {
+  regression,
+  customRegression,
+  regressionSpec,
+  type Fit,
+} from "./regression";
 import { latexToText } from "./latex";
 
 export type Relation = "<" | "<=" | ">" | ">=";
@@ -41,6 +46,7 @@ export type GraphObject =
       drag?: { id: string; name: string; y: (x: number) => number };
     };
 export interface EntryResult {
+  graphable?: boolean;
   error?: string;
   value?: number;
   values?: number[];
@@ -270,11 +276,26 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         throw new Error(
           "Regression parameters must be distinct, unreserved, and not already defined.",
         );
-      const fit = regression(
-        x.map((value, index) => ({ x: value, y: y[index] })),
-        spec.model,
-        spec.powers,
-      );
+      const fit =
+        spec.model === "custom"
+          ? customRegression(
+              x.map((value, index) => ({ x: value, y: y[index] })),
+              spec.formula,
+              spec.names,
+              state.angle,
+            )
+          : regression(
+              x.map((value, index) => ({ x: value, y: y[index] })),
+              spec.model,
+              spec.powers,
+            );
+      if (spec.exponentialRate) {
+        fit.coefficients = [fit.coefficients[0], Math.log(fit.coefficients[1])];
+        fit.custom = {
+          formula: `${spec.names[0]}*exp(${spec.names[1]}*x)`,
+          names: spec.names,
+        };
+      }
       const parameters = Object.fromEntries(
         spec.names.map((name, index) => [
           name,
@@ -302,7 +323,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
               throw new Error(`Data row ${i + 1} is undefined.`);
             return { x, y };
           });
-        results[entry.id] = { points };
+        results[entry.id] = { points, graphable: true };
         if (!entry.hidden)
           graphs.push({ kind: "points", id: entry.id, color, points });
         if (entry.fit !== "none") {
@@ -327,6 +348,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     }
     if (regressions.has(entry.id)) {
       const fit = results[entry.id]?.fit;
+      if (fit) results[entry.id].graphable = true;
       if (fit && !entry.hidden)
         graphs.push({ kind: "function", id: entry.id, color, fn: fit.predict });
       return;
@@ -336,6 +358,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     try {
       const tex = scalarTex;
       const add = (g: GraphObject) => {
+        results[entry.id].graphable = true;
         if (!entry.hidden) graphs.push(g);
       };
       if (p.type === "variable") {

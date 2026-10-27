@@ -15,7 +15,7 @@ export function ShortcutHelp() {
         <dt>E</dt>
         <dd>Toggle the current question’s bookmark</dd>
         <dt>Escape</dt>
-        <dd>Close a panel or dialog</dd>
+        <dd>Close a temporary panel first. While reading, open Leave session; press Escape again to leave.</dd>
       </dl>
       <p className="small muted">
         Shortcuts apply while reading. Focused controls keep their normal keys;

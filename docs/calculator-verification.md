@@ -1,5 +1,35 @@
 # Calculator pass verification — 2026-10-27
 
+## Current stabilization pass
+
+- Production build and all 81 core/math/storage/import tests passed.
+- All 16 calculator/keyboard Edge workflows passed in the final targeted run.
+  This includes actual keystroke regression entry, exact quadratic display/export,
+  held/repeated table deletion, multi-POI selection/deselection, keyboard refocus,
+  fractions, shorthand, grids/narrow curves and Escape confirmation/isolation.
+- Thirty other portal workflows passed in the broad regression run. The existing
+  timing checkpoint test remains intermittent: one run observed an exit cleanup
+  write arrive after its first snapshot; another had a 2773 ms submitted duration
+  against 3051 ms in the elapsed map. This same issue predates this pass. Timing
+  implementation and that timing assertion were not changed or weakened.
+  The unchanged timing test passed in its final isolated recheck (9.2 seconds),
+  confirming the intermittent boundary rather than an all-green full-run claim.
+- The keyboard Space test now verifies both checkbox toggle directions relative
+  to its initial preference rather than assuming the timer starts hidden.
+- Live official v1.12.0 loaded successfully with the supplied key, including at
+  the usual production address after a verified local-server restart. No key is
+  committed or embedded in build output; `.env.local` is ignored. Source/build
+  scans found no copy of the real key.
+- Live synthetic checks verified native quadratic/noisy exponential/custom
+  sine-basis regressions, table data, `sinx` typing, fraction/decimal conversion,
+  `(π/2,1)` POI labels and moving curve tracing while dragging. Desmos's native
+  trial-key notice remains visible and unmodified.
+- Light/dark laptop screenshots were visually inspected. Window checks cover
+  desktop bounds, pointer/keyboard geometry, mobile fallback and unchanged
+  question layout. Offline tests record/abort external requests and observe none.
+- No dependencies, license changes, study-schema migration or question-content
+  conversion. See [stabilization details](calculator-stabilization.md).
+
 ## Floating-window follow-up
 
 - Production build and 76 core/math/storage/import tests passed. New numerical

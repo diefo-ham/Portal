@@ -14,6 +14,9 @@ import {
   type Entry,
 } from "./model";
 import type { Fit } from "./regression";
+import { displayedCoefficients, fittedExpression } from "./fitDisplay";
+import { exactForm } from "./exact";
+import { textToLatex } from "./latex";
 
 function MathDisplay({ tex }: { tex: string }) {
   const html = useMemo(
@@ -33,67 +36,112 @@ function MathDisplay({ tex }: { tex: string }) {
 }
 function FitResult({
   fit,
-  exponential,
   parameters,
+  onExport,
 }: {
   fit: Fit;
-  exponential: boolean;
   parameters?: Record<string, number>;
+  onExport: () => void;
 }) {
-  const c = fit.coefficients;
-  const number = (n: number) =>
-    fmt(n).replace(/e([+-]?\d+)/, (_, power) => `\\times 10^{${power}}`);
-  const polynomial = c
-    .map((v, power) => ({ v, power }))
-    .reverse()
-    .map(
-      ({ v, power }, i) =>
-        `${i && v >= 0 ? "+" : ""}${number(v)}${power ? `x${power > 1 ? `^{${power}}` : ""}` : ""}`,
-    )
-    .join(" ");
+  const c = displayedCoefficients(fit);
+  const names = parameters
+    ? Object.keys(parameters)
+    : fit.exponential
+      ? ["a", "b"]
+      : c.length === 2
+        ? ["b", "m"]
+        : c.length === 3
+          ? ["c", "b", "a"]
+          : ["d", "c", "b", "a"];
   return (
     <div className="calc-fit-result">
       <MathDisplay
-        tex={
-          exponential
-            ? `y \\approx ${number(c[0])} \\cdot \\left(${number(c[1])}\\right)^{x}`
-            : `y \\approx ${polynomial}`
-        }
+        tex={"y \\approx " + textToLatex(fittedExpression(fit, 10))}
       />
       <output
         aria-label={
           parameters ? "Fitted parameters" : "Regression coefficients"
         }
       >
-        {parameters
-          ? Object.entries(parameters)
-              .map(([name, value]) => `${name} = ${fmt(value)}`)
-              .join(" · ")
-          : (exponential
-              ? ["a", "b"]
-              : c.length === 2
-                ? ["b", "m"]
-                : c.length === 3
-                  ? ["c", "b", "a"]
-                  : ["d", "c", "b", "a"]
-            )
-              .map((name, i) => `${name} = ${fmt(c[i])}`)
-              .join(" · ")}
+        {names
+          .map((name, i) => {
+            const original = parameters
+              ? parameters[name]
+              : fit.coefficients[i];
+            const index = parameters ? fit.coefficients.indexOf(original) : i;
+            return name + " = " + fmt(c[index] ?? original);
+          })
+          .join(" · ")}
       </output>
       <p>
         R² = {fit.r2 === undefined ? "undefined (constant y)" : fmt(fit.r2)} ·
         RMSE = {fmt(fit.rmse)}
       </p>
-      {fit.logSpace && (
-        <p className="small muted">
-          Least squares in ln(y), not y. Statistics use the original y scale.
-        </p>
-      )}
+      <button className="text-button" onClick={onExport}>
+        Export to expression list
+      </button>
       <details>
         <summary>Residuals (observed − fitted)</summary>
         <p className="calc-residuals">{fit.residuals.map(fmt).join(", ")}</p>
       </details>
     </div>
+  );
+}
+function NumericResult({ value, source }: { value: number; source: string }) {
+  const [exact, setExact] = useState(false);
+  const form = exactForm(value, source);
+  useEffect(() => setExact(false), [value, source]);
+  return (
+    <div className="calc-value">
+      <output className="calc-numeric-result">
+        {exact && form ? "≈ " + form : "= " + fmt(value)}
+      </output>
+      {form && form !== fmt(value) && (
+        <button
+          className="text-button"
+          aria-label="Toggle fraction or exact form"
+          aria-pressed={exact}
+          onClick={() => setExact(!exact)}
+        >
+          {exact ? "Decimal" : "Fraction / exact"}
+        </button>
+      )}
+    </div>
+  );
+}
+function CalculatorHelp() {
+  const [section, setSection] = useState<string>();
+  const topics = [
+    [
+      "Expressions",
+      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument; use parentheses for compound arguments. Enter adds or advances a row; Backspace removes an empty one. Define a=2 for a slider.",
+    ],
+    [
+      "Tables & regressions",
+      "Add a table with + or type table. Paste two columns, use arrows/Tab to navigate and Enter to move down. Backspace on an empty cell moves backward; an empty table can be removed. Enter y₁~mx₁+b in an expression, or choose a Fit model. Export keeps the fit and adds editable math.",
+    ],
+    [
+      "Graph & angles",
+      "Drag blank space to pan; drag a curve to trace it. Inspect points reveals numerical zeros, intersections and extrema. Click points to keep multiple labels; click again to remove one. Radians/Degrees changes trig units. Fraction/exact shows only recognizable forms, not a symbolic proof.",
+    ],
+  ];
+  return (
+    <details className="calc-help">
+      <summary>Calculator help</summary>
+      {topics.map(([title, body]) => (
+        <details key={title} open={section === title}>
+          <summary
+            onClick={(e) => {
+              e.preventDefault();
+              setSection(section === title ? undefined : title);
+            }}
+          >
+            {title}
+          </summary>
+          <p>{body}</p>
+        </details>
+      ))}
+    </details>
   );
 }
 
@@ -111,6 +159,16 @@ export function Calculator({
   );
   const root = useRef<HTMLElement>(null);
   const [error, setError] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const addMenu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!addOpen) return;
+    const outside = (e: PointerEvent) => {
+      if (!addMenu.current?.contains(e.target as Node)) setAddOpen(false);
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, [addOpen]);
   useEffect(() => {
     (
       root.current?.querySelector<HTMLElement>("textarea") ??
@@ -124,6 +182,12 @@ export function Calculator({
     });
   const focus = (id: string) => requestAnimationFrame(() => focusMath(id));
   const add = (entry: Entry, after?: string) => {
+    if (entry.type === "expression" && entry.text.length > 1200) {
+      setError(
+        "This fitted expression is too long to export. Try a simpler model.",
+      );
+      return;
+    }
     if (state.entries.length >= 24) {
       setError("This workspace supports up to 24 working entries.");
       return;
@@ -195,48 +259,73 @@ export function Calculator({
       aria-label="Offline graphing calculator"
     >
       <div className="calc-options">
-        <span className="small muted">Saved on this device</span>
-        <label>
-          Angles{" "}
-          <select
-            aria-label="Angle mode"
-            value={state.angle}
-            onChange={(event) =>
-              onChange({
-                ...state,
-                angle: event.target.value as CalculatorState["angle"],
-              })
-            }
-          >
-            <option value="radians">Radians</option>
-            <option value="degrees">Degrees</option>
-          </select>
-        </label>
+        <div className="calc-angle" role="group" aria-label="Angle mode">
+          {(["radians", "degrees"] as const).map((angle) => (
+            <button
+              key={angle}
+              aria-pressed={state.angle === angle}
+              onClick={() => onChange({ ...state, angle })}
+            >
+              {angle === "radians" ? "Radians" : "Degrees"}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="calc-body">
         <section
           className="calc-expression-area"
           aria-label="Expressions and data"
         >
-          <div className="calc-add">
+          <div
+            className="calc-add"
+            ref={addMenu}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && addOpen) {
+                e.preventDefault();
+                e.stopPropagation();
+                setAddOpen(false);
+                addMenu.current
+                  ?.querySelector<HTMLButtonElement>("button")
+                  ?.focus();
+              }
+            }}
+          >
             <button
-              onClick={() => {
-                const blank = state.entries.find(
-                  (entry) =>
-                    entry.type === "expression" && !entry.text && !entry.latex,
-                );
-                if (blank) focusMath(blank.id);
-                else add(newExpression());
-              }}
+              aria-label="Add item"
+              aria-expanded={addOpen}
+              onClick={() => setAddOpen(!addOpen)}
             >
-              + Expression
+              ＋
             </button>
-            <button
-              onClick={() => table()}
-              disabled={state.entries.length >= 24}
-            >
-              + Table
-            </button>
+            {addOpen && (
+              <div
+                className="calc-add-menu"
+                role="group"
+                aria-label="Add calculator item"
+              >
+                <button
+                  onClick={() => {
+                    setAddOpen(false);
+                    const blank = state.entries.find(
+                      (e) => e.type === "expression" && !e.text && !e.latex,
+                    );
+                    if (blank) focusMath(blank.id);
+                    else add(newExpression());
+                  }}
+                >
+                  Expression
+                </button>
+                <button
+                  onClick={() => {
+                    setAddOpen(false);
+                    table();
+                  }}
+                  disabled={state.entries.length >= 24}
+                >
+                  Table
+                </button>
+              </div>
+            )}
           </div>
           <div className="calc-entry-list">
             {state.entries.map((entry, index) => {
@@ -248,16 +337,18 @@ export function Calculator({
                   aria-label={`${entry.type === "table" ? "Data table" : "Expression"} ${index + 1}`}
                 >
                   <div className="calc-entry-heading">
-                    <button
-                      className="calc-visibility"
-                      aria-label={`${entry.hidden ? "Show" : "Hide"} ${entry.type} ${index + 1}`}
-                      aria-pressed={!entry.hidden}
-                      onClick={() =>
-                        change({ ...entry, hidden: !entry.hidden })
-                      }
-                    >
-                      {entry.hidden ? "○" : "●"}
-                    </button>
+                    {(entry.type === "table" || result?.graphable) && (
+                      <button
+                        className="calc-visibility"
+                        aria-label={`${entry.hidden ? "Show" : "Hide"} ${entry.type} ${index + 1}`}
+                        aria-pressed={!entry.hidden}
+                        onClick={() =>
+                          change({ ...entry, hidden: !entry.hidden })
+                        }
+                      >
+                        {entry.hidden ? "○" : "●"}
+                      </button>
+                    )}
                     <span className="small muted">
                       {entry.type === "table" ? "Data" : index + 1}
                     </span>
@@ -288,10 +379,11 @@ export function Calculator({
                         }}
                         onTable={() => table(entry.id)}
                       />
-                      {result?.value !== undefined && (
-                        <output className="calc-numeric-result">
-                          = {fmt(result.value)}
-                        </output>
+                      {result?.value !== undefined && !result.parameter && (
+                        <NumericResult
+                          value={result.value}
+                          source={entry.text}
+                        />
                       )}
                       {result?.values && (
                         <output className="calc-list-result">
@@ -301,7 +393,14 @@ export function Calculator({
                       {result?.fit && (
                         <FitResult
                           fit={result.fit}
-                          exponential={!!result.fit.exponential}
+                          onExport={() =>
+                            add(
+                              newExpression(
+                                "y=" + fittedExpression(result.fit!),
+                              ),
+                              entry.id,
+                            )
+                          }
                           parameters={result.parameters}
                         />
                       )}
@@ -341,7 +440,14 @@ export function Calculator({
                       {result?.fit && (
                         <FitResult
                           fit={result.fit}
-                          exponential={entry.fit === "exponential"}
+                          onExport={() =>
+                            add(
+                              newExpression(
+                                "y=" + fittedExpression(result.fit!),
+                              ),
+                              entry.id,
+                            )
+                          }
                         />
                       )}
                     </>
@@ -382,37 +488,7 @@ export function Calculator({
               </button>
             </p>
           )}
-          <details className="calc-help">
-            <summary>Calculator help</summary>
-            <p>
-              Type math directly: sqrt, /, ^, and _ create roots, fractions,
-              powers, and subscripts. Arrows move inside structures; Enter moves
-              to the next expression. Delete an empty expression with Backspace
-              or Delete.
-            </p>
-            <p>
-              Try f(x)=x^2, y&lt;2x+1, (2,3), or x^2+y^2=25. Define a=1 for a
-              slider. Lists use L=[1,2,3]. Table columns have stable x₁/y₁
-              names; use y₁~mx₁+b for a linear fit, or choose Fit model.
-            </p>
-            <p>
-              Type table in a blank expression to create a table. Enter moves
-              down, Tab moves across, and arrows navigate cells. A populated
-              last row adds a blank row. Delete on an empty row removes it;
-              repeated deletion in an empty table removes the table.
-            </p>
-            <p>
-              Supported trig: sin, cos, tan, sec, csc, cot, and inverse forms,
-              in radians or degrees. Functions use parentheses. Inspect points
-              for numerical zeros, intersections, and turning points. Numerical
-              searches and approximate contours may not find every solution.
-            </p>
-            <p>
-              Both workspaces save separately with this session. Offline never
-              needs a network. Study keyboard shortcuts are inactive while
-              calculator focus is inside this panel.
-            </p>
-          </details>
+          <CalculatorHelp />
         </section>
         <Graph
           graphs={workspace.graphs}

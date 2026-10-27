@@ -16,15 +16,17 @@ import {
   type Interest,
 } from "./numerics";
 import type { GraphObject } from "./workspace";
+import { coordinateForm } from "./exact";
 
-function ticks(min: number, max: number) {
+function ticks(min: number, max: number, minor = false) {
   const rough = (max - min) / 8,
     power = 10 ** Math.floor(Math.log10(rough));
-  const step = [1, 2, 5, 10].find((n) => n * power >= rough)! * power;
+  const step =
+    ([1, 2, 5, 10].find((n) => n * power >= rough)! * power) / (minor ? 5 : 1);
   const values: number[] = [];
   for (
     let v = Math.ceil(min / step) * step;
-    v <= max + step * 1e-8 && values.length < 25;
+    v <= max + step * 1e-8 && values.length < (minor ? 125 : 25);
     v += step
   )
     values.push(Math.abs(v) < step * 1e-10 ? 0 : v);
@@ -49,10 +51,15 @@ export function Graph({
     view: Viewport;
     moved: boolean;
     trace?: GraphObject;
+    point?: Interest;
   } | null>(null);
   const [inspect, setInspect] = useState(false);
   const [selected, setSelected] = useState<Interest>();
+  const [kept, setKept] = useState<Interest[]>([]);
+  const pointKey = (p: Interest) =>
+    `${p.graphIds.join(",")}:${p.x.toPrecision(10)}:${p.y.toPrecision(10)}`;
   const pinned = useRef(false);
+  const suppressedHover = useRef<string | undefined>(undefined);
   const [notice, setNotice] = useState("");
   const [{ width, height }, setSize] = useState({ width: 640, height: 300 });
   useEffect(() => {
@@ -126,7 +133,7 @@ export function Graph({
     [graphs, view, inspect],
   );
   useEffect(() => {
-    setSelected((point) => {
+    const reconcile = (point: Interest | undefined) => {
       const graph =
         point && graphs.find((graph) => point.graphIds.includes(graph.id));
       if (!point || !graph) {
@@ -155,8 +162,12 @@ export function Graph({
             Math.hypot(a.x - point.x, a.y - point.y) -
             Math.hypot(b.x - point.x, b.y - point.y),
         )[0];
-    });
-  }, [graphs, special]);
+    };
+    setSelected(reconcile);
+    setKept((points) =>
+      points.map(reconcile).filter((point): point is Interest => !!point),
+    );
+  }, [graphs]);
   const path = (p: Point[]) =>
     p
       .map(
@@ -212,26 +223,69 @@ export function Graph({
       : undefined;
   };
   const selectAt = (p: Point) => {
-    pinned.current = true;
-    setSelected(nearestAt(p));
+    const point = nearestAt(p);
+    if (point && point.label !== "curve point") togglePoint(point);
+    else {
+      pinned.current = !!point;
+      setSelected(point);
+    }
+  };
+  const togglePoint = (p: Interest) => {
+    const key = pointKey(p);
+    // Releasing pointer capture can fire PointerEnter again. A deselected
+    // point must stay visibly deselected until the pointer actually leaves.
+    suppressedHover.current = kept.some((point) => pointKey(point) === key)
+      ? key
+      : undefined;
+    setKept((points) =>
+      points.some((point) => pointKey(point) === key)
+        ? points.filter((point) => pointKey(point) !== key)
+        : [...points, p],
+    );
+    pinned.current = false;
+    setSelected(undefined);
   };
   const selectPoint = (p: Interest, pin = true) => {
+    if (!pin && suppressedHover.current === pointKey(p)) return;
     pinned.current = pin;
     setSelected(p);
   };
-  // Coordinate inspection is approximate; avoid pixel-motion noise in labels.
-  // Numerical computations and saved slider values retain their full precision.
-  const coordinate = (value: number) => fmt(Number(value.toPrecision(6)));
-  const label = selected
-    ? `≈ (${coordinate(selected.x)}, ${coordinate(selected.y)})`
-    : "";
-  const labelWidth = Math.min(width - 12, label.length * 7 + 18);
-  const labelX = selected
-    ? Math.max(6, Math.min(width - labelWidth - 6, px(selected.x) + 12))
-    : 0;
-  const labelY = selected
-    ? Math.max(6, Math.min(height - 32, py(selected.y) - 37))
-    : 0;
+  const labels = [
+    ...kept,
+    ...(selected && !kept.some((p) => pointKey(p) === pointKey(selected))
+      ? [selected]
+      : []),
+  ].filter(
+    (p) =>
+      Number.isFinite(p.y) &&
+      px(p.x) >= 0 &&
+      px(p.x) <= width &&
+      py(p.y) >= 0 &&
+      py(p.y) <= height,
+  );
+  const boxes: { x: number; y: number; width: number }[] = [];
+  const pointLabels = labels.map((point) => {
+    const label =
+      "≈ (" + coordinateForm(point.x) + ", " + coordinateForm(point.y) + ")";
+    const labelWidth = Math.min(width - 12, label.length * 7 + 18);
+    const x = Math.max(6, Math.min(width - labelWidth - 6, px(point.x) + 12));
+    let y = Math.max(6, Math.min(height - 32, py(point.y) - 37));
+    for (
+      let i = 0;
+      i < 8 &&
+      boxes.some(
+        (b) =>
+          x < b.x + b.width &&
+          x + labelWidth > b.x &&
+          y < b.y + 29 &&
+          y + 29 > b.y,
+      );
+      i++
+    )
+      y = y >= 40 ? y - 33 : Math.min(height - 32, py(point.y) + 16 + i * 33);
+    boxes.push({ x, y, width: labelWidth });
+    return { point, label, x, y, labelWidth };
+  });
   return (
     <section className="graph-area" aria-label="Graphing plane">
       <div className="graph-controls">
@@ -293,10 +347,11 @@ export function Graph({
         aria-label="Cartesian graph. Drag empty space to pan or drag a curve to trace. Use zoom buttons or scroll over the focused graph to zoom. Arrow keys pan; with a curve selected, Left and Right trace it. Escape clears the selection."
         tabIndex={0}
         onKeyDown={(e) => {
-          if (e.key === "Escape" && selected) {
+          if (e.key === "Escape" && (selected || kept.length)) {
             e.preventDefault();
             e.stopPropagation();
             setSelected(undefined);
+            setKept([]);
             pinned.current = false;
             return;
           }
@@ -348,11 +403,17 @@ export function Graph({
           svg.current?.focus();
           e.currentTarget.setPointerCapture(e.pointerId);
           const p = locate(e.clientX, e.clientY);
-          const nearest = nearestAt(p);
+          const index = (e.target as Element)
+            .closest("[data-interest-index]")
+            ?.getAttribute("data-interest-index");
+          const nearest =
+            index !== undefined && index !== null
+              ? special[Number(index)]
+              : nearestAt(p);
           const object =
             nearest && graphs.find((g) => g.id === nearest.graphIds[0]);
           const trace =
-            object?.kind === "function" ||
+            (object?.kind === "function" && nearest?.label === "curve point") ||
             (object?.kind === "points" && object.drag)
               ? object
               : undefined;
@@ -367,6 +428,7 @@ export function Graph({
             view,
             moved: false,
             trace,
+            point: nearest,
           };
         }}
         onPointerMove={(e) => {
@@ -410,8 +472,11 @@ export function Graph({
             });
         }}
         onPointerUp={(e) => {
-          if (drag.current && !drag.current.moved)
-            selectAt(locate(e.clientX, e.clientY));
+          if (drag.current && !drag.current.moved) {
+            const p = drag.current.point;
+            if (p && p.label !== "curve point") togglePoint(p);
+            else selectAt(locate(e.clientX, e.clientY));
+          }
           drag.current = null;
         }}
         onPointerCancel={() => {
@@ -431,6 +496,14 @@ export function Graph({
           </clipPath>
         </defs>
         <rect width={width} height={height} className="graph-background" />
+        <g className="graph-minor-grid">
+          {ticks(view.xMin, view.xMax, true).map((x) => (
+            <line key={x} x1={px(x)} x2={px(x)} y1={0} y2={height} />
+          ))}
+          {ticks(view.yMin, view.yMax, true).map((y) => (
+            <line key={y} y1={py(y)} y2={py(y)} x1={0} x2={width} />
+          ))}
+        </g>
         <g className="graph-grid">
           {ticks(view.xMin, view.xMax).map((x) => (
             <line key={x} x1={px(x)} x2={px(x)} y1={0} y2={height} />
@@ -552,13 +625,17 @@ export function Graph({
                     role="button"
                     tabIndex={0}
                     aria-label={`Point (${fmt(p.x)}, ${fmt(p.y)})${g.drag ? `; draggable ${g.drag.name}` : ""}`}
-                    onFocus={() =>
-                      selectPoint({
-                        ...p,
-                        label: "data point",
-                        graphIds: [g.id],
-                      })
-                    }
+                    onFocus={() => {
+                      suppressedHover.current = undefined;
+                      selectPoint(
+                        {
+                          ...p,
+                          label: "data point",
+                          graphIds: [g.id],
+                        },
+                        false,
+                      );
+                    }}
                     onPointerEnter={() => {
                       if (!pinned.current)
                         selectPoint(
@@ -567,13 +644,17 @@ export function Graph({
                         );
                     }}
                     onPointerLeave={() => {
+                      suppressedHover.current = undefined;
                       if (!pinned.current) setSelected(undefined);
+                    }}
+                    onBlur={() => {
+                      suppressedHover.current = undefined;
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         e.stopPropagation();
-                        selectPoint({
+                        togglePoint({
                           ...p,
                           label: "data point",
                           graphIds: [g.id],
@@ -599,6 +680,7 @@ export function Graph({
           ))}
           {special.map((p, i) => (
             <circle
+              data-interest-index={i}
               key={i}
               cx={px(p.x)}
               cy={py(p.y)}
@@ -607,24 +689,37 @@ export function Graph({
               role="button"
               tabIndex={0}
               aria-label={`${p.label} ≈ (${fmt(p.x)}, ${fmt(p.y)})`}
-              onFocus={() => selectPoint(p)}
+              onFocus={() => {
+                suppressedHover.current = undefined;
+                selectPoint(p, false);
+              }}
               onPointerEnter={() => {
                 if (!pinned.current) selectPoint(p, false);
               }}
               onPointerLeave={() => {
+                suppressedHover.current = undefined;
                 if (!pinned.current) setSelected(undefined);
               }}
-              onClick={(e) => {
-                e.stopPropagation();
-                selectPoint(p);
+              onBlur={() => {
+                suppressedHover.current = undefined;
               }}
+
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   e.stopPropagation();
-                  selectPoint(p);
+                  togglePoint(p);
                 }
               }}
+            />
+          ))}
+          {kept.map((p) => (
+            <circle
+              key={pointKey(p)}
+              cx={px(p.x)}
+              cy={py(p.y)}
+              r={5}
+              className="graph-selection"
             />
           ))}
           {selected && (
@@ -636,28 +731,26 @@ export function Graph({
             />
           )}
         </g>
-        {selected &&
-          Number.isFinite(selected.y) &&
-          px(selected.x) >= 0 &&
-          px(selected.x) <= width &&
-          py(selected.y) >= 0 &&
-          py(selected.y) <= height && (
-            <g
-              className="graph-point-label"
-              aria-label={`${selected.label} ${label}`}
-            >
-              <rect
-                x={labelX}
-                y={labelY}
-                width={labelWidth}
-                height={29}
-                rx={4}
-              />
-              <text x={labelX + 9} y={labelY + 19}>
-                {label}
-              </text>
-            </g>
-          )}
+        {pointLabels.map(({ point, label, x, y, labelWidth }) => (
+          <g
+            key={pointKey(point)}
+            className="graph-point-label"
+            aria-label={point.label + " " + label}
+          >
+            <line
+              x1={px(point.x)}
+              y1={py(point.y)}
+              x2={x + labelWidth / 2}
+              y2={y + 29}
+              stroke="var(--muted)"
+              strokeOpacity=".4"
+            />
+            <rect x={x} y={y} width={labelWidth} height={29} rx={4} />
+            <text x={x + 9} y={y + 19}>
+              {label}
+            </text>
+          </g>
+        ))}
       </svg>
       <p className="graph-hint">
         Drag empty space to pan · drag a curve to trace · focus graph to

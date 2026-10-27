@@ -150,7 +150,11 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   await page.getByRole("slider", { name: "a slider", exact: true }).focus();
   await page.keyboard.press("ArrowRight");
   await expectExpression(page, 2, "a = 1.1");
-  await page.getByRole("button", { name: "+ Table", exact: true }).click();
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Add calculator item" })
+    .getByRole("button", { name: "Table", exact: true })
+    .click();
   const table = page.getByRole("region", { name: "Data table 5", exact: true });
   const cell = table.getByRole("textbox").first();
   await cell.evaluate((el) => {
@@ -251,8 +255,10 @@ for (const theme of ["light", "dark"])
     );
     await start(page);
     await enterExpression(page, 1, "y=x^2-4");
+    await page.getByRole("button", { name: "Add item", exact: true }).click();
     await page
-      .getByRole("button", { name: "+ Expression", exact: true })
+      .getByRole("group", { name: "Add calculator item" })
+      .getByRole("button", { name: "Expression", exact: true })
       .click();
     await enterExpression(page, 2, "y=2x+3");
     await expect(page.locator(".graph-curve")).toHaveCount(2);
@@ -284,7 +290,11 @@ for (const theme of ["light", "dark"])
     await expect(page.getByRole("status")).toContainText(
       "Undefined or outside the supported numeric range",
     );
-    await page.getByRole("button", { name: "+ Table", exact: true }).click();
+    await page.getByRole("button", { name: "Add item", exact: true }).click();
+    await page
+      .getByRole("group", { name: "Add calculator item" })
+      .getByRole("button", { name: "Table", exact: true })
+      .click();
     await page.setViewportSize({ width: 1024, height: 768 });
     expect(await overflow(page)).toBe(false);
   });

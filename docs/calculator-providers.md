@@ -1,5 +1,7 @@
 # Calculator providers and input
 
+Current stabilization changes and live-key verification are documented in [Calculator stabilization](calculator-stabilization.md); those details supersede earlier interaction limits below.
+
 Updated 2026-10-27. The official online API and the local offline engine share one
 Practice surface, with separate session-owned workspaces. Question, attempt,
 review and timer rules are independent of the calculator provider.
@@ -8,10 +10,12 @@ review and timer rules are independent of the calculator provider.
 
 Obtain your own browser-side API key at https://www.desmos.com/my-api following
 the [official API documentation](https://www.desmos.com/api/v1.12/docs/index.html).
-Copy `.env.example` to `.env.local`, set `VITE_DESMOS_API_KEY=your-own-key`, then
-restart Vite or rebuild for `npm start`. The key is browser-visible by design;
-there is no backend. `.env.local` is ignored by Git. Do not use a demonstration
-key as your own key.
+Copy `.env.example` to `.env.local`, set `DESMOS_API_KEY=your-own-key`, then
+close/reopen Calculator. Both local servers read it through a no-store local
+configuration response; no key-only rebuild is needed. `.env.local` is ignored
+by Git, and the key is not embedded in build output. It is browser-visible by
+the official API model. Legacy `VITE_DESMOS_API_KEY` still works at build time.
+Do not use a demonstration key as your own key.
 
 An administrator can alternatively supply a local `/calculator-config.json`
 containing `{ "desmosApiKey": "your-own-key" }`. The build-time key takes

@@ -16,7 +16,12 @@ import {
   implicitSegments,
   fitViewport,
 } from "../src/calculator/numerics";
-import { regression } from "../src/calculator/regression";
+import { regression, customRegression } from "../src/calculator/regression";
+import {
+  displayedCoefficients,
+  fittedExpression,
+} from "../src/calculator/fitDisplay";
+import { rational, exactForm, coordinateForm } from "../src/calculator/exact";
 import { parsePastedData } from "../src/calculator/TableEditor";
 import { emptyData } from "../src/core/model";
 import { parseBackup } from "../src/importing/backup";
@@ -37,6 +42,137 @@ const workspace = (...texts: string[]) =>
     entries: texts.map((t) => newExpression(t)),
   });
 describe("floating window bounds and parameter points", () => {
+  it("cleans exact quadratic presentation without modifying coefficients or tiny meaningful terms", () => {
+    const fit = regression(
+      [1, 2, 3, 4].map((x) => ({ x, y: x * x })),
+      "quadratic",
+    );
+    const before = [...fit.coefficients];
+    expect(fittedExpression(fit)).toBe("x^2");
+    expect(displayedCoefficients(fit)).toEqual([0, 0, 1]);
+    expect(fit.coefficients).toEqual(before);
+    const tiny = regression(
+      [1, 2, 3, 4].map((x) => ({ x, y: 1e-16 * x * x })),
+      "quadratic",
+    );
+    expect(displayedCoefficients(tiny)[2]).toBeCloseTo(1e-16, 28);
+    expect(displayedCoefficients(tiny)[2]).not.toBe(0);
+    const largeX = regression(
+      [1e6, 2e6, 3e6, 4e6].map((x) => ({ x, y: 1e-12 * x * x + 2 })),
+      "quadratic",
+    );
+    expect(displayedCoefficients(largeX)[2]).not.toBe(0);
+    expect(largeX.predict(5e6)).toBeCloseTo(27, 9);
+  });
+  it("solves custom affine-parameter models, with truthful residuals and nonlinear rejection", () => {
+    const fit = customRegression(
+      [0, 0.3, 0.7, 1.4, 2].map((x) => ({ x, y: 2 * Math.sin(x) + 3 })),
+      "a*sin(x)+b",
+      ["a", "b"],
+      "radians",
+    );
+    expect(fit.coefficients[0]).toBeCloseTo(2, 11);
+    expect(fit.coefficients[1]).toBeCloseTo(3, 11);
+    expect(fit.r2).toBeCloseTo(1, 12);
+    expect(fit.residuals.every((value) => Math.abs(value) < 1e-12)).toBe(true);
+    expect(fit.predict(0.9)).toBeCloseTo(2 * Math.sin(0.9) + 3, 12);
+    for (const model of ["a*exp(b*x_1)", "a*e^(b*x_1)"]) {
+      const w = workspace(
+        "x_1=[0,1,2,3]",
+        `y_1=[${[0, 1, 2, 3].map((x) => 3 * Math.exp(0.5 * x)).join(",")}]`,
+        `y_1~${model}`,
+      );
+      const result = Object.values(w.results).find((result) => result.fit);
+      expect(result?.parameters?.a).toBeCloseTo(3, 6);
+      expect(result?.parameters?.b).toBeCloseTo(0.5, 6);
+    }
+    expect(() =>
+      customRegression(
+        [
+          { x: 1, y: 2 },
+          { x: 2, y: 3 },
+        ],
+        "a*sin(b*x)",
+        ["a", "b"],
+        "radians",
+      ),
+    ).toThrow("nonlinear");
+    expect(() =>
+      customRegression([{ x: 1, y: 2 }], "a*x+b", ["a", "b"], "radians"),
+    ).toThrow();
+    const w = workspace(
+      "x_1=[0,0.3,0.7,1.4,2]",
+      "y_1=[3,3.591040413322679,4.288435374475382,4.97089945997692,4.818594853651364]",
+      "y_1~a*sin(x_1)+b",
+    );
+    expect(
+      Object.values(w.results).find((result) => result.fit)?.parameters?.a,
+    ).toBeCloseTo(2, 10);
+  });
+  it("samples steep and narrow visible curves without spending the entire budget offscreen", () => {
+    for (const coefficient of [2000, 100000])
+      for (const center of [0, 0.013, -0.017]) {
+        let evaluations = 0;
+        const paths = sampleFunction(
+          (x) => {
+            evaluations++;
+            return coefficient * (x - center) ** 2;
+          },
+          defaultView(),
+          640,
+          400,
+        );
+        expect(
+          paths.flat().some((p) => Math.abs(p.x - center) < 0.005 && p.y < 1),
+        ).toBe(true);
+        expect(evaluations).toBeLessThan(640 * 7 + 2);
+      }
+    expect(
+      sampleFunction((x) => 100000 * x, defaultView()).length,
+    ).toBeGreaterThan(0);
+    const pole = 0.123;
+    const paths = sampleFunction((x) => 1 / (x - pole), defaultView());
+    expect(paths.length).toBeGreaterThan(1);
+    expect(
+      paths.every(
+        (path) =>
+          path.every((p) => p.x < pole) || path.every((p) => p.x > pole),
+      ),
+    ).toBe(true);
+  });
+  it("recognizes only bounded fractions/simple exact forms and keeps tiny values", () => {
+    expect(rational(1 / 3)).toEqual([1, 3]);
+    expect(exactForm(0.125)).toBe("1/8");
+    expect(exactForm(Math.sqrt(8), "sqrt(8)")).toBe("2√2");
+    expect(exactForm(Math.PI / 2, "pi/2")).toBe("π/2");
+    expect(exactForm(Math.PI)).toBeUndefined();
+    expect(exactForm(0.3333)).toBeUndefined();
+    expect(coordinateForm(Math.PI)).toBe("π");
+    expect(coordinateForm((3 * Math.PI) / 2)).toBe("3π/2");
+    expect(coordinateForm(1e-14)).not.toBe("0");
+  });
+  it("supports bounded function shorthand without splitting unrelated identifiers", () => {
+    expect(scalar("sinx").value({ x: Math.PI / 2 }, {}, "radians")).toBeCloseTo(
+      1,
+      12,
+    );
+    expect(
+      scalar(latexToText("\\sin x")).value({ x: Math.PI / 2 }, {}, "radians"),
+    ).toBeCloseTo(1, 12);
+    expect(scalar("cosx").value({ x: 0 }, {}, "radians")).toBe(1);
+    expect(scalar("sinx^2").value({ x: 2 }, {}, "radians")).toBeCloseTo(
+      Math.sin(4),
+      12,
+    );
+    expect(scalar("sinwave").symbols.has("sinwave")).toBe(true);
+    const w = workspace("a=2", "b=a+2", "y=x^2");
+    const results = Object.values(w.results);
+    expect(results[0].parameter?.name).toBe("a");
+    expect(results[1].parameter).toBeUndefined();
+    expect(results[1].value).toBe(4);
+    expect(results[0].graphable).toBeUndefined();
+    expect(results[2].graphable).toBe(true);
+  });
   it("clamps stale/large/tiny geometry without stranding the title or close control", () => {
     const bounds = { width: 1024, height: 600 };
     expect(

@@ -565,3 +565,27 @@
   stroke: var(--accent);
   stroke-width: 4;
 }
+/* Compact notebook controls: only graphable objects have visibility controls. */
+.calc-angle { display:flex; gap:2px; margin-left:auto; }
+.calc-angle button { border-color:transparent; background:transparent; min-height:28px; padding:3px 8px; }
+.calc-angle button[aria-pressed="true"] { background:var(--surface-selected); border-color:var(--line); }
+.calculator-surface .calc-options { padding:4px 12px; }
+.calc-add { padding:4px 0; }
+.calc-add > button { min-height:28px; padding:1px 9px; font-size:19px; }
+.calc-add-menu { position:absolute; z-index:5; top:36px; left:0; display:grid; min-width:150px; padding:5px; border:1px solid var(--line-strong); border-radius:var(--radius); background:var(--paper); box-shadow:var(--dialog-shadow); }
+.calc-add-menu button { text-align:left; border:0; }
+.calc-entry { position:relative; padding:4px 0 7px; }
+.calc-entry-heading { position:absolute; inset:8px 0 auto; pointer-events:none; }
+.calc-entry-heading button { pointer-events:auto; }
+.calc-entry-heading > span { font-size:10px; margin-left:5px; }
+.calc-entry .calc-icon { opacity:.45; }
+.calc-entry .calc-icon:focus-visible,.calc-entry:hover .calc-icon { opacity:1; }
+.calc-entry[aria-label^="Data table"] .calc-entry-heading { position:static; }
+.calc-structural-input { min-height:38px; padding:5px 33px 5px 58px; }
+.calc-value { display:flex; justify-content:flex-end; align-items:baseline; gap:8px; flex-wrap:wrap; padding-right:8px; }
+.calc-value .calc-numeric-result { padding:0; font-size:17px; }
+.calculator-workspace .calc-value button { min-height:24px; padding:2px 3px; font-size:10px; }
+.calc-slider { padding:0 30px 0 55px; }
+.calc-slider input { min-height:20px; height:20px; }
+.calc-help > details { margin:8px 0; }
+.graph-minor-grid { stroke:var(--line); stroke-width:.55; opacity:.55; }

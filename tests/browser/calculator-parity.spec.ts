@@ -100,6 +100,12 @@ test("floating geometry overlays unchanged Practice, resizes in all directions, 
   expect(max.x + max.width).toBeLessThanOrEqual(1358);
   expect(max.y + max.height).toBeLessThanOrEqual(892);
   await page.setViewportSize({ width: 820, height: 600 });
+  await expect
+    .poll(async () => {
+      const b = (await panel.boundingBox())!;
+      return b.x + b.width;
+    })
+    .toBeLessThanOrEqual(812);
   const clamped = (await panel.boundingBox())!;
   expect(clamped.x).toBeGreaterThanOrEqual(8);
   expect(clamped.x + clamped.width).toBeLessThanOrEqual(812);
@@ -243,7 +249,9 @@ test("Offline curve tracing and parameter dragging label the point on the graph"
   await expect(graph.locator(".graph-point-label")).toHaveCount(0);
   await expect(page.locator(".calc-structural-input")).toHaveCount(1);
   await enterExpression(page, 1, "y=x^2-4");
-  await page.getByRole("button", { name: "Inspect points", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Inspect points", exact: true })
+    .click();
   const zero = page.getByRole("button", { name: "zero ≈ (2, 0)", exact: true });
   await zero.hover();
   await expect(graph.locator(".graph-point-label")).toHaveCount(1);
@@ -252,7 +260,12 @@ test("Offline curve tracing and parameter dragging label the point on the graph"
   await page.mouse.move(20, 20);
   await expect(graph.locator(".graph-point-label")).toContainText("(2, 0)");
   await graph.click({ position: { x: 15, y: 15 } });
+  await expect(graph.locator(".graph-point-label")).toContainText("(2, 0)");
+  await zero.click();
   await expect(graph.locator(".graph-point-label")).toHaveCount(0);
+  // Move focus away and back, as keyboard navigation would. Calling focus()
+  // on the already-focused deselected point intentionally does not reselect it.
+  await graph.focus();
   await zero.focus();
   await expect(graph.locator(".graph-point-label")).toContainText("(2, 0)");
   await page.keyboard.press("Escape");

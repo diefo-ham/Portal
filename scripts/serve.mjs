@@ -2,6 +2,7 @@ import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { serveLocalLibrary } from "./local-library.mjs";
+import { serveCalculatorConfig } from "./calculator-config.mjs";
 const port = Number(
   process.argv.includes("--port")
     ? process.argv[process.argv.indexOf("--port") + 1]
@@ -35,6 +36,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   try {
+    if (await serveCalculatorConfig(req, res, process.argv.includes("--no-local-config"))) return;
     if (
       new URL(req.url, "http://127.0.0.1").pathname.startsWith(
         "/local-library/",

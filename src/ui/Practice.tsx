@@ -41,9 +41,9 @@ export function Practice({
     session.calculator,
     mutate,
   );
-  const [panel, setPanel] = useState<"overview" | "details" | "tools" | null>(
-    null,
-  );
+  const [panel, setPanel] = useState<
+    "overview" | "details" | "tools" | "leave" | null
+  >(null);
   const [panelParent, setPanelParent] = useState<"tools" | null>(null);
   const showTime = session.timerVisible ?? false;
   const dialog = useRef<HTMLDialogElement>(null);
@@ -139,6 +139,13 @@ export function Practice({
       )?.focus({ preventScroll: true }),
     );
   };
+  const leave = () =>
+    run(async () => {
+      await timer.flush();
+      await calculatorWork.flush();
+      setPanel(null);
+      onBack();
+    });
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   if (session.finishedAt)
     return (
@@ -173,6 +180,7 @@ export function Practice({
     <main
       onKeyDown={(e) => {
         if (
+          e.defaultPrevented ||
           panel ||
           pending ||
           e.altKey ||
@@ -186,6 +194,18 @@ export function Practice({
             ))
         )
           return;
+        if (e.key === "Escape") {
+          const disclosure =
+            e.target instanceof Element && e.target.closest("details[open]");
+          if (disclosure) {
+            disclosure.removeAttribute("open");
+            e.preventDefault();
+            return;
+          }
+          e.preventDefault();
+          openPanel("leave");
+          return;
+        }
         const focusedControl =
           e.target instanceof HTMLElement &&
           e.target.closest(
@@ -531,7 +551,15 @@ export function Practice({
       <dialog
         ref={dialog}
         className="practice-dialog"
-        onCancel={() => setPanel(null)}
+        onCancel={(event) => {
+          if (panel === "leave") {
+            event.preventDefault();
+            if (!pending) void leave();
+          } else setPanel(null);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && event.repeat) event.preventDefault();
+        }}
         onClick={(event) => {
           if (event.target === event.currentTarget) setPanel(null);
         }}
@@ -559,12 +587,29 @@ export function Practice({
               ? "Question overview"
               : panel === "details"
                 ? "Question details"
-                : "Practice tools"}
+                : panel === "leave"
+                  ? "Leave this session?"
+                  : "Practice tools"}
           </h2>
           <button aria-label="Close panel" onClick={() => setPanel(null)}>
             ×
           </button>
         </div>
+        {panel === "leave" && (
+          <div className="tool-menu">
+            <p>
+              Your work is saved. You can resume this session from Practice.
+            </p>
+            <button onClick={() => setPanel(null)}>Cancel</button>
+            <button
+              className="primary"
+              disabled={pending}
+              onClick={() => void leave()}
+            >
+              Leave session
+            </button>
+          </div>
+        )}
         {panel === "tools" && (
           <div className="tool-menu">
             <details>
