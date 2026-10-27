@@ -6,10 +6,7 @@ import {
   type DomainPerformance,
 } from "../core/review";
 
-type Scope =
-  | { kind: "all" }
-  | { kind: "section"; section: Section }
-  | { kind: "domain"; key: string };
+type Scope = { kind: "all" } | { kind: "section"; section: Section };
 
 const sectionLabel = (section: Section) =>
   section === "math" ? "Math" : "Reading & Writing";
@@ -86,21 +83,39 @@ function Gauge({
         }
       >
         <svg viewBox="0 0 200 108" aria-hidden="true">
-          <path className="gauge-track" d="M18 100 A82 82 0 0 1 182 100" />
-          {metric.accuracy !== undefined && value > 0 && (
-            <path
-              className="gauge-value"
-              d="M18 100 A82 82 0 0 1 182 100"
-              pathLength="100"
-              strokeDasharray={`${value} ${100 - value}`}
-            />
+          {metric.accuracy === undefined ? (
+            <path className="gauge-empty" d="M18 100 A82 82 0 0 1 182 100" />
+          ) : (
+            <>
+              {value < 100 && (
+                <path
+                  className="gauge-incorrect"
+                  d="M18 100 A82 82 0 0 1 182 100"
+                  pathLength="100"
+                  strokeDasharray={`${100 - value} ${value}`}
+                  strokeDashoffset={-value}
+                />
+              )}
+              {value > 0 && (
+                <path
+                  className="gauge-correct"
+                  d="M18 100 A82 82 0 0 1 182 100"
+                  pathLength="100"
+                  strokeDasharray={`${value} ${100 - value}`}
+                />
+              )}
+            </>
           )}
         </svg>
         <div className="gauge-reading">
-          <strong>
-            {metric.accuracy === undefined ? "Not attempted" : `${value}%`}
-          </strong>
-          <span>{attemptsLabel(metric.attempts)}</span>
+          {metric.accuracy === undefined ? (
+            <strong className="no-attempts">No attempts yet</strong>
+          ) : (
+            <>
+              <strong>{value}%</strong>
+              <span>{attemptsLabel(metric.attempts)}</span>
+            </>
+          )}
         </div>
       </div>
       {metric.attempts > 0 && (
@@ -133,14 +148,25 @@ function DomainRow({
   const mistakes = domain.questionIds.filter((id) => mistakeIds.has(id));
   const eligible = domain.questionIds.filter((id) => eligibleIds.has(id));
   return (
-    <details className={`domain-row ${selected ? "selected" : ""}`}>
-      <summary onClick={onSelect}>
+    <details
+      className={`domain-row ${selected ? "selected" : ""}`}
+      open={selected}
+    >
+      <summary
+        onClick={(event) => {
+          event.preventDefault();
+          onSelect();
+        }}
+      >
         <span className="domain-name">{domain.domain}</span>
         <span className="domain-metric">
-          {domain.accuracy === undefined
-            ? "Not attempted"
-            : `${domain.accuracy}%`}
-          <small>{attemptsLabel(domain.attempts)}</small>
+          {domain.accuracy === undefined ? (
+            "No attempts"
+          ) : (
+            <>
+              {domain.accuracy}%<small>{attemptsLabel(domain.attempts)}</small>
+            </>
+          )}
         </span>
         <AttemptMarks metric={domain} />
       </summary>
@@ -152,9 +178,8 @@ function DomainRow({
                 <span>{skill.skill}</span>
                 <span>
                   {skill.accuracy === undefined
-                    ? "Not attempted"
-                    : `${skill.accuracy}%`}{" "}
-                  · {attemptsLabel(skill.attempts)}
+                    ? "No attempts"
+                    : `${skill.accuracy}% · ${attemptsLabel(skill.attempts)}`}
                 </span>
               </div>
             ))}
@@ -200,22 +225,18 @@ export function PerformanceOverview({
 }) {
   const performance = useMemo(() => performanceOverview(data), [data]);
   const [scope, setScope] = useState<Scope>({ kind: "all" });
-  const selectedDomain =
-    scope.kind === "domain"
-      ? performance.domains.find((domain) => domain.key === scope.key)
-      : undefined;
-  const metric =
+  const [expandedDomainKey, setExpandedDomainKey] = useState<string>();
+  const selectedDomain = performance.domains.find(
+    (domain) => domain.key === expandedDomainKey,
+  );
+  const scopeMetric =
     scope.kind === "all"
       ? performance.all
-      : scope.kind === "section"
-        ? performance.sections[scope.section]
-        : selectedDomain || performance.all;
-  const label =
-    scope.kind === "all"
-      ? "All SAT practice"
-      : scope.kind === "section"
-        ? sectionLabel(scope.section)
-        : selectedDomain?.domain || "All SAT practice";
+      : performance.sections[scope.section];
+  const metric = selectedDomain || scopeMetric;
+  const scopeLabel =
+    scope.kind === "all" ? "All SAT practice" : sectionLabel(scope.section);
+  const label = selectedDomain?.domain || scopeLabel;
   const mistakes = useMemo(() => new Set(mistakeIds), [mistakeIds]);
   const eligibleIds = useMemo(
     () =>
@@ -245,7 +266,10 @@ export function PerformanceOverview({
         >
           <button
             aria-pressed={scope.kind === "all"}
-            onClick={() => setScope({ kind: "all" })}
+            onClick={() => {
+              setScope({ kind: "all" });
+              setExpandedDomainKey(undefined);
+            }}
           >
             All
           </button>
@@ -255,7 +279,10 @@ export function PerformanceOverview({
               aria-pressed={
                 scope.kind === "section" && scope.section === section
               }
-              onClick={() => setScope({ kind: "section", section })}
+              onClick={() => {
+                setScope({ kind: "section", section });
+                setExpandedDomainKey(undefined);
+              }}
             >
               {sectionLabel(section)}
             </button>
@@ -278,7 +305,9 @@ export function PerformanceOverview({
                     eligibleIds={eligibleIds}
                     mistakeIds={mistakes}
                     onSelect={() =>
-                      setScope({ kind: "domain", key: domain.key })
+                      setExpandedDomainKey((current) =>
+                        current === domain.key ? undefined : domain.key,
+                      )
                     }
                     onStart={onStart}
                   />

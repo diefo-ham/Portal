@@ -30,6 +30,7 @@ import {
   performanceOverview,
   reviewQueues,
   sessionOutcomes,
+  sessionTiming,
 } from "../src/core/review";
 import {
   createResetArchive,
@@ -101,6 +102,25 @@ describe("question integrity and practice rules", () => {
     expect(
       performance.domains.find((domain) => domain.domain === "Advanced Math"),
     ).toMatchObject({ attempts: 0, accuracy: undefined });
+  });
+  it("derives recorded session and answered-question timing without inventing missing history", () => {
+    const d = { ...emptyData(), questions };
+    const session = beginSession(
+      d,
+      [questions[0].id, questions[1].id],
+      defaultFilters,
+    );
+    expect(sessionTiming(d, session)).toEqual({
+      totalMs: undefined,
+      averageAnsweredMs: undefined,
+    });
+    session.elapsed[questions[0].id] = 40_000;
+    session.elapsed[questions[1].id] = 20_000;
+    submitAnswer(d, session.id, questions[0].id, "B");
+    expect(sessionTiming(d, session)).toEqual({
+      totalMs: 60_000,
+      averageAnsweredMs: 40_000,
+    });
   });
   it("derives useful session labels and persists optional names and stars", () => {
     const d = { ...emptyData(), questions };
@@ -448,6 +468,23 @@ describe("question integrity and practice rules", () => {
       accuracy: 50,
       outcomes: [false, true],
     });
+  });
+  it("filters multiple imported difficulty levels while keeping legacy filters readable", () => {
+    const d = { ...emptyData(), questions };
+    expect(
+      filterQuestions(d, {
+        ...defaultFilters,
+        difficulties: ["easy", "hard"],
+      }).every(
+        (question) =>
+          question.difficulty === "easy" || question.difficulty === "hard",
+      ),
+    ).toBe(true);
+    expect(
+      filterQuestions(d, { ...defaultFilters, difficulty: "medium" }).every(
+        (question) => question.difficulty === "medium",
+      ),
+    ).toBe(true);
   });
   it("uses source namespace plus source ID and rejects conflicting internal IDs", () => {
     expect(mergeQuestions(questions, questions, "x").skipped).toBe(12);

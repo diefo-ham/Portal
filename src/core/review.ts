@@ -25,6 +25,37 @@ export function sessionOutcomes(data: StudyData, session: Session) {
   };
 }
 
+export interface SessionTiming {
+  /** Cumulative active Practice time across every visited question. */
+  totalMs?: number;
+  /** Submitted-question time only; unanswered time is deliberately excluded. */
+  averageAnsweredMs?: number;
+}
+
+/** Timing is already persisted per question and snapshotted on each attempt.
+ * Undefined distinguishes older/unrecorded timing from a meaningful zero. */
+export function sessionTiming(
+  data: StudyData,
+  session: Session,
+): SessionTiming {
+  const elapsed = Object.values(session.elapsed).filter(
+    (value) => Number.isFinite(value) && value > 0,
+  );
+  const attempts = data.attempts.filter(
+    (attempt) => attempt.sessionId === session.id,
+  );
+  return {
+    totalMs: elapsed.length
+      ? elapsed.reduce((total, value) => total + value, 0)
+      : undefined,
+    averageAnsweredMs:
+      elapsed.length && attempts.length
+        ? attempts.reduce((total, attempt) => total + attempt.durationMs, 0) /
+          attempts.length
+        : undefined,
+  };
+}
+
 // Revisit unanswered *assigned* material, rather than treating the entire unseen
 // bank as unfinished work. A later answer resolves it in the global review queue.
 export function reviewQueues(data: StudyData, protectTests = true) {

@@ -54,6 +54,7 @@ export function Home({
       domains: [],
       skills: [],
       statuses: [],
+      difficulties: [],
     });
   return (
     <main className="page home-page">
@@ -92,6 +93,7 @@ export function Home({
                 Refine selection
                 {value.skills?.length ||
                 value.difficulty ||
+                value.difficulties?.length ||
                 value.bookmark ||
                 value.active !== (protectTests ? "hide" : "include")
                   ? " · customized"

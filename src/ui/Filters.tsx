@@ -1,5 +1,6 @@
 import type {
   AnswerStatus,
+  Difficulty,
   Filters as FilterValues,
   StudyData,
 } from "../core/model";
@@ -35,6 +36,20 @@ export function Filters({
     ? value.statuses
     : answerStatusOptions.some((option) => option.value === value.status)
       ? [value.status as AnswerStatus]
+      : [];
+  const difficultyOrder: Difficulty[] = ["easy", "medium", "hard"];
+  const difficultyOptions = difficultyOrder
+    .filter((difficulty) =>
+      data.questions.some((question) => question.difficulty === difficulty),
+    )
+    .map((difficulty) => ({
+      value: difficulty,
+      label: difficulty[0].toUpperCase() + difficulty.slice(1),
+    }));
+  const difficulties = value.difficulties?.length
+    ? value.difficulties
+    : difficultyOptions.some((option) => option.value === value.difficulty)
+      ? [value.difficulty as Difficulty]
       : [];
   const changeSection = (section: string) => {
     const sectionQuestions = data.questions.filter(
@@ -130,20 +145,20 @@ export function Filters({
               onChange({ ...value, skill: "", skills: selected })
             }
           />
-          <label>
-            Difficulty
-            <select
-              value={value.difficulty}
-              onChange={(e) =>
-                onChange({ ...value, difficulty: e.target.value })
-              }
-            >
-              <option value="">Any difficulty</option>
-              {["easy", "medium", "hard"].map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
-          </label>
+          <MultiSelect
+            label="Difficulty"
+            options={difficultyOptions}
+            value={difficulties}
+            emptyLabel="Any difficulty"
+            selectionSummary={(labels) => labels.join(", ")}
+            onChange={(selected) =>
+              onChange({
+                ...value,
+                difficulty: "",
+                difficulties: selected as Difficulty[],
+              })
+            }
+          />
           <label className="check-filter">
             <input
               type="checkbox"

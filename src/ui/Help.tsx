@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, type MouseEvent } from "react";
 
 export function ShortcutHelp() {
   return (
@@ -34,13 +34,27 @@ export function ShortcutHelp() {
 export function Help() {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const [openSection, setOpenSection] = useState<string>();
+  const close = () => {
+    setOpenSection(undefined);
+    dialog.current?.close();
+  };
+  const detail = (key: string) => ({
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      event.preventDefault();
+      setOpenSection((current) => (current === key ? undefined : key));
+    },
+  });
   return (
     <>
       <button
         ref={trigger}
         className="text-button help-link"
         aria-label="Help and keyboard shortcuts"
-        onClick={() => dialog.current?.showModal()}
+        onClick={() => {
+          setOpenSection(undefined);
+          dialog.current?.showModal();
+        }}
       >
         Help
       </button>
@@ -48,17 +62,17 @@ export function Help() {
         ref={dialog}
         className="practice-dialog help-dialog"
         aria-labelledby="help-title"
-        onClose={() => trigger.current?.focus()}
+        onClose={() => {
+          setOpenSection(undefined);
+          trigger.current?.focus();
+        }}
         onClick={(event) => {
-          if (event.target === event.currentTarget) dialog.current?.close();
+          if (event.target === event.currentTarget) close();
         }}
       >
         <div className="dialog-heading">
           <h2 id="help-title">Using SAT Study</h2>
-          <button
-            aria-label="Close help"
-            onClick={() => dialog.current?.close()}
-          >
+          <button aria-label="Close help" onClick={close}>
             ×
           </button>
         </div>
@@ -71,8 +85,10 @@ export function Help() {
               individual questions without starting a session.
             </p>
           </section>
-          <details>
-            <summary>Practice-test question protection</summary>
+          <details open={openSection === "protection"}>
+            <summary {...detail("protection")}>
+              Practice-test question protection
+            </summary>
             <p>
               Some imported questions may belong to active practice tests.
               Protection hides those questions during ordinary study so you do
@@ -86,8 +102,8 @@ export function Help() {
               contains one.
             </p>
           </details>
-          <details>
-            <summary>Answer status</summary>
+          <details open={openSection === "status"}>
+            <summary {...detail("status")}>Answer status</summary>
             <p>
               Choose one or more statuses; an empty selection means all
               questions. Status reflects the latest submitted answer, while
@@ -108,16 +124,20 @@ export function Help() {
               <dd>Questions with at least one submitted answer.</dd>
             </dl>
           </details>
-          <details>
-            <summary>Section, domain, and skill</summary>
+          <details open={openSection === "taxonomy"}>
+            <summary {...detail("taxonomy")}>
+              Section, domain, and skill
+            </summary>
             <p>
               Section sets the broad SAT scope. Domains are limited to that
               scope, and skills are limited to the selected domains. With All
               selected, a domain can narrow the scope on its own.
             </p>
           </details>
-          <details>
-            <summary>Sessions and saved questions</summary>
+          <details open={openSection === "sessions"}>
+            <summary {...detail("sessions")}>
+              Sessions and saved questions
+            </summary>
             <p>
               New sessions are shuffled; resuming preserves the saved order and
               your place. Session stars keep important sets easy to find and are
@@ -130,8 +150,8 @@ export function Help() {
               excluded, and repeated attempts remain separate.
             </p>
           </details>
-          <details>
-            <summary>Keyboard shortcuts</summary>
+          <details open={openSection === "shortcuts"}>
+            <summary {...detail("shortcuts")}>Keyboard shortcuts</summary>
             <ShortcutHelp />
           </details>
         </div>

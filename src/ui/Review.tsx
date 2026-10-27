@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { StudyData } from "../core/model";
-import { reviewQueues, sessionOutcomes } from "../core/review";
+import { reviewQueues, sessionOutcomes, sessionTiming } from "../core/review";
 import { sessionDisplayName } from "../core/sessions";
 import { PerformanceOverview } from "./PerformanceOverview";
+import { formatElapsed } from "./formatTime";
 
 export function Review({
   data,
@@ -73,26 +74,26 @@ export function Review({
             Practice unanswered
           </button>
         </section>
+        <section>
+          <h2>Bookmarks</h2>
+          <p>
+            {bookmarks.length
+              ? `${bookmarks.length} saved questions ready to revisit.`
+              : protectedBookmarks
+                ? "Your saved questions are currently protected practice-test material."
+                : "Save a question with the star or E during practice."}
+            {protectedBookmarks > 0 && bookmarks.length > 0
+              ? ` ${protectedBookmarks} saved questions are hidden by practice-test protection.`
+              : ""}
+          </p>
+          <button
+            disabled={!bookmarks.length}
+            onClick={() => onStart(bookmarks, "bookmarks")}
+          >
+            Practice bookmarks
+          </button>
+        </section>
       </div>
-      <section className="bookmark-review">
-        <h2>Bookmarks</h2>
-        <p className="muted">
-          {bookmarks.length
-            ? `${bookmarks.length} saved questions ready to revisit.`
-            : protectedBookmarks
-              ? "Your saved questions are currently protected practice-test material."
-              : "Save a question with the star or E during practice."}
-          {protectedBookmarks > 0 && bookmarks.length > 0
-            ? ` ${protectedBookmarks} saved questions are hidden by practice-test protection.`
-            : ""}
-        </p>
-        <button
-          disabled={!bookmarks.length}
-          onClick={() => onStart(bookmarks, "bookmarks")}
-        >
-          Practice bookmarks
-        </button>
-      </section>
       <p className="small muted">
         {protectTests
           ? "Practice-test protection is on for these review sets."
@@ -108,6 +109,7 @@ export function Review({
       )}
       {recent.slice(0, visible).map((session) => {
         const result = sessionOutcomes(data, session);
+        const timing = sessionTiming(data, session);
         return (
           <button
             key={session.id}
@@ -120,6 +122,9 @@ export function Review({
                 {result.correct.length} correct · {result.incorrect.length}{" "}
                 incorrect · {result.unanswered.length} unanswered ·{" "}
                 {new Date(session.startedAt).toLocaleDateString()}
+                {session.finishedAt && timing.totalMs !== undefined
+                  ? ` · ${formatElapsed(timing.totalMs)} active time`
+                  : ""}
               </small>
             </span>
             <span>

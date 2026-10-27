@@ -75,7 +75,25 @@ test("question details return to tools and Help only scrolls when constrained", 
       (element) => element.scrollHeight <= element.clientHeight + 1,
     ),
   ).toBe(true);
+  const shortcuts = help.locator("details").filter({
+    hasText: "Keyboard shortcuts",
+  });
+  const statuses = help.locator("details").filter({ hasText: "Answer status" });
+  await expect(shortcuts).toHaveAttribute("open", "");
+  await statuses.getByText("Answer status", { exact: true }).click();
+  await expect(statuses).toHaveAttribute("open", "");
+  await expect(shortcuts).not.toHaveAttribute("open", "");
   await page.getByRole("button", { name: "Close help" }).click();
+
+  await page
+    .getByRole("button", {
+      name: "Help and keyboard shortcuts",
+      exact: true,
+    })
+    .click();
+  await expect(help.locator("details[open]")).toHaveCount(0);
+  await help.dispatchEvent("click");
+  await expect(help).not.toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 420 });
   await page
@@ -136,6 +154,70 @@ test("timer and correct-explanation preferences apply to new sessions", async ({
   await expect(page.getByText(/Subtract 7 from both sides/)).toBeVisible();
 });
 
+test("timing accumulates only during active Practice and survives resume", async ({
+  page,
+}) => {
+  await loadMath(page, "1");
+  await page.getByRole("button", { name: "Start practice" }).click();
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Practice tools" }).click();
+  await page.getByLabel("Show timer", { exact: true }).click();
+  await expect(
+    page.getByLabel("Show timer", { exact: true }),
+  ).not.toBeChecked();
+  await page.getByRole("button", { name: "Close panel" }).click();
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
+
+  const exited = await state(page);
+  const sessionId = exited.sessions[0].id;
+  const questionId = exited.sessions[0].questionIds[0];
+  const beforeClosedWait = exited.sessions[0].elapsed[questionId];
+  expect(beforeClosedWait).toBeGreaterThan(700);
+  expect(exited.sessions[0].timerVisible).toBe(false);
+  await page.waitForTimeout(600);
+  expect(
+    (await state(page)).sessions.find((session) => session.id === sessionId)!
+      .elapsed[questionId],
+  ).toBe(beforeClosedWait);
+
+  await page.getByRole("button", { name: /Resume practice:/ }).click();
+  await expect(page.getByLabel("Time on this question")).not.toBeVisible();
+  await page.waitForTimeout(600);
+  await page.getByRole("button", { name: "Practice tools" }).click();
+  await page.getByRole("button", { name: "Pause timer" }).click();
+  const paused = await state(page);
+  const pausedAt = paused.sessions.find((session) => session.id === sessionId)!
+    .elapsed[questionId];
+  await page.waitForTimeout(600);
+  expect(
+    (await state(page)).sessions.find((session) => session.id === sessionId)!
+      .elapsed[questionId],
+  ).toBe(pausedAt);
+  await page.getByRole("button", { name: "Resume timer" }).click();
+  await page.getByRole("button", { name: "Close panel" }).click();
+  await page.waitForTimeout(600);
+  await page.getByRole("article").focus();
+  await page.keyboard.press("b");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
+
+  const submitted = await state(page);
+  const stored = submitted.sessions.find(
+    (session) => session.id === sessionId,
+  )!;
+  const attempt = submitted.attempts.find(
+    (candidate) => candidate.sessionId === sessionId,
+  )!;
+  expect(attempt.durationMs).toBe(Math.round(stored.elapsed[questionId]));
+  const submittedAt = stored.elapsed[questionId];
+  await page.waitForTimeout(600);
+  expect(
+    (await state(page)).sessions.find((session) => session.id === sessionId)!
+      .elapsed[questionId],
+  ).toBe(submittedAt);
+});
+
 test("E bookmarks, B remains answer B, and Review uses answered denominators", async ({
   page,
 }) => {
@@ -194,6 +276,6 @@ test("Review has a truthful empty state before any answer is submitted", async (
   ).toBeVisible();
   await expect(page.locator(".domain-row")).toHaveCount(8);
   await expect(
-    page.getByText("Not attempted", { exact: true }).first(),
+    page.getByText("No attempts yet", { exact: true }),
   ).toBeVisible();
 });

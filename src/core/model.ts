@@ -1,6 +1,7 @@
 export type Section = "math" | "reading-writing";
 export type TestStatus = "active" | "inactive" | "unknown";
 export type AnswerStatus = "incorrect" | "unanswered" | "completed";
+export type Difficulty = "easy" | "medium" | "hard";
 export interface DocumentPanel {
   src: string;
   alt: string;
@@ -14,7 +15,7 @@ export interface Question {
   section: Section;
   domain?: string;
   skill?: string;
-  difficulty?: "easy" | "medium" | "hard";
+  difficulty?: Difficulty;
   passage?: string;
   stem: string;
   choices?: { id: string; text: string }[];
@@ -56,6 +57,8 @@ export interface Filters {
   skills?: string[];
   /** Empty means unrestricted. The legacy single status remains readable. */
   statuses?: AnswerStatus[];
+  /** Empty means unrestricted. The legacy single difficulty remains readable. */
+  difficulties?: Difficulty[];
   difficulty: string;
   status: string;
   bookmark: string;
@@ -72,6 +75,7 @@ export const defaultFilters: Filters = {
   active: "hide",
   search: "",
   statuses: [],
+  difficulties: [],
 };
 export interface Session {
   id: string;

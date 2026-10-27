@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { Question, Session, StudyData } from "../core/model";
-import { sessionOutcomes } from "../core/review";
+import { sessionOutcomes, sessionTiming } from "../core/review";
 import { sessionDisplayName } from "../core/sessions";
 import { DocumentPanels } from "./DocumentPanels";
+import { formatElapsed } from "./formatTime";
 export const displayAnswer = (q: Question, value: string) =>
   q.document
     ? value
@@ -26,6 +27,7 @@ export function SessionResults({
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
 }) {
   const result = sessionOutcomes(data, session);
+  const timing = sessionTiming(data, session);
   const [view, setView] = useState("all");
   const answered = result.correct.length + result.incorrect.length;
   return (
@@ -50,6 +52,21 @@ export function SessionResults({
           ? `${result.unanswered.length} questions left unanswered.`
           : "Every question answered."}
       </p>
+      {(timing.totalMs !== undefined ||
+        timing.averageAnsweredMs !== undefined) && (
+        <p className="session-timing-summary">
+          {timing.totalMs !== undefined
+            ? `${formatElapsed(timing.totalMs)} active study time`
+            : ""}
+          {timing.totalMs !== undefined &&
+          timing.averageAnsweredMs !== undefined
+            ? " · "
+            : ""}
+          {timing.averageAnsweredMs !== undefined
+            ? `Average ${formatElapsed(timing.averageAnsweredMs)} / answered question`
+            : ""}
+        </p>
+      )}
       <div
         className="outcome-bar"
         role="img"
@@ -116,6 +133,7 @@ export function SessionResults({
           .map((id) => {
             const q = data.questions.find((q) => q.id === id)!;
             const attempt = result.attempts.get(id);
+            const elapsedMs = attempt?.durationMs || session.elapsed[id];
             return (
               <details key={id}>
                 <summary>
@@ -138,6 +156,9 @@ export function SessionResults({
                   <span className="small muted">
                     {" "}
                     · #{session.questionIds.indexOf(id) + 1}
+                    {elapsedMs > 0
+                      ? ` · ${formatElapsed(elapsedMs)}${attempt ? "" : " spent"}`
+                      : ""}
                   </span>
                 </summary>
                 {q.document ? (

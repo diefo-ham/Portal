@@ -65,13 +65,19 @@ export function filterQuestions(data: StudyData, f: Filters): Question[] {
       : f.status
         ? [f.status]
         : [];
+    const difficulties = f.difficulties?.length
+      ? f.difficulties
+      : f.difficulty
+        ? [f.difficulty]
+        : [];
     return (
       (!f.section || q.section === f.section) &&
       (!f.domain || metadataKey(q.domain) === metadataKey(f.domain)) &&
       (!f.skill || metadataKey(q.skill) === metadataKey(f.skill)) &&
       (!f.domains?.length || f.domains.includes(domainKey(q))) &&
       (!f.skills?.length || f.skills.includes(skillKey(q))) &&
-      (!f.difficulty || q.difficulty === f.difficulty) &&
+      (!difficulties.length ||
+        (!!q.difficulty && difficulties.includes(q.difficulty))) &&
       (f.active === "include" ||
         (f.active === "hide"
           ? q.testStatus !== "active"
@@ -101,6 +107,9 @@ export function createSession(
       ...(filters.domains ? { domains: [...filters.domains] } : {}),
       ...(filters.skills ? { skills: [...filters.skills] } : {}),
       ...(filters.statuses ? { statuses: [...filters.statuses] } : {}),
+      ...(filters.difficulties
+        ? { difficulties: [...filters.difficulties] }
+        : {}),
     },
     drafts: {},
     elapsed: {},
