@@ -7,12 +7,12 @@ export function ShortcutHelp() {
         <dt>← / →</dt>
         <dd>Previous / next question</dd>
         <dt>1–4</dt>
-        <dd>Choose answer A–D (A, C, and D also work while reading)</dd>
+        <dd>Choose answer A–D (letters also work while reading)</dd>
         <dt>Enter / Space</dt>
         <dd>
           Check your answer; after feedback, advance or review the session
         </dd>
-        <dt>B</dt>
+        <dt>E</dt>
         <dd>Toggle the current question’s bookmark</dd>
         <dt>Escape</dt>
         <dd>Close a panel or dialog</dd>
@@ -46,7 +46,7 @@ export function Help() {
       </button>
       <dialog
         ref={dialog}
-        className="practice-dialog"
+        className="practice-dialog help-dialog"
         aria-labelledby="help-title"
         onClose={() => trigger.current?.focus()}
         onClick={(event) => {

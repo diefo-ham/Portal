@@ -8,6 +8,7 @@ export function beginSession(
   questionIds: string[],
   filters: Filters,
   name?: string,
+  timerVisible = true,
 ): Session {
   if (
     !questionIds.length ||
@@ -16,6 +17,7 @@ export function beginSession(
     throw new Error("Select existing questions before starting a session.");
   const session = createSession([...new Set(questionIds)], filters);
   session.name = normalizeSessionName(name || "");
+  session.timerVisible = timerVisible;
   data.sessions.push(session);
   return session;
 }

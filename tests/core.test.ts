@@ -26,7 +26,11 @@ import {
   toggleSessionStar,
 } from "../src/core/commands";
 import { domainKey, skillKey, taxonomyOptions } from "../src/core/taxonomy";
-import { reviewQueues, sessionOutcomes } from "../src/core/review";
+import {
+  performanceOverview,
+  reviewQueues,
+  sessionOutcomes,
+} from "../src/core/review";
 import {
   createResetArchive,
   validateResetArchive,
@@ -51,6 +55,42 @@ describe("question integrity and practice rules", () => {
     beginSession(d, [questions[2].id], defaultFilters);
     expect(d.sessions.filter((s) => !s.finishedAt)).toHaveLength(2);
     expect(first).toEqual(saved);
+  });
+  it("snapshots timer visibility and calculates performance from answers only", () => {
+    const d = { ...emptyData(), questions };
+    const visible = beginSession(
+      d,
+      [questions[0].id, questions[1].id],
+      defaultFilters,
+    );
+    const hidden = beginSession(
+      d,
+      [questions[0].id],
+      defaultFilters,
+      undefined,
+      false,
+    );
+    submitAnswer(d, visible.id, questions[0].id, "B");
+    submitAnswer(d, hidden.id, questions[0].id, "A");
+    expect(visible.timerVisible).toBe(true);
+    expect(hidden.timerVisible).toBe(false);
+    expect(performanceOverview(d)).toEqual({
+      answered: 2,
+      correct: 1,
+      incorrect: 1,
+      accuracy: 50,
+      domains: [
+        {
+          key: "math:Algebra",
+          section: "math",
+          domain: "Algebra",
+          answered: 2,
+          correct: 1,
+          incorrect: 1,
+          accuracy: 50,
+        },
+      ],
+    });
   });
   it("derives useful session labels and persists optional names and stars", () => {
     const d = { ...emptyData(), questions };

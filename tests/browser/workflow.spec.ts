@@ -44,10 +44,13 @@ test("offline local workflow, history, reload persistence and backup restore", a
   await expect(page.getByText(/Subtract 7 from both sides/)).toBeVisible();
   await expect(page.getByRole("navigation")).toHaveCount(0);
   await expect(page.getByLabel("My notes")).not.toBeVisible();
-  await expect(page.getByLabel("Time on this question")).toHaveCount(0);
+  await expect(page.getByLabel("Time on this question")).toBeVisible();
   await page
     .getByRole("button", { name: "Bookmark question", exact: true })
     .click();
+  await expect(
+    page.getByRole("button", { name: "Remove bookmark", exact: true }),
+  ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).click();
   await expect(
@@ -68,7 +71,6 @@ test("offline local workflow, history, reload persistence and backup restore", a
     page.getByRole("button", { name: "Practice mistakes (1)", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Review", exact: true }).click();
-  await page.getByText("Study details", { exact: true }).click();
   await expect(page.getByText("50%", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "Practice mistakes", exact: true })

@@ -36,3 +36,61 @@ export function reviewQueues(data: StudyData, protectTests = true) {
       .map((q) => q.id),
   };
 }
+
+export interface DomainPerformance {
+  key: string;
+  section: "math" | "reading-writing";
+  domain: string;
+  answered: number;
+  correct: number;
+  incorrect: number;
+  accuracy: number;
+}
+
+/** Accuracy is calculated from submitted attempts only. Repeated attempts are
+ * intentionally retained because this describes study performance over time,
+ * rather than the current state of each unique question. */
+export function performanceOverview(data: StudyData) {
+  const questions = new Map(
+    data.questions.map((question) => [question.id, question]),
+  );
+  const domains = new Map<string, DomainPerformance>();
+  let correct = 0;
+  for (const attempt of data.attempts) {
+    const question = questions.get(attempt.questionId);
+    if (!question) continue;
+    if (attempt.correct) correct += 1;
+    const domain = question.domain || "Domain unspecified";
+    const key = `${question.section}:${domain}`;
+    const aggregate = domains.get(key) || {
+      key,
+      section: question.section,
+      domain,
+      answered: 0,
+      correct: 0,
+      incorrect: 0,
+      accuracy: 0,
+    };
+    aggregate.answered += 1;
+    aggregate.correct += attempt.correct ? 1 : 0;
+    aggregate.incorrect += attempt.correct ? 0 : 1;
+    aggregate.accuracy = Math.round(
+      (100 * aggregate.correct) / aggregate.answered,
+    );
+    domains.set(key, aggregate);
+  }
+  const answered = [...domains.values()].reduce(
+    (total, domain) => total + domain.answered,
+    0,
+  );
+  return {
+    answered,
+    correct,
+    incorrect: answered - correct,
+    accuracy: answered ? Math.round((100 * correct) / answered) : undefined,
+    domains: [...domains.values()].sort(
+      (a, b) =>
+        a.section.localeCompare(b.section) || a.domain.localeCompare(b.domain),
+    ),
+  };
+}

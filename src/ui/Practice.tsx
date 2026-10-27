@@ -17,12 +17,14 @@ export function Practice({
   data,
   session,
   mutate,
+  showCorrectExplanations,
   onBack,
   onRetry,
 }: {
   data: StudyData;
   session: Session;
   mutate: Mutate;
+  showCorrectExplanations: boolean;
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
 }) {
@@ -43,18 +45,25 @@ export function Practice({
   const [panel, setPanel] = useState<"overview" | "details" | "tools" | null>(
     null,
   );
-  const [showTime, setShowTime] = useState(false);
+  const [panelParent, setPanelParent] = useState<"tools" | null>(null);
+  const showTime = session.timerVisible ?? false;
   const dialog = useRef<HTMLDialogElement>(null);
   const questionTop = useRef<HTMLElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLElement | null>(null);
-  const openPanel = (value: typeof panel) => {
-    trigger.current = document.activeElement as HTMLElement;
+  const openPanel = (value: Exclude<typeof panel, null>) => {
+    if (!panel) trigger.current = document.activeElement as HTMLElement;
+    setPanelParent(null);
+    setPanel(value);
+  };
+  const openToolDetail = (value: "overview" | "details") => {
+    setPanelParent("tools");
     setPanel(value);
   };
   useEffect(() => {
-    if (panel) dialog.current?.showModal();
-    else if (dialog.current?.open) dialog.current.close();
+    if (panel) {
+      if (!dialog.current?.open) dialog.current?.showModal();
+    } else if (dialog.current?.open) dialog.current.close();
   }, [panel]);
   useEffect(() => {
     questionTop.current?.focus({ preventScroll: true });
@@ -156,32 +165,28 @@ export function Practice({
             ))
         )
           return;
-        if (
-          e.key.toLowerCase() === "b" &&
-          !(
-            e.target instanceof HTMLElement &&
-            e.target.closest(
-              'button,input,a,summary,[role="button"],[role="combobox"],[role="listbox"],[role="slider"],[role="spinbutton"],[role="switch"],[role="checkbox"],[role="menuitem"]',
-            )
-          )
-        ) {
+        const focusedControl =
+          e.target instanceof HTMLElement &&
+          e.target.closest(
+            'button,input,a,summary,[role="button"],[role="combobox"],[role="listbox"],[role="slider"],[role="spinbutton"],[role="switch"],[role="checkbox"],[role="menuitem"]',
+          );
+        if (e.key.toLowerCase() === "e" && !focusedControl) {
           e.preventDefault();
           void toggleBookmark();
           return;
         }
-        // B on a focused radio retains its existing answer-choice behavior;
-        // other utility controls must not accidentally select answer B.
-        if (
-          e.key.toLowerCase() === "b" &&
-          !(e.target instanceof HTMLInputElement && e.target.type === "radio")
-        )
-          return;
         const choice = /^[1-4]$/.test(e.key)
           ? question.choices?.[Number(e.key) - 1]
           : question.choices?.find(
               (c) => c.id.toLowerCase() === e.key.toLowerCase(),
             );
-        if (!attempt && question.answer.type === "choice" && choice) {
+        if (
+          !attempt &&
+          question.answer.type === "choice" &&
+          choice &&
+          (!focusedControl ||
+            (e.target instanceof HTMLInputElement && e.target.type === "radio"))
+        ) {
           e.preventDefault();
           choose(choice.id);
         } else if (
@@ -312,7 +317,9 @@ export function Practice({
                 annotation.bookmarked ? "Remove bookmark" : "Bookmark question"
               }
               title={
-                annotation.bookmarked ? "Remove bookmark" : "Bookmark question"
+                annotation.bookmarked
+                  ? "Remove bookmark (E)"
+                  : "Bookmark question (E)"
               }
               onClick={(e) => {
                 // Pointer activation returns to reading; keyboard activation keeps
@@ -437,14 +444,30 @@ export function Practice({
               <p>
                 <strong>Correct answer:</strong> {correctAnswer(question)}
               </p>
-              <h3>Explanation</h3>
-              {question.document ? (
-                <DocumentPanels question={question} kind="rationale" />
+              {attempt.correct && !showCorrectExplanations ? (
+                <details className="correct-explanation">
+                  <summary>View explanation</summary>
+                  {question.document ? (
+                    <DocumentPanels question={question} kind="rationale" />
+                  ) : (
+                    <p className="rationale">
+                      {question.rationale ||
+                        "No rationale was included in this import."}
+                    </p>
+                  )}
+                </details>
               ) : (
-                <p className="rationale">
-                  {question.rationale ||
-                    "No rationale was included in this import."}
-                </p>
+                <>
+                  <h3>Explanation</h3>
+                  {question.document ? (
+                    <DocumentPanels question={question} kind="rationale" />
+                  ) : (
+                    <p className="rationale">
+                      {question.rationale ||
+                        "No rationale was included in this import."}
+                    </p>
+                  )}
+                </>
               )}
               <span className="small muted">
                 Your answer: {displayAnswer(question, attempt.answer)}
@@ -549,10 +572,23 @@ export function Practice({
         }}
         onClose={() => {
           setPanel(null);
+          setPanelParent(null);
           trigger.current?.focus();
         }}
       >
         <div className="dialog-heading">
+          {panelParent === "tools" && panel !== "tools" && (
+            <button
+              className="dialog-back"
+              aria-label="Back to Practice tools"
+              onClick={() => {
+                setPanelParent(null);
+                setPanel("tools");
+              }}
+            >
+              ← <span>Back</span>
+            </button>
+          )}
           <h2>
             {panel === "overview"
               ? "Question overview"
@@ -570,14 +606,20 @@ export function Practice({
               <summary>Keyboard shortcuts & help</summary>
               <ShortcutHelp />
             </details>
-            <button onClick={() => setPanel("overview")}>
+            <button onClick={() => openToolDetail("overview")}>
               Question overview
             </button>
             <label>
               <input
                 type="checkbox"
                 checked={showTime}
-                onChange={(e) => setShowTime(e.target.checked)}
+                onChange={(e) => {
+                  const visible = e.target.checked;
+                  void mutate((d) => {
+                    const current = d.sessions.find((s) => s.id === session.id);
+                    if (current) current.timerVisible = visible;
+                  }).catch(() => {});
+                }}
               />{" "}
               Show timer
             </label>
@@ -594,7 +636,7 @@ export function Practice({
             >
               {session.paused ? "Resume timer" : "Pause timer"}
             </button>
-            <button onClick={() => setPanel("details")}>
+            <button onClick={() => openToolDetail("details")}>
               Question details
             </button>
             <button

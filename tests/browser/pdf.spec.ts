@@ -123,6 +123,7 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   await page.getByRole("radio").nth(1).check();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
+  await page.getByText("View explanation", { exact: true }).click();
   await expect(page.getByLabel("Original PDF explanation")).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).click();

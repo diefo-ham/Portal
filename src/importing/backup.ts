@@ -56,6 +56,7 @@ export function parseBackup(raw: unknown): StudyData {
     if (
       (s.name !== undefined && typeof s.name !== "string") ||
       (s.starred !== undefined && typeof s.starred !== "boolean") ||
+      (s.timerVisible !== undefined && typeof s.timerVisible !== "boolean") ||
       (typeof s.name === "string" &&
         Array.from(s.name).length > SESSION_NAME_MAX_LENGTH)
     )

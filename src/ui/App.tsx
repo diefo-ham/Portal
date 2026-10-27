@@ -33,6 +33,12 @@ export function App() {
   const [protectedTests, setProtectedTests] = useState(
     () => localStorage.getItem("sat-protect-tests") !== "false",
   );
+  const [timerDefault, setTimerDefault] = useState(
+    () => localStorage.getItem("sat-timer-default") !== "false",
+  );
+  const [showCorrectExplanations, setShowCorrectExplanations] = useState(
+    () => localStorage.getItem("sat-show-correct-explanations") === "true",
+  );
   const [filters, setFilters] = useState<FilterValues>(() => ({
     ...defaultFilters,
     active:
@@ -118,7 +124,7 @@ export function App() {
     await run(async () => {
       let id = "";
       await mutate((d) => {
-        id = beginSession(d, selected, sessionFilters, name).id;
+        id = beginSession(d, selected, sessionFilters, name, timerDefault).id;
       });
       setSessionId(id);
       setMessage("");
@@ -222,6 +228,7 @@ export function App() {
           data={data}
           session={current}
           mutate={mutate}
+          showCorrectExplanations={showCorrectExplanations}
           onBack={() => setPage("home")}
           onRetry={(ids, kind) =>
             void start(
@@ -300,7 +307,44 @@ export function App() {
         <main className="page narrow settings-page">
           <h1>Settings</h1>
           <AppearanceSettings appearance={appearance} />
-          <section className="utility">
+          <section className="utility study-preferences">
+            <h2>Study preferences</h2>
+            <label>
+              <input
+                type="checkbox"
+                checked={timerDefault}
+                onChange={(e) => {
+                  setTimerDefault(e.target.checked);
+                  localStorage.setItem(
+                    "sat-timer-default",
+                    String(e.target.checked),
+                  );
+                }}
+              />{" "}
+              Timer on by default
+            </label>
+            <p className="small muted">
+              New sessions start with the timer visible. Each session remembers
+              its own choice afterward.
+            </p>
+            <label>
+              <input
+                type="checkbox"
+                checked={showCorrectExplanations}
+                onChange={(e) => {
+                  setShowCorrectExplanations(e.target.checked);
+                  localStorage.setItem(
+                    "sat-show-correct-explanations",
+                    String(e.target.checked),
+                  );
+                }}
+              />{" "}
+              Show explanations after correct answers
+            </label>
+            <p className="small muted">
+              When off, correct answers stay concise and the explanation remains
+              available on request. Incorrect answers always show it.
+            </p>
             <label>
               <input
                 type="checkbox"

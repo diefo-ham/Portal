@@ -83,6 +83,8 @@ export interface Session {
   drafts: Record<string, string>;
   elapsed: Record<string, number>;
   paused: boolean;
+  /** Snapshot of the timer-visibility preference for this session. */
+  timerVisible?: boolean;
   calculator?: import("../calculator/model").CalculatorState;
 }
 export interface StudyData {

@@ -66,7 +66,7 @@ test("bookmark pointer and keyboard flow, help, and independent resumable sets",
   await expect
     .poll(async () => (await state(page)).annotations["demo-m01"]?.bookmarked)
     .toBe(true);
-  await page.keyboard.press("b");
+  await page.keyboard.press("e");
   await expect(
     page.getByRole("button", { name: "Bookmark question", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
@@ -82,7 +82,7 @@ test("bookmark pointer and keyboard flow, help, and independent resumable sets",
   await page.locator("article").focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByLabel("Your numeric answer")).toBeVisible();
-  await page.getByLabel("Your numeric answer").fill("b");
+  await page.getByLabel("Your numeric answer").fill("e");
   expect((await state(page)).annotations["demo-m02"]).toBeUndefined();
   await page.getByLabel("Your numeric answer").fill("28");
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
@@ -114,7 +114,7 @@ test("bookmark pointer and keyboard flow, help, and independent resumable sets",
   await expect(page.getByRole("dialog")).toContainText(
     "Toggle the current question’s bookmark",
   );
-  await page.keyboard.press("b");
+  await page.keyboard.press("e");
   expect((await state(page)).annotations["demo-m02"]).toBeUndefined();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
