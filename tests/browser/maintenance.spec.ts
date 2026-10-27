@@ -27,9 +27,7 @@ test("new sessions sample the filtered pool, avoid repeats, and resume the exact
   await page
     .getByRole("button", { name: "Load synthetic sample", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   const first = (await state(page)).sessions.at(-1)!;
@@ -53,9 +51,7 @@ test("new sessions sample the filtered pool, avoid repeats, and resume the exact
   expect(resumed.questionIds).toEqual(first.questionIds);
   expect(resumed.index).toBe(2);
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   const second = (await state(page)).sessions.at(-1)!;
@@ -74,9 +70,7 @@ test("confirmed progress reset preserves the bank and preferences across reload;
   await page
     .getByRole("button", { name: "Load synthetic sample", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page

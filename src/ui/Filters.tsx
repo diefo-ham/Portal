@@ -1,4 +1,8 @@
-import type { Filters as FilterValues, StudyData } from "../core/model";
+import type {
+  AnswerStatus,
+  Filters as FilterValues,
+  StudyData,
+} from "../core/model";
 import { domainKey, skillKey, taxonomyOptions } from "../core/taxonomy";
 import { MultiSelect } from "./MultiSelect";
 export const sectionName = (s: string) =>
@@ -22,30 +26,64 @@ export function Filters({
   const skills = relevant.filter(
     (q) => !value.domains?.length || value.domains.includes(domainKey(q)),
   );
+  const answerStatusOptions = [
+    { value: "incorrect", label: "Mistakes" },
+    { value: "unanswered", label: "Unanswered" },
+    { value: "completed", label: "Completed" },
+  ];
+  const answerStatuses = value.statuses?.length
+    ? value.statuses
+    : answerStatusOptions.some((option) => option.value === value.status)
+      ? [value.status as AnswerStatus]
+      : [];
+  const changeSection = (section: string) => {
+    const sectionQuestions = data.questions.filter(
+      (question) => !section || question.section === section,
+    );
+    const validDomainKeys = new Set(sectionQuestions.map(domainKey));
+    const domains = (value.domains ?? []).filter((key) =>
+      validDomainKeys.has(key),
+    );
+    const validSkillKeys = new Set(
+      sectionQuestions
+        .filter(
+          (question) =>
+            !domains.length || domains.includes(domainKey(question)),
+        )
+        .map(skillKey),
+    );
+    onChange({
+      ...value,
+      section,
+      domain: "",
+      skill: "",
+      domains,
+      skills: (value.skills ?? []).filter((key) => validSkillKeys.has(key)),
+    });
+  };
   return (
     <div className="filters">
       {!advanced && (
         <>
-          <label>
-            Section
-            <select
-              value={value.section}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  section: e.target.value,
-                  domain: "",
-                  skill: "",
-                  domains: [],
-                  skills: [],
-                })
-              }
-            >
-              <option value="">Both sections</option>
-              <option value="reading-writing">Reading & Writing</option>
-              <option value="math">Math</option>
-            </select>
-          </label>
+          <div className="section-filter">
+            <span className="filter-label">Section</span>
+            <div className="section-segments" role="group" aria-label="Section">
+              {[
+                ["", "All"],
+                ["reading-writing", "Reading & Writing"],
+                ["math", "Math"],
+              ].map(([section, label]) => (
+                <button
+                  type="button"
+                  key={section || "all"}
+                  aria-pressed={value.section === section}
+                  onClick={() => changeSection(section)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <MultiSelect
             label="Domain"
             options={taxonomyOptions(relevant, "domain")}
@@ -66,18 +104,20 @@ export function Filters({
               })
             }
           />
-          <label>
-            Answer status
-            <select
-              value={value.status}
-              onChange={(e) => onChange({ ...value, status: e.target.value })}
-            >
-              <option value="">All questions</option>
-              <option value="unanswered">Unanswered</option>
-              <option value="incorrect">Mistakes</option>
-              <option value="completed">Completed</option>
-            </select>
-          </label>
+          <MultiSelect
+            label="Answer status"
+            options={answerStatusOptions}
+            value={answerStatuses}
+            emptyLabel="All questions"
+            selectionSummary={(labels) => labels.join(", ")}
+            onChange={(statuses) =>
+              onChange({
+                ...value,
+                status: "",
+                statuses: statuses as AnswerStatus[],
+              })
+            }
+          />
         </>
       )}
       {!compact && (

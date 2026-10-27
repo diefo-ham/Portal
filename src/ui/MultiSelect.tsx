@@ -5,11 +5,15 @@ export function MultiSelect({
   options,
   value,
   onChange,
+  selectionSummary,
+  emptyLabel,
 }: {
   label: string;
-  options: TaxonomyOption[];
+  options: Pick<TaxonomyOption, "value" | "label">[];
   value: string[];
   onChange: (values: string[]) => void;
+  selectionSummary?: (labels: string[]) => string;
+  emptyLabel?: string;
 }) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -27,6 +31,12 @@ export function MultiSelect({
   const names = options
     .filter((option) => value.includes(option.value))
     .map((option) => option.label);
+  const summary = value.length
+    ? selectionSummary?.(names) ||
+      (value.length === 1
+        ? names[0] || "1 selected"
+        : `${value.length} selected`)
+    : emptyLabel || `Any ${label.toLowerCase()}`;
   return (
     <div
       className="multi-select"
@@ -54,7 +64,7 @@ export function MultiSelect({
         ref={button}
         type="button"
         title={names.join(", ") || "Any"}
-        aria-label={`${label}: ${value.length ? `${value.length} selected` : "Any"}`}
+        aria-label={`${label}: ${value.length ? summary : emptyLabel || "Any"}`}
         aria-expanded={open}
         aria-controls={id}
         onClick={() => {
@@ -62,13 +72,7 @@ export function MultiSelect({
           setSearch("");
         }}
       >
-        <span>
-          {value.length === 0
-            ? `Any ${label.toLowerCase()}`
-            : value.length === 1
-              ? names[0] || "1 selected"
-              : `${value.length} selected`}
-        </span>
+        <span>{summary}</span>
         <span aria-hidden="true">⌄</span>
       </button>
       {open && (
@@ -108,7 +112,7 @@ export function MultiSelect({
                 </label>
               ))}
             {!options.length && (
-              <p className="muted small">No skills in this selection.</p>
+              <p className="muted small">No options in this selection.</p>
             )}
           </div>
           <div className="multi-actions">

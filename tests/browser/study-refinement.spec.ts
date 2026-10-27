@@ -21,9 +21,7 @@ async function loadMath(page: Page, size = "2") {
   await page
     .getByRole("button", { name: "Load synthetic sample", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill(size);
 }
 
@@ -60,7 +58,7 @@ test("question details return to tools and Help only scrolls when constrained", 
   await page.getByRole("button", { name: "Close panel" }).click();
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
 
-  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.setViewportSize({ width: 1280, height: 1100 });
   await page
     .getByRole("button", {
       name: "Help and keyboard shortcuts",
@@ -162,14 +160,19 @@ test("E bookmarks, B remains answer B, and Review uses answered denominators", a
     .getByRole("button", { name: "Finish session", exact: true })
     .click();
   await page.getByRole("button", { name: "Review", exact: true }).click();
-  await expect(page.getByText("50%", { exact: true })).toBeVisible();
-  await expect(page.getByText("2 answered", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("img", {
+      name: "All SAT practice: 50% accuracy across 2 attempts",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".performance-gauge")).toContainText("2 attempts");
   await expect(
     page.getByText("1 correct · 1 incorrect", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("img", {
-      name: "Algebra: 1 correct out of 2 answered",
+      name: "1 correct and 1 incorrect across 2 attempts.",
       exact: true,
     }),
   ).toBeVisible();
@@ -183,6 +186,14 @@ test("Review has a truthful empty state before any answer is submitted", async (
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Review", exact: true }).click();
-  await expect(page.getByText("No answered questions yet.")).toBeVisible();
-  await expect(page.locator(".overall-accuracy")).toHaveCount(0);
+  await expect(
+    page.getByRole("img", {
+      name: "All SAT practice: not attempted, 0 attempts",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".domain-row")).toHaveCount(8);
+  await expect(
+    page.getByText("Not attempted", { exact: true }).first(),
+  ).toBeVisible();
 });

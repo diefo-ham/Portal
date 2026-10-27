@@ -42,9 +42,7 @@ test("session size is numeric, bounded, and adapts to the filtered pool", async 
   await size.fill("11");
   await expect(start).toBeDisabled();
   await size.fill("9");
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await expect(page.getByText("Max 5", { exact: true })).toBeVisible();
   await expect(size).toHaveValue("9");
   await expect(start).toBeDisabled();
@@ -95,9 +93,7 @@ test("header order, concise help, and ordinary overlays dismiss outside", async 
     .click();
   await expect(page.locator(".multi-options")).not.toBeVisible();
 
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("button", { name: "Practice tools" }).click();

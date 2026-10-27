@@ -33,11 +33,38 @@ export function isCorrect(q: Question, answer: string): boolean {
   );
 }
 export function latestAttempt(data: StudyData, id: string) {
-  return data.attempts.findLast((a) => a.questionId === id);
+  return data.attempts
+    .filter((attempt) => attempt.questionId === id)
+    .reduce<(typeof data.attempts)[number] | undefined>(
+      (latest, attempt) =>
+        !latest || attempt.submittedAt >= latest.submittedAt ? attempt : latest,
+      undefined,
+    );
+}
+function matchesAnswerStatus(
+  data: StudyData,
+  questionId: string,
+  status: string,
+) {
+  const attempt = latestAttempt(data, questionId);
+  return status === "unanswered"
+    ? !attempt
+    : status === "completed"
+      ? !!attempt
+      : status === "ever-missed"
+        ? data.attempts.some(
+            (candidate) =>
+              candidate.questionId === questionId && !candidate.correct,
+          )
+        : !!attempt && attempt.correct === (status === "correct");
 }
 export function filterQuestions(data: StudyData, f: Filters): Question[] {
   return data.questions.filter((q) => {
-    const a = latestAttempt(data, q.id);
+    const statuses = f.statuses?.length
+      ? f.statuses
+      : f.status
+        ? [f.status]
+        : [];
     return (
       (!f.section || q.section === f.section) &&
       (!f.domain || metadataKey(q.domain) === metadataKey(f.domain)) &&
@@ -49,14 +76,8 @@ export function filterQuestions(data: StudyData, f: Filters): Question[] {
         (f.active === "hide"
           ? q.testStatus !== "active"
           : q.testStatus === (f.active === "only" ? "active" : f.active))) &&
-      (!f.status ||
-        (f.status === "unanswered"
-          ? !a
-          : f.status === "completed"
-            ? !!a
-            : f.status === "ever-missed"
-              ? data.attempts.some((x) => x.questionId === q.id && !x.correct)
-              : !!a && a.correct === (f.status === "correct"))) &&
+      (!statuses.length ||
+        statuses.some((status) => matchesAnswerStatus(data, q.id, status))) &&
       (!f.bookmark || !!data.annotations[q.id]?.bookmarked) &&
       (!f.search ||
         [q.stem, q.passage, q.sourceId, q.skill, q.domain]
@@ -79,6 +100,7 @@ export function createSession(
       ...filters,
       ...(filters.domains ? { domains: [...filters.domains] } : {}),
       ...(filters.skills ? { skills: [...filters.skills] } : {}),
+      ...(filters.statuses ? { statuses: [...filters.statuses] } : {}),
     },
     drafts: {},
     elapsed: {},

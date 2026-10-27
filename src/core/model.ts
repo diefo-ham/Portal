@@ -1,5 +1,6 @@
 export type Section = "math" | "reading-writing";
 export type TestStatus = "active" | "inactive" | "unknown";
+export type AnswerStatus = "incorrect" | "unanswered" | "completed";
 export interface DocumentPanel {
   src: string;
   alt: string;
@@ -53,6 +54,8 @@ export interface Filters {
   /** Scoped multi-selections. Legacy domain/skill strings remain readable. */
   domains?: string[];
   skills?: string[];
+  /** Empty means unrestricted. The legacy single status remains readable. */
+  statuses?: AnswerStatus[];
   difficulty: string;
   status: string;
   bookmark: string;
@@ -68,6 +71,7 @@ export const defaultFilters: Filters = {
   bookmark: "",
   active: "hide",
   search: "",
+  statuses: [],
 };
 export interface Session {
   id: string;

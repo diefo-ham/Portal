@@ -29,9 +29,7 @@ test.beforeEach(async ({ page }) => {
 test("compact domain and skill combinations persist in a deterministically resumed set", async ({
   page,
 }) => {
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("button", { name: /^Domain:/ }).click();
   const domains = page.getByRole("group", { name: "Domain", exact: true });
   await domains.getByLabel("Algebra", { exact: true }).check();
@@ -51,11 +49,13 @@ test("compact domain and skill combinations persist in a deterministically resum
   await expect(
     page.getByRole("button", { name: "Skill: 2 selected" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Answer status: All questions" })
+    .click();
   await expect(
-    page
-      .getByRole("combobox", { name: "Answer status", exact: true })
-      .locator("option"),
-  ).toHaveCount(4);
+    page.getByRole("group", { name: "Answer status", exact: true }),
+  ).toContainText("MistakesUnansweredCompleted");
+  await page.keyboard.press("Escape");
   await expect(
     page.getByRole("combobox", { name: "Practice-test status" }),
   ).toHaveCount(0);
@@ -97,9 +97,7 @@ test("compact domain and skill combinations persist in a deterministically resum
 test("results retain three outcomes and offer entire, mistaken and unanswered session retries", async ({
   page,
 }) => {
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("radio").nth(1).check();

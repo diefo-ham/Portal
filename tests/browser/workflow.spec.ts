@@ -30,9 +30,7 @@ test("offline local workflow, history, reload persistence and backup restore", a
     .uncheck();
   await expect(page.locator(".question-row")).toHaveCount(12);
   await page.getByRole("button", { name: "Reset filters" }).click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("button", { name: "Practice", exact: true }).click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();

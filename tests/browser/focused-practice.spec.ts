@@ -17,9 +17,7 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   await expect(
     page.getByRole("combobox", { name: "Skill", exact: true }),
   ).not.toBeVisible();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByRole("navigation")).toHaveCount(0);

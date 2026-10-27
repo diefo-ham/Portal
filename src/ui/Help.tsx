@@ -88,6 +88,11 @@ export function Help() {
           </details>
           <details>
             <summary>Answer status</summary>
+            <p>
+              Choose one or more statuses; an empty selection means all
+              questions. Status reflects the latest submitted answer, while
+              earlier attempts remain in history.
+            </p>
             <dl className="help-definitions">
               <dt>All</dt>
               <dd>No answer-status restriction.</dd>
@@ -100,8 +105,16 @@ export function Help() {
               <dt>Mistakes</dt>
               <dd>Questions whose latest recorded answer is incorrect.</dd>
               <dt>Completed</dt>
-              <dd>Questions with a recorded submitted answer.</dd>
+              <dd>Questions with at least one submitted answer.</dd>
             </dl>
+          </details>
+          <details>
+            <summary>Section, domain, and skill</summary>
+            <p>
+              Section sets the broad SAT scope. Domains are limited to that
+              scope, and skills are limited to the selected domains. With All
+              selected, a domain can narrow the scope on its own.
+            </p>
           </details>
           <details>
             <summary>Sessions and saved questions</summary>
@@ -110,6 +123,11 @@ export function Help() {
               your place. Session stars keep important sets easy to find and are
               separate from question bookmarks. Bookmarks are available from
               Review and do not count as answers.
+            </p>
+            <p>
+              Review accuracy uses correct submitted attempts divided by all
+              submitted attempts in the selected scope. Unanswered questions are
+              excluded, and repeated attempts remain separate.
             </p>
           </details>
           <details>

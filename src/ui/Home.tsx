@@ -53,6 +53,7 @@ export function Home({
       active: protectTests ? "hide" : "include",
       domains: [],
       skills: [],
+      statuses: [],
     });
   return (
     <main className="page home-page">

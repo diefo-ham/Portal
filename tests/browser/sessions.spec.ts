@@ -33,9 +33,7 @@ test("sessions can be named, starred, found, repracticed, and reset-restored", a
   await page
     .getByRole("button", { name: "Load synthetic sample", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("2");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("button", { name: "← Exit", exact: true }).click();

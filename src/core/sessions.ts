@@ -24,12 +24,17 @@ export function sessionDefaultName(data: StudyData, session: Session): string {
   const domains = [
     ...new Set(questions.map((question) => question.domain).filter(Boolean)),
   ];
+  const statuses = session.filters.statuses?.length
+    ? session.filters.statuses
+    : session.filters.status
+      ? [session.filters.status]
+      : [];
   const source = session.filters.bookmark
     ? "Bookmarks"
-    : session.filters.status === "incorrect" ||
-        session.filters.status === "ever-missed"
+    : statuses.length === 1 &&
+        (statuses[0] === "incorrect" || statuses[0] === "ever-missed")
       ? "Mistakes"
-      : session.filters.status === "unanswered"
+      : statuses.length === 1 && statuses[0] === "unanswered"
         ? "Unanswered"
         : "";
   const focus =

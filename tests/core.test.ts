@@ -74,23 +74,33 @@ describe("question integrity and practice rules", () => {
     submitAnswer(d, hidden.id, questions[0].id, "A");
     expect(visible.timerVisible).toBe(true);
     expect(hidden.timerVisible).toBe(false);
-    expect(performanceOverview(d)).toEqual({
-      answered: 2,
+    const performance = performanceOverview(d);
+    expect(performance.all).toMatchObject({
+      attempts: 2,
       correct: 1,
       incorrect: 1,
       accuracy: 50,
-      domains: [
-        {
-          key: "math:Algebra",
-          section: "math",
-          domain: "Algebra",
-          answered: 2,
-          correct: 1,
-          incorrect: 1,
-          accuracy: 50,
-        },
-      ],
     });
+    expect(performance.sections.math).toMatchObject({
+      attempts: 2,
+      correct: 1,
+      incorrect: 1,
+      accuracy: 50,
+    });
+    expect(performance.sections["reading-writing"].accuracy).toBeUndefined();
+    expect(performance.domains).toHaveLength(8);
+    expect(
+      performance.domains.find((domain) => domain.domain === "Algebra"),
+    ).toMatchObject({
+      section: "math",
+      attempts: 2,
+      correct: 1,
+      incorrect: 1,
+      accuracy: 50,
+    });
+    expect(
+      performance.domains.find((domain) => domain.domain === "Advanced Math"),
+    ).toMatchObject({ attempts: 0, accuracy: undefined });
   });
   it("derives useful session labels and persists optional names and stars", () => {
     const d = { ...emptyData(), questions };
@@ -397,15 +407,19 @@ describe("question integrity and practice rules", () => {
   });
   it("separates latest mistakes from historical mistakes", () => {
     const d = { ...emptyData(), questions };
-    d.attempts = [false, true].map((correct, i) => ({
+    d.attempts = [
+      { correct: true, submittedAt: "2026-01-02T00:00:00.000Z" },
+      { correct: false, submittedAt: "2026-01-01T00:00:00.000Z" },
+    ].map(({ correct, submittedAt }, i) => ({
       id: String(i),
       sessionId: "s",
       questionId: questions[0].id,
       answer: "B",
       correct,
       durationMs: 100,
-      submittedAt: new Date().toISOString(),
+      submittedAt,
     }));
+    expect(d.attempts).toHaveLength(2);
     expect(
       filterQuestions(d, { ...defaultFilters, status: "incorrect" }),
     ).toHaveLength(0);
@@ -415,6 +429,25 @@ describe("question integrity and practice rules", () => {
     expect(
       filterQuestions(d, { ...defaultFilters, status: "completed" }),
     ).toHaveLength(1);
+    expect(
+      filterQuestions(d, {
+        ...defaultFilters,
+        statuses: ["incorrect", "unanswered"],
+      }).map((question) => question.id),
+    ).not.toContain(questions[0].id);
+    expect(
+      filterQuestions(d, {
+        ...defaultFilters,
+        statuses: ["completed", "unanswered"],
+      }),
+    ).toHaveLength(10);
+    expect(performanceOverview(d).all).toMatchObject({
+      attempts: 2,
+      correct: 1,
+      incorrect: 1,
+      accuracy: 50,
+      outcomes: [false, true],
+    });
   });
   it("uses source namespace plus source ID and rejects conflicting internal IDs", () => {
     expect(mergeQuestions(questions, questions, "x").skipped).toBe(12);

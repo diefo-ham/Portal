@@ -236,8 +236,12 @@ export function App() {
               0,
               {
                 ...current.filters,
-                ...(kind === "mistakes" ? { status: "incorrect" } : {}),
-                ...(kind === "unanswered" ? { status: "unanswered" } : {}),
+                ...(kind === "mistakes"
+                  ? { status: "incorrect", statuses: ["incorrect" as const] }
+                  : {}),
+                ...(kind === "unanswered"
+                  ? { status: "unanswered", statuses: ["unanswered" as const] }
+                  : {}),
               },
               current.name
                 ? normalizeSessionName(
@@ -298,6 +302,12 @@ export function App() {
                   : source === "unanswered"
                     ? "unanswered"
                     : "",
+              statuses:
+                source === "mistakes"
+                  ? ["incorrect"]
+                  : source === "unanswered"
+                    ? ["unanswered"]
+                    : [],
               bookmark: source === "bookmarks" ? "yes" : "",
             })
           }
@@ -494,7 +504,12 @@ export function App() {
                   await mutate(() => {}, { resetArchive: "restore" });
                   setSessionId("");
                   setRestore(undefined);
-                  changeFilters({ ...filters, status: "", bookmark: "" });
+                  changeFilters({
+                    ...filters,
+                    status: "",
+                    statuses: [],
+                    bookmark: "",
+                  });
                   setMessage(
                     "Previous study state restored. Saved timers are paused.",
                   );
@@ -510,6 +525,7 @@ export function App() {
                   changeFilters({
                     ...filters,
                     status: "",
+                    statuses: [],
                     bookmark: "",
                   });
                   setMessage(

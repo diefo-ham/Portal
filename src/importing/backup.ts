@@ -63,13 +63,18 @@ export function parseBackup(raw: unknown): StudyData {
       throw new Error("Invalid session label in backup.");
     if (typeof s.name === "string") s.name = normalizeSessionName(s.name);
     if (
-      [s.filters.domains, s.filters.skills].some(
+      [s.filters.domains, s.filters.skills, s.filters.statuses].some(
         (values) =>
           values !== undefined &&
           (!Array.isArray(values) ||
             values.length > 200 ||
             values.some((value) => typeof value !== "string")),
       ) ||
+      (s.filters.statuses !== undefined &&
+        s.filters.statuses.some(
+          (status) =>
+            !["incorrect", "unanswered", "completed"].includes(status),
+        )) ||
       Object.entries(s.drafts).some(
         ([id, v]) => !s.questionIds.includes(id) || typeof v !== "string",
       ) ||

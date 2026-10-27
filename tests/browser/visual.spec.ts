@@ -124,8 +124,9 @@ for (const theme of ["light", "dark"] as const) {
     ).toBe(true);
     await shot(page, `${theme}-home-focus`);
     await page
-      .getByRole("combobox", { name: "Section", exact: true })
-      .selectOption("math");
+      .getByRole("group", { name: "Section" })
+      .getByText("Math")
+      .click();
     await page.getByRole("textbox", { name: "Session size" }).fill("5");
     await page.getByRole("button", { name: "Start practice" }).click();
     await expect(page.getByRole("article")).toBeFocused();
@@ -287,8 +288,9 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
     expect(await overflow(page)).toBe(false);
     await page.getByRole("button", { name: "Practice", exact: true }).click();
     await page
-      .getByRole("combobox", { name: "Section", exact: true })
-      .selectOption("math");
+      .getByRole("group", { name: "Section" })
+      .getByText("Math")
+      .click();
     await page.getByRole("textbox", { name: "Session size" }).fill("1");
     await page.getByRole("button", { name: "Start practice" }).click();
     await page.getByRole("radio").nth(1).check();
@@ -307,9 +309,7 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
   ).toHaveCSS("filter", "none");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.getByRole("button", { name: "Practice", exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("1");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("radio").first().check();

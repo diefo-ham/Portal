@@ -14,9 +14,7 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   await page
     .getByRole("button", { name: "Load synthetic sample", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Section", exact: true })
-    .selectOption("math");
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByRole("article")).toBeFocused();
