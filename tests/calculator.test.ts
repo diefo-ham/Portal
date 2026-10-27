@@ -15,6 +15,8 @@ import {
   interests,
   implicitSegments,
   fitViewport,
+  equalScaleViewport,
+  nearestInterestInPixels,
 } from "../src/calculator/numerics";
 import { regression, customRegression } from "../src/calculator/regression";
 import {
@@ -42,6 +44,60 @@ const workspace = (...texts: string[]) =>
     entries: texts.map((t) => newExpression(t)),
   });
 describe("floating window bounds and parameter points", () => {
+  it("solves scalar residual regressions without requiring table columns", () => {
+    for (const [source, expected] of [
+      ["8c~3", 0.375],
+      ["8c~2", 0.25],
+    ] as const) {
+      const result = Object.values(workspace(source).results)[0];
+      expect(result.error).toBeUndefined();
+      expect(result.parameters?.c).toBeCloseTo(expected, 14);
+      expect(result.fit?.rmse).toBeCloseTo(0, 14);
+      expect(result.scalarRelation).toBe(true);
+      expect(result.graphable).not.toBe(true);
+    }
+    expect(Object.values(workspace("a+b~3").results)[0].error).toContain(
+      "too few residuals",
+    );
+    expect(Object.values(workspace("a*b~3").results)[0].error).toContain(
+      "nonlinear",
+    );
+    const table = workspace("x_1=[1,2,3]", "y_1=[4,7,10]", "y_1~m*x_1+b");
+    const fit = Object.values(table.results).find((result) => result.fit);
+    expect(fit?.parameters?.m).toBeCloseTo(3, 12);
+    expect(fit?.parameters?.b).toBeCloseTo(1, 12);
+  });
+  it("uses forgiving deterministic screen-space POI hit testing", () => {
+    const points = [
+      { x: 0, y: 0, label: "zero", graphIds: ["a"] },
+      { x: 0.1, y: 0, label: "nearby", graphIds: ["b"] },
+    ];
+    expect(
+      nearestInterestInPixels(points, { x: 0, y: 0 }, 100, 100, 22)?.label,
+    ).toBe("zero");
+    expect(
+      nearestInterestInPixels(points, { x: 0.06, y: 0 }, 100, 100, 22)?.label,
+    ).toBe("nearby");
+    expect(
+      nearestInterestInPixels(points, { x: 0.35, y: 0 }, 100, 100, 22),
+    ).toBeUndefined();
+  });
+  it("derives an equal-unit viewport from rectangular graph dimensions", () => {
+    const wide = equalScaleViewport(defaultView(), 800, 400);
+    expect(800 / (wide.xMax - wide.xMin)).toBeCloseTo(
+      400 / (wide.yMax - wide.yMin),
+      12,
+    );
+    expect(wide.xMin).toBe(-10);
+    expect(wide.xMax).toBe(10);
+    expect(wide.yMin).toBe(-5);
+    expect(wide.yMax).toBe(5);
+    const resized = equalScaleViewport(wide, 600, 400);
+    expect(600 / (resized.xMax - resized.xMin)).toBeCloseTo(
+      400 / (resized.yMax - resized.yMin),
+      12,
+    );
+  });
   it("cleans exact quadratic presentation without modifying coefficients or tiny meaningful terms", () => {
     const fit = regression(
       [1, 2, 3, 4].map((x) => ({ x, y: x * x })),
@@ -635,6 +691,10 @@ describe("tables and persisted calculator work", () => {
   it("validates portable session work without accepting malformed state", () => {
     const state = emptyCalculator();
     expect(validateCalculator(state)).toEqual(state);
+    const legacy = { ...state };
+    delete legacy.equalAxes;
+    expect(validateCalculator(legacy)).toEqual(legacy);
+    expect(() => validateCalculator({ ...state, equalAxes: "yes" })).toThrow();
     const dual = {
       ...state,
       mode: "desmos" as const,

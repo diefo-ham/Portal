@@ -29,6 +29,8 @@ export interface CalculatorState {
   entries: Entry[];
   angle: "radians" | "degrees";
   view: Viewport;
+  /** Ordinary graph interaction preserves one physical pixel scale per unit. */
+  equalAxes?: boolean;
   mode?: "desmos" | "offline";
   /** Official getState() JSON, kept opaque and separate from offline entries. */
   desmos?: Record<string, unknown>;
@@ -50,6 +52,7 @@ export const emptyCalculator = (): CalculatorState => ({
   entries: [newExpression()],
   angle: "radians",
   view: defaultView(),
+  equalAxes: true,
 });
 export function validView(v: Viewport) {
   return (
@@ -70,6 +73,7 @@ export function validateCalculator(raw: unknown): CalculatorState {
     s.version !== 1 ||
     !["radians", "degrees"].includes(s.angle) ||
     !validView(s.view) ||
+    (s.equalAxes !== undefined && typeof s.equalAxes !== "boolean") ||
     !Array.isArray(s.entries) ||
     s.entries.length > 25 ||
     (s.mode !== undefined && !["desmos", "offline"].includes(s.mode))

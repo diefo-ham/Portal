@@ -228,6 +228,44 @@ export function interests(graphs: GraphObject[], view: Viewport): Interest[] {
   return found;
 }
 
+/** Choose a graph point in screen space. The stable index tie-break keeps
+ * overlapping numerical POIs predictable without enlarging their visible dot. */
+export function nearestInterestInPixels(
+  candidates: Interest[],
+  target: Point,
+  pixelsPerX: number,
+  pixelsPerY: number,
+  tolerance: number,
+): Interest | undefined {
+  let nearest: Interest | undefined;
+  let best = tolerance;
+  for (const candidate of candidates) {
+    if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.y))
+      continue;
+    const distance = Math.hypot(
+      (candidate.x - target.x) * pixelsPerX,
+      (candidate.y - target.y) * pixelsPerY,
+    );
+    if (distance < best) {
+      nearest = candidate;
+      best = distance;
+    }
+  }
+  return nearest;
+}
+
+/** Preserve the x window and adapt y to the rendered aspect ratio. */
+export function equalScaleViewport(
+  view: Viewport,
+  width: number,
+  height: number,
+): Viewport {
+  if (!(width > 0 && height > 0)) return view;
+  const center = (view.yMin + view.yMax) / 2;
+  const span = ((view.xMax - view.xMin) * height) / width;
+  return { ...view, yMin: center - span / 2, yMax: center + span / 2 };
+}
+
 /** Adaptive, bounded sampling; separate paths at domain holes, sharp unresolved
  * jumps, and asymptotes. A quarter/midpoint check avoids connecting across poles.
  */

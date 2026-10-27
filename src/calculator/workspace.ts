@@ -10,6 +10,7 @@ import { tableColumns, type CalculatorState, type Point } from "./model";
 import {
   regression,
   customRegression,
+  relationRegression,
   regressionSpec,
   type Fit,
 } from "./regression";
@@ -53,6 +54,7 @@ export interface EntryResult {
   parameters?: Record<string, number>;
   tex?: string;
   fit?: Fit;
+  scalarRelation?: boolean;
   points?: Point[];
   parameter?: { name: string; value: number };
   message?: string;
@@ -260,6 +262,41 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     }
   for (const [id, spec] of regressions) {
     try {
+      if ("kind" in spec && spec.kind === "relation") {
+        const relation = scalar(`(${spec.left})-(${spec.right})`);
+        const names = [...relation.symbols].filter(
+          (name) =>
+            !definitions.has(name) &&
+            !columns.has(name) &&
+            !Object.hasOwn(values, name),
+        );
+        if (
+          !names.length ||
+          new Set(names).size !== names.length ||
+          names.some((name) => isBuiltin(name) || !/^[a-z]$/i.test(name))
+        )
+          throw new Error(
+            "Use one to five undefined single-letter regression parameters.",
+          );
+        const scope: Record<string, Numeric> = Object.create(null);
+        for (const name of relation.symbols) {
+          if (names.includes(name)) continue;
+          scope[name] = evaluateAny(scalar(name));
+        }
+        const fit = relationRegression(
+          relation,
+          names,
+          scope,
+          functions,
+          state.angle,
+        );
+        const parameters = Object.fromEntries(
+          names.map((name, index) => [name, fit.coefficients[index]]),
+        );
+        Object.assign(values, parameters);
+        results[id] = { fit, parameters, scalarRelation: true };
+        continue;
+      }
       const x = evaluateAny(scalar(spec.x)),
         y = evaluateAny(scalar(spec.y));
       if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length)
@@ -348,8 +385,9 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     }
     if (regressions.has(entry.id)) {
       const fit = results[entry.id]?.fit;
-      if (fit) results[entry.id].graphable = true;
-      if (fit && !entry.hidden)
+      const scalarRelation = results[entry.id]?.scalarRelation;
+      if (fit && !scalarRelation) results[entry.id].graphable = true;
+      if (fit && !scalarRelation && !entry.hidden)
         graphs.push({ kind: "function", id: entry.id, color, fn: fit.predict });
       return;
     }

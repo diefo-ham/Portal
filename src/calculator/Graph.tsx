@@ -10,6 +10,8 @@ import {
   fitViewport,
   implicitSegments,
   interests,
+  equalScaleViewport,
+  nearestInterestInPixels,
   roots,
   safeValue,
   sampleFunction,
@@ -37,11 +39,13 @@ export function Graph({
   view,
   onView,
   onParameter,
+  equalAxes = true,
 }: {
   graphs: GraphObject[];
   view: Viewport;
-  onView: (v: Viewport) => void;
+  onView: (v: Viewport, equalAxes?: boolean) => void;
   onParameter?: (id: string, name: string, value: number) => void;
+  equalAxes?: boolean;
 }) {
   const id = useId().replaceAll(":", "");
   const svg = useRef<SVGSVGElement>(null);
@@ -70,13 +74,26 @@ export function Graph({
     if (svg.current) observer.observe(svg.current);
     return () => observer.disconnect();
   }, []);
+  useEffect(() => {
+    if (!equalAxes || width <= 0 || height <= 0) return;
+    const adjusted = equalScaleViewport(view, width, height);
+    if (
+      Math.abs(adjusted.yMin - view.yMin) >
+        Math.max(1, Math.abs(view.yMin)) * 1e-12 ||
+      Math.abs(adjusted.yMax - view.yMax) >
+        Math.max(1, Math.abs(view.yMax)) * 1e-12
+    )
+      onView(adjusted, true);
+  }, [width, height, equalAxes]);
   const sx = width / (view.xMax - view.xMin),
     sy = height / (view.yMax - view.yMin);
   const px = (x: number) => (x - view.xMin) * sx,
     py = (y: number) => height - (y - view.yMin) * sy;
-  const changeView = (v: Viewport) => {
-    if (validView(v)) {
-      onView(v);
+  const changeView = (v: Viewport, equalOverride?: boolean) => {
+    const keepEqual = equalOverride ?? equalAxes;
+    const adjusted = keepEqual ? equalScaleViewport(v, width, height) : v;
+    if (validView(adjusted)) {
+      onView(adjusted, equalOverride);
       setSelected(undefined);
       setNotice("");
     } else
@@ -182,28 +199,32 @@ export function Graph({
       y: view.yMax - ((clientY - r.top) / r.height) * (view.yMax - view.yMin),
     };
   };
-  const nearestAt = (p: Point): Interest | undefined => {
+  const nearestAt = (p: Point, pointerType = "mouse"): Interest | undefined => {
+    const pointTolerance = pointerType === "touch" ? 30 : 22;
     // A real parameter-controlled point takes precedence over a nearby curve.
+    const draggable: Interest[] = [];
     for (const graph of graphs)
       if (graph.kind === "points" && graph.drag) {
-        const point = graph.points.find(
-          (point) =>
-            Math.hypot((point.x - p.x) * sx, (point.y - p.y) * sy) < 12,
+        draggable.push(
+          ...graph.points.map((point) => ({
+            ...point,
+            label: "parameter point",
+            graphIds: [graph.id],
+          })),
         );
-        if (point)
-          return { ...point, label: "parameter point", graphIds: [graph.id] };
       }
-    const candidates: Interest[] = [...special];
+    const parameter = nearestInterestInPixels(
+      draggable,
+      p,
+      sx,
+      sy,
+      pointTolerance,
+    );
+    if (parameter) return parameter;
+    const pointCandidates: Interest[] = [...special];
     for (const g of graphs) {
-      if (g.kind === "function")
-        candidates.push({
-          x: p.x,
-          y: safeValue(g.fn, p.x),
-          label: "curve point",
-          graphIds: [g.id],
-        });
       if (g.kind === "points")
-        candidates.push(
+        pointCandidates.push(
           ...g.points.map((v) => ({
             ...v,
             label: "data point",
@@ -211,16 +232,26 @@ export function Graph({
           })),
         );
     }
-    candidates.sort(
-      (a, b) =>
-        Math.hypot((a.x - p.x) * sx, (a.y - p.y) * sy) -
-        Math.hypot((b.x - p.x) * sx, (b.y - p.y) * sy),
+    const point = nearestInterestInPixels(
+      pointCandidates,
+      p,
+      sx,
+      sy,
+      pointTolerance,
     );
-    const nearest = candidates.find((v) => Number.isFinite(v.y));
-    return nearest &&
-      Math.hypot((nearest.x - p.x) * sx, (nearest.y - p.y) * sy) < 14
-      ? nearest
-      : undefined;
+    if (point) return point;
+    const curves = graphs
+      .filter(
+        (g): g is Extract<GraphObject, { kind: "function" }> =>
+          g.kind === "function",
+      )
+      .map((g) => ({
+        x: p.x,
+        y: safeValue(g.fn, p.x),
+        label: "curve point",
+        graphIds: [g.id],
+      }));
+    return nearestInterestInPixels(curves, p, sx, sy, 14);
   };
   const selectAt = (p: Point) => {
     const point = nearestAt(p);
@@ -295,7 +326,9 @@ export function Graph({
         <button aria-label="Zoom out" onClick={() => zoom(1 / 0.7)}>
           −
         </button>
-        <button onClick={() => changeView(defaultView())}>Reset view</button>
+        <button onClick={() => changeView(defaultView(), true)}>
+          Reset view
+        </button>
         <button
           disabled={
             !graphs.some(
@@ -307,7 +340,7 @@ export function Graph({
           title="Fit sampled functions and data points"
           onClick={() => {
             const v = fitViewport(graphs, view);
-            if (v) changeView(v);
+            if (v) changeView(v, false);
             else
               setNotice(
                 "No finite sampled values are available in this x window. Try changing the graph window.",
@@ -320,11 +353,14 @@ export function Graph({
           onClick={() => {
             const center = (view.yMax + view.yMin) / 2;
             const span = ((view.xMax - view.xMin) * height) / width;
-            changeView({
-              ...view,
-              yMin: center - span / 2,
-              yMax: center + span / 2,
-            });
+            changeView(
+              {
+                ...view,
+                yMin: center - span / 2,
+                yMax: center + span / 2,
+              },
+              true,
+            );
           }}
         >
           Square axes
@@ -342,6 +378,11 @@ export function Graph({
       <svg
         ref={svg}
         className="graph-plane"
+        data-x-min={view.xMin}
+        data-x-max={view.xMax}
+        data-y-min={view.yMin}
+        data-y-max={view.yMax}
+        data-equal-axes={equalAxes}
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label="Cartesian graph. Drag empty space to pan or drag a curve to trace. Use zoom buttons or scroll over the focused graph to zoom. Arrow keys pan; with a curve selected, Left and Right trace it. Escape clears the selection."
@@ -395,7 +436,7 @@ export function Graph({
             zoom(1 / 0.7);
           } else if (e.key === "Home") {
             e.preventDefault();
-            changeView(defaultView());
+            changeView(defaultView(), true);
           }
         }}
         onPointerDown={(e) => {
@@ -409,7 +450,7 @@ export function Graph({
           const nearest =
             index !== undefined && index !== null
               ? special[Number(index)]
-              : nearestAt(p);
+              : nearestAt(p, e.pointerType);
           const object =
             nearest && graphs.find((g) => g.id === nearest.graphIds[0]);
           const trace =
@@ -766,7 +807,7 @@ export function Graph({
         <WindowFields
           key={JSON.stringify(view)}
           view={view}
-          onView={changeView}
+          onView={(next) => changeView(next, false)}
         />
       </details>
     </section>

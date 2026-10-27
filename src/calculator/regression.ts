@@ -1,6 +1,6 @@
 import { Matrix, QrDecomposition } from "ml-matrix";
 import type { FitModel, Point } from "./model";
-import { scalar, type Angle } from "./math";
+import { scalar, type Angle, type Scalar } from "./math";
 import type { MathNode } from "mathjs";
 
 export interface Fit {
@@ -16,6 +16,125 @@ export interface Fit {
   custom?: { formula: string; names: string[] };
 }
 
+function assertAffineParameters(node: MathNode, names: string[]): void {
+  const degree = (node: MathNode): number => {
+    const n = node as MathNode & {
+      name: string;
+      args: MathNode[];
+      items: MathNode[];
+      content: MathNode;
+      op: string;
+    };
+    if (n.type === "ConstantNode") return 0;
+    if (n.type === "SymbolNode") return names.includes(n.name) ? 1 : 0;
+    if (n.type === "ParenthesisNode") return degree(n.content);
+    if (n.type === "ArrayNode") return Math.max(0, ...n.items.map(degree));
+    if (n.type === "FunctionNode") {
+      if (n.args.some((a) => degree(a)))
+        throw new Error(
+          "General nonlinear regression parameters need Desmos; Offline parameters must enter linearly.",
+        );
+      return 0;
+    }
+    if (n.type === "OperatorNode") {
+      const ds = n.args.map(degree);
+      if (["+", "-"].includes(n.op)) return Math.max(...ds);
+      if (n.op === "*" && ds.reduce((a, b) => a + b, 0) <= 1)
+        return Math.max(...ds);
+      if (n.op === "/" && !ds[1]) return ds[0];
+      if (n.op === "^" && !ds.some(Boolean)) return 0;
+    }
+    throw new Error(
+      "General nonlinear regression parameters need Desmos. Offline parameters must enter linearly.",
+    );
+  };
+  degree(node);
+}
+
+/** Least-squares relation solver. Each scalar/list element contributes one
+ * residual from left - right; undefined symbols supplied in names are fitted. */
+export function relationRegression(
+  relation: Scalar,
+  names: string[],
+  scope: Record<string, number | number[]>,
+  functions: Record<string, (x: number) => number>,
+  angle: Angle,
+): Fit {
+  if (names.length < 1 || names.length > 5)
+    throw new Error("Use between one and five free regression parameters.");
+  assertAffineParameters(relation.node, names);
+  const zero = Object.fromEntries(names.map((name) => [name, 0]));
+  const vector = (parameters: Record<string, number>) => {
+    const value = relation.evaluate(
+      { ...scope, ...parameters },
+      functions,
+      angle,
+    );
+    return Array.isArray(value) ? value : [value];
+  };
+  const offset = vector(zero);
+  if (!offset.length || offset.some((value) => !Number.isFinite(value)))
+    throw new Error("The regression relation is undefined in its data domain.");
+  const rows = offset.map((base, row) =>
+    names.map((name) => {
+      const sample = vector({ ...zero, [name]: 1 });
+      if (sample.length !== offset.length)
+        throw new Error("Regression lists must have compatible lengths.");
+      return sample[row] - base;
+    }),
+  );
+  if (offset.length < names.length)
+    throw new Error(
+      "This regression has too few residuals to determine its parameters.",
+    );
+  const scales = names.map((_, column) =>
+    Math.max(...rows.map((row) => Math.abs(row[column]))),
+  );
+  if (
+    [...rows.flat(), ...scales].some((v) => !Number.isFinite(v)) ||
+    scales.some((v) => v === 0)
+  )
+    throw new Error("The regression cannot determine every free parameter.");
+  const qr = new QrDecomposition(
+    new Matrix(rows.map((row) => row.map((value, i) => value / scales[i]))),
+  );
+  const diagonal = qr.upperTriangularMatrix.diag().map(Math.abs);
+  if (!qr.isFullRank() || Math.min(...diagonal) < Math.max(...diagonal) * 1e-10)
+    throw new Error("The regression is underdetermined or ill-conditioned.");
+  const coefficients = qr
+    .solve(Matrix.columnVector(offset.map((value) => -value)))
+    .to1DArray()
+    .map((value, i) => value / scales[i]);
+  const parameters = Object.fromEntries(
+    names.map((name, i) => [name, coefficients[i]]),
+  );
+  const residuals = vector(parameters);
+  const sse = residuals.reduce((sum, residual) => sum + residual * residual, 0);
+  if (
+    [...coefficients, ...residuals, sse].some(
+      (value) => !Number.isFinite(value),
+    )
+  )
+    throw new Error("The regression exceeds the supported numeric range.");
+  return {
+    coefficients,
+    predict: () => NaN,
+    residuals,
+    rmse: Math.sqrt(sse / residuals.length),
+    logSpace: false,
+    coefficientTolerance: scales.map(
+      (scale) =>
+        (4 *
+          Number.EPSILON *
+          names.length *
+          Math.max(1, ...offset.map(Math.abs)) *
+          Math.max(...diagonal)) /
+        Math.min(...diagonal) /
+        scale,
+    ),
+  };
+}
+
 /** Custom functions linear in their parameters, solved directly rather than
  * guessed by a nonlinear optimizer. Nonlinear parameter use is rejected. */
 export function customRegression(
@@ -29,37 +148,7 @@ export function customRegression(
     throw new Error(
       "Use up to five single-letter parameters and built-in functions.",
     );
-  const degree = (node: MathNode): number => {
-    const n = node as MathNode & {
-      name: string;
-      args: MathNode[];
-      content: MathNode;
-      op: string;
-      value: number;
-    };
-    if (n.type === "ConstantNode") return 0;
-    if (n.type === "SymbolNode") return names.includes(n.name) ? 1 : 0;
-    if (n.type === "ParenthesisNode") return degree(n.content);
-    if (n.type === "FunctionNode") {
-      if (n.args.some((a) => degree(a)))
-        throw new Error(
-          "General nonlinear custom fits need Desmos; parameters inside functions are not supported Offline.",
-        );
-      return 0;
-    }
-    if (n.type === "OperatorNode") {
-      const ds = n.args.map(degree);
-      if (["+", "-"].includes(n.op)) return Math.max(...ds);
-      if (n.op === "*" && ds.reduce((a, b) => a + b, 0) <= 1)
-        return Math.max(...ds);
-      if (n.op === "/" && !ds[1]) return ds[0];
-      if (n.op === "^" && !ds.some(Boolean)) return 0;
-    }
-    throw new Error(
-      "General nonlinear custom fits need Desmos. Offline custom parameters must enter linearly.",
-    );
-  };
-  degree(expression.node);
+  assertAffineParameters(expression.node, names);
   if (
     points.length < names.length ||
     points.some((p) => ![p.x, p.y].every(Number.isFinite))
@@ -288,13 +377,20 @@ export function regression(
 
 /** Supported SAT templates, with user-chosen single-letter parameter names. */
 export function regressionSpec(text: string) {
-  const match = text.replace(/\s/g, "").match(/^([a-zA-Z](?:_\d+)?)~(.+)$/);
-  if (!match) throw new Error("Write a regression such as y_1 ~ m x_1 + b.");
+  const compact = text.replace(/\s/g, "");
+  const parts = compact.split("~");
+  if (parts.length !== 2 || !parts[0] || !parts[1])
+    throw new Error(
+      "Write a relation with one ~, such as 8c ~ 3 or y_1 ~ m x_1 + b.",
+    );
+  const match = compact.match(/^([a-zA-Z](?:_\d+)?)~(.+)$/);
+  if (!match)
+    return { kind: "relation" as const, left: parts[0], right: parts[1] };
   const y = match[1],
     formula = match[2];
   const dataName = formula.match(/[a-zA-Z]_\d+/)?.[0];
   if (!dataName)
-    throw new Error("Use a table column or a subscripted x data list.");
+    return { kind: "relation" as const, left: parts[0], right: parts[1] };
   const rhs = formula
     .replaceAll(dataName, "X")
     .replace(/\*/g, "")
@@ -382,7 +478,5 @@ export function regressionSpec(text: string) {
       names,
       formula: customFormula,
     };
-  throw new Error(
-    "Supported fits: polynomial terms through degree 3 (such as m x_1 or a x_1^2 + c), or a b^x_1. General nonlinear custom fits need Desmos.",
-  );
+  return { kind: "relation" as const, left: parts[0], right: parts[1] };
 }

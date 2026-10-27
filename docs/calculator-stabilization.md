@@ -33,6 +33,11 @@ interrupt Offline; a loaded Desmos instance survives the browser's offline event
 
 ## Offline regressions
 
+- `~` is classified as a relation rather than requiring table-column syntax.
+  Scalar relations such as `8c ~ 3` fit undefined symbols (`c = 0.375`) by
+  minimizing the left-minus-right residual. The same scaled QR path supports
+  scalar or list residuals and rejects underdetermined, ill-conditioned, or
+  nonlinear-in-parameter relations. Already-defined variables remain fixed.
 - Enter `y_1 ~ m x_1 + b` directly after populating a table or defining lists.
   Full and sparse polynomial terms through degree 3 remain supported.
 - Exponential forms include `a b^x_1`, `a exp(b x_1)` and `a e^(b x_1)`.
@@ -88,6 +93,19 @@ under tight numerical tolerances. Otherwise they show decimals. Labels retain
 `≈`: recognition is not a symbolic proof. Zero is not substituted for arbitrary
 tiny nonzero coordinates. Explicit scalar-parameter points remain draggable.
 
+Point selection uses pixel-space distance rather than mathematical-coordinate
+distance: visible markers remain small, while mouse/trackpad clicks receive a
+22-pixel target and touch receives 30 pixels. Draggable points take precedence,
+then the nearest POI/data point, then curve tracing, so a nearby trace does not
+steal an intended POI click.
+
+Equal physical x/y unit scale is now the default and is persisted as a graph
+viewport mode. Initial/Reset view, ordinary pan/zoom and calculator resizing
+preserve it by adapting the y range to the rendered aspect ratio; a rectangular
+graph therefore shows more of one axis without stretching circles. Fit and
+manual graph-window bounds may intentionally turn equal scaling off. Square axes
+restores it explicitly.
+
 ## Compact input and tables
 
 - One **+** Add control offers Expression/Table and dismisses outside or with
@@ -140,11 +158,11 @@ Exhaustive native gesture equivalence is not claimed.
 
 Observed native parameters:
 
-| Synthetic case | Official Desmos | Offline |
-| --- | --- | --- |
-| x=1,2,3,4; y=x² | a=1, b=0, c=0 | same cleaned display; raw QR residue retained |
-| x=0,1,2,3; y=1,2,4,9; a·bˣ | a=0.888120061686, b=2.160827144028 | same within checked displayed precision |
-| y=2 sin(x)+3 at five x values | a≈2, b=3 | same QR result within numerical tolerance |
+| Synthetic case                | Official Desmos                    | Offline                                       |
+| ----------------------------- | ---------------------------------- | --------------------------------------------- |
+| x=1,2,3,4; y=x²               | a=1, b=0, c=0                      | same cleaned display; raw QR residue retained |
+| x=0,1,2,3; y=1,2,4,9; a·bˣ    | a=0.888120061686, b=2.160827144028 | same within checked displayed precision       |
+| y=2 sin(x)+3 at five x values | a≈2, b=3                           | same QR result within numerical tolerance     |
 
 General nonlinear fits, exact CAS algebra, arbitrary symbolic recognition,
 editable table headers, full list comprehensions and Offline Undo remain outside

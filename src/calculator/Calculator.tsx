@@ -37,10 +37,12 @@ function MathDisplay({ tex }: { tex: string }) {
 function FitResult({
   fit,
   parameters,
+  scalarRelation,
   onExport,
 }: {
   fit: Fit;
   parameters?: Record<string, number>;
+  scalarRelation?: boolean;
   onExport: () => void;
 }) {
   const c = displayedCoefficients(fit);
@@ -55,9 +57,11 @@ function FitResult({
           : ["d", "c", "b", "a"];
   return (
     <div className="calc-fit-result">
-      <MathDisplay
-        tex={"y \\approx " + textToLatex(fittedExpression(fit, 10))}
-      />
+      {!scalarRelation && (
+        <MathDisplay
+          tex={"y \\approx " + textToLatex(fittedExpression(fit, 10))}
+        />
+      )}
       <output
         aria-label={
           parameters ? "Fitted parameters" : "Regression coefficients"
@@ -74,12 +78,19 @@ function FitResult({
           .join(" · ")}
       </output>
       <p>
-        R² = {fit.r2 === undefined ? "undefined (constant y)" : fmt(fit.r2)} ·
+        {!scalarRelation && (
+          <>
+            R² = {fit.r2 === undefined ? "undefined (constant y)" : fmt(fit.r2)}{" "}
+            ·{" "}
+          </>
+        )}
         RMSE = {fmt(fit.rmse)}
       </p>
-      <button className="text-button" onClick={onExport}>
-        Export to expression list
-      </button>
+      {!scalarRelation && (
+        <button className="text-button" onClick={onExport}>
+          Export to expression list
+        </button>
+      )}
       <details>
         <summary>Residuals (observed − fitted)</summary>
         <p className="calc-residuals">{fit.residuals.map(fmt).join(", ")}</p>
@@ -402,6 +413,7 @@ export function Calculator({
                             )
                           }
                           parameters={result.parameters}
+                          scalarRelation={result.scalarRelation}
                         />
                       )}
                       {result?.parameter && (
@@ -493,7 +505,14 @@ export function Calculator({
         <Graph
           graphs={workspace.graphs}
           view={state.view}
-          onView={(view) => onChange({ ...state, view })}
+          equalAxes={state.equalAxes !== false}
+          onView={(view, equalAxes) =>
+            onChange({
+              ...state,
+              view,
+              equalAxes: equalAxes ?? state.equalAxes ?? true,
+            })
+          }
           onParameter={(id, name, value) => {
             const entry = state.entries.find((entry) => entry.id === id);
             if (entry?.type === "expression" && Number.isFinite(value))

@@ -175,6 +175,90 @@ test("narrow graphs, minor grid and multiple pi-aware POI labels", async ({
     .getByRole("button", { name: "Close calculator", exact: true })
     .click();
 });
+test("scalar regressions, forgiving POI targets and equal graph units", async ({
+  page,
+}) => {
+  await calculator(page);
+  await enterExpression(page, 1, "8c~3");
+  await expect(page.getByLabel("Fitted parameters")).toContainText("c = 0.375");
+  await expect(page.locator(".calc-fit-result")).toContainText("RMSE = 0");
+  await expect(page.locator(".calc-fit-result .calc-math")).toHaveCount(0);
+
+  const graph = page.locator("svg.graph-plane");
+  const expectEqualUnits = async () => {
+    await expect
+      .poll(() =>
+        graph.evaluate((element) => {
+          const svg = element as SVGSVGElement;
+          const box = svg.getBoundingClientRect();
+          const x =
+            box.width / (Number(svg.dataset.xMax) - Number(svg.dataset.xMin));
+          const y =
+            box.height / (Number(svg.dataset.yMax) - Number(svg.dataset.yMin));
+          return x / y;
+        }),
+      )
+      .toBeCloseTo(1, 2);
+  };
+  await expect.poll(() => graph.getAttribute("data-equal-axes")).toBe("true");
+  await expectEqualUnits();
+  await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+  await expectEqualUnits();
+  await page.getByRole("button", { name: "Reset view", exact: true }).click();
+  await expectEqualUnits();
+  const resize = page.getByRole("button", {
+    name: "Resize calculator width",
+    exact: true,
+  });
+  await resize.focus();
+  await page.keyboard.press("Shift+ArrowRight");
+  await expectEqualUnits();
+
+  await enterExpression(page, 1, "x^2+y^2=25");
+  const circleRatio = await graph
+    .locator(".graph-curve")
+    .first()
+    .evaluate((path) => {
+      const bounds = (path as SVGGraphicsElement).getBBox();
+      return bounds.width / bounds.height;
+    });
+  expect(circleRatio).toBeCloseTo(1, 1);
+
+  await enterExpression(page, 1, "y=sinx");
+  await page
+    .getByRole("button", { name: "Inspect points", exact: true })
+    .click();
+  const markers = page.locator(".graph-interest");
+  const labels = await markers.evaluateAll((elements) =>
+    elements.map((element) => element.getAttribute("aria-label")),
+  );
+  const maximum = labels.findIndex(
+    (label) => label?.includes("maximum") && label.includes("1.570796"),
+  );
+  const zero = labels.findIndex((label) => label?.includes("zero ≈ (3.141592"));
+  expect(maximum).toBeGreaterThanOrEqual(0);
+  expect(zero).toBeGreaterThanOrEqual(0);
+  const maxBox = (await markers.nth(maximum).boundingBox())!;
+  await page.mouse.click(
+    maxBox.x + maxBox.width / 2 + 15,
+    maxBox.y + maxBox.height / 2,
+  );
+  await expect(page.locator(".graph-point-label")).toContainText("(π/2, 1)");
+  const zeroBox = (await markers.nth(zero).boundingBox())!;
+  await page.mouse.click(
+    zeroBox.x + zeroBox.width / 2 + 15,
+    zeroBox.y + zeroBox.height / 2,
+  );
+  await expect(page.locator(".graph-point-label")).toHaveCount(2);
+  await expect(
+    page.locator(".graph-point-label").filter({ hasText: "(π, 0)" }),
+  ).toBeVisible();
+  await page.mouse.click(
+    maxBox.x + maxBox.width / 2,
+    maxBox.y + maxBox.height / 2 + 30,
+  );
+  await expect(page.locator(".graph-point-label")).toHaveCount(2);
+});
 test("Escape closes utilities first, then confirms leaving without calculator leakage", async ({
   page,
 }) => {
