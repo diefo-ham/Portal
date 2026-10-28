@@ -69,7 +69,7 @@ Offline has no Undo yet.
 - Click a function curve to place a temporary trace point. Drag along the curve
   to update its coordinates, without changing expressions. With a curve selected,
   Left/Right on the focused graph moves the trace; Escape clears it.
-- Drag empty graph space to pan. Zoom/Fit/Square axes remain unchanged.
+- Drag empty graph space to pan. Zoom and Reset view retain equal unit scale.
 - **Inspect points** reveals numerical roots/intercepts/intersections/extrema as
   subtle graph-local marks. Hover, focus or select a point to reveal one attached
   coordinate label. No detached coordinate legend/list is required or displayed.

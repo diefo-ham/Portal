@@ -177,7 +177,9 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   await expect(table.locator(".katex-error")).toHaveCount(0);
   await expect(table.locator(".calc-math")).toContainText("≈");
   await expect(page.locator(".graph-data-point")).toHaveCount(3);
-  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Fit", exact: true }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", { name: "Resize calculator", exact: true })
     .focus();
@@ -188,7 +190,7 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   mkdirSync("private-data/inspection", { recursive: true });
   await table.scrollIntoViewIfNeeded();
   await page.screenshot({
-    path: "private-data/inspection/calculator-table-fit.png",
+    path: "private-data/inspection/calculator-table-regression.png",
     fullPage: true,
     animations: "disabled",
   });

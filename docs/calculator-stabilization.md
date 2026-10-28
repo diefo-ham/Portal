@@ -105,9 +105,9 @@ steal an intended POI click.
 Equal physical x/y unit scale is now the default and is persisted as a graph
 viewport mode. Initial/Reset view, ordinary pan/zoom and calculator resizing
 preserve it by adapting the y range to the rendered aspect ratio; a rectangular
-graph therefore shows more of one axis without stretching circles. Fit and
-manual graph-window bounds now expand one axis enough to retain equal units.
-The redundant Square axes button has been removed.
+graph therefore shows more of one axis without stretching circles. Manual
+graph-window bounds expand one axis enough to retain equal units. The redundant
+Fit and Square axes buttons have been removed.
 
 ## Compact input and tables
 

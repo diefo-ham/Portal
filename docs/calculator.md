@@ -72,12 +72,10 @@ have contextual Add slider actions. A constant assignment such as `a=1` has a
 slider; its literal text remains editable for precise values or larger ranges.
 
 The graph supports colored simultaneous curves/data points, dragging, focused
-wheel zoom, zoom buttons, keyboard pan, Reset view, Fit, Square axes, and manual
-bounds. Labels and curves remain readable in light, dark, and automatic themes.
-Fit uses data bounds when present; otherwise it retains the current x range and
-fits sampled y values, trimming isolated asymptote outliers. It does not search
-all possible domains. Square axes equalizes physical x/y unit lengths for the
-current panel size; other windows may intentionally have different axis scales.
+wheel zoom, zoom buttons, keyboard pan, Reset view, and manual bounds. Labels
+and curves remain readable in light, dark, and automatic themes. Normal graph
+interaction preserves equal physical x/y unit lengths for the current panel
+size; manual bounds expand one axis as needed to preserve that invariant.
 
 Explicit functions use bounded adaptive sampling and separate paths at detected
 holes, jumps, and asymptotes. Explicit inequalities shade above/below a curve or
@@ -191,7 +189,7 @@ tested with isolated browser data.
 Try these before expanding scope:
 
 1. Plot y=x²−4 and y=2x+3, then Inspect points; click the coordinate list.
-2. Plot y=1/(x−1), y=sqrt(x), and x²+y²=25. Try Square axes for the circle.
+2. Plot y=1/(x−1), y=sqrt(x), and x²+y²=25. Confirm the circle remains circular while resizing.
 3. Add x=[1,2,3], y=[4,7,10], fit Linear, and inspect m=3, b=1, R²=1.
 4. Try Quadratic and Exponential with your own SAT data; compare the labeled
    log-space behavior if comparing noisy exponential fits with another calculator.

@@ -440,32 +440,3 @@ export function implicitSegments(
     }
   return segments;
 }
-
-export function fitViewport(
-  graphs: GraphObject[],
-  view: Viewport,
-): Viewport | undefined {
-  const points = graphs.flatMap((g) => (g.kind === "points" ? g.points : []));
-  let xMin = points.length ? Math.min(...points.map((p) => p.x)) : view.xMin;
-  let xMax = points.length ? Math.max(...points.map((p) => p.x)) : view.xMax;
-  if (xMin === xMax) {
-    xMin -= 5;
-    xMax += 5;
-  }
-  const ys = points.map((p) => p.y);
-  for (const g of graphs)
-    if (g.kind === "function")
-      for (let i = 0; i <= 200; i++) {
-        const y = safeValue(g.fn, xMin + ((xMax - xMin) * i) / 200);
-        if (Number.isFinite(y) && Math.abs(y) < 1e10) ys.push(y);
-      }
-  if (!ys.length) return undefined;
-  // Robust range for functions: isolated near-asymptote samples must not crush the graph.
-  ys.sort((a, b) => a - b);
-  const tail = points.length ? 0 : Math.floor(ys.length * 0.03);
-  let yMin = ys[tail],
-    yMax = ys[ys.length - 1 - tail];
-  const px = (xMax - xMin) * 0.12,
-    py = Math.max((yMax - yMin) * 0.12, yMin === yMax ? 2 : 0.05);
-  return { xMin: xMin - px, xMax: xMax + px, yMin: yMin - py, yMax: yMax + py };
-}

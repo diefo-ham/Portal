@@ -14,7 +14,6 @@ import {
   sampleFunction,
   interests,
   implicitSegments,
-  fitViewport,
   equalScaleViewport,
   nearestInterestInPixels,
 } from "../src/calculator/numerics";
@@ -633,7 +632,7 @@ describe("bounded graph calculations", () => {
         .every((p) => p.x >= 0),
     ).toBe(true);
   });
-  it("contours circles conservatively and fits point bounds", () => {
+  it("contours circles conservatively", () => {
     const segments = implicitSegments(
       (x, y) => x * x + y * y - 25,
       defaultView(),
@@ -641,22 +640,6 @@ describe("bounded graph calculations", () => {
     expect(segments.length).toBeGreaterThan(80);
     for (const point of segments.flat())
       expect(Math.hypot(point.x, point.y)).toBeCloseTo(5, 1);
-    const v = fitViewport(
-      [
-        {
-          kind: "points",
-          id: "p",
-          color: 0,
-          points: [
-            { x: 100, y: 500 },
-            { x: 200, y: 700 },
-          ],
-        },
-      ],
-      defaultView(),
-    )!;
-    expect(v.xMin).toBeLessThan(100);
-    expect(v.yMax).toBeGreaterThan(700);
   });
 });
 describe("regression uses numerical least squares", () => {

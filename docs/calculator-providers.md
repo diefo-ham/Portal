@@ -114,7 +114,7 @@ changes both input and inverse output units. Domain/pole checks reject undefined
 values. Inverse cotangent uses the 0–π branch, matching the checked reference.
 
 Existing graph capabilities remain: simultaneous functions, vertical/implicit
-equations, explicit inequalities, points, pan/zoom, Fit, Square axes, manual bounds,
+equations, explicit inequalities, points, pan/zoom, Reset view, manual bounds,
 numerical roots/intercepts/intersections/extrema, and coordinate inspection.
 Adaptive paths break at detected discontinuities. Implicit curves use bounded
 approximate contours. Numerical sampling cannot prove every solution was found.
@@ -166,7 +166,6 @@ Conservative limits: 24 working entries plus a blank row, 200 table/list values,
 depth/size, ±10¹⁰ graph bounds, 10⁻⁷ minimum spans, IEEE-754 numbers with 10-significant-
 digit display. Desmos state is limited to 2 MB. The lazy local calculator is about
 200 KB gzip JS and 21 KB gzip CSS; the initial study-screen load excludes it.
-
 
 ## Floating-window follow-up
 

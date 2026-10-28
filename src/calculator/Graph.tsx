@@ -7,7 +7,6 @@ import {
   type Viewport,
 } from "./model";
 import {
-  fitViewport,
   implicitSegments,
   interests,
   equalScaleViewport,
@@ -332,26 +331,6 @@ export function Graph({
           −
         </button>
         <button onClick={() => changeView(defaultView())}>Reset view</button>
-        <button
-          disabled={
-            !graphs.some(
-              (g) =>
-                g.kind === "function" ||
-                (g.kind === "points" && g.points.length > 0),
-            )
-          }
-          title="Fit sampled functions and data points"
-          onClick={() => {
-            const v = fitViewport(graphs, view);
-            if (v) changeView(v, true);
-            else
-              setNotice(
-                "No finite sampled values are available in this x window. Try changing the graph window.",
-              );
-          }}
-        >
-          Fit
-        </button>
         <button
           aria-pressed={inspect}
           onClick={() => {

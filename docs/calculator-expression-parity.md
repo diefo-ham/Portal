@@ -48,8 +48,8 @@ dependent graphs. No point-specific evaluation is cached as a global constant.
   (`sat-study-calculator-split`), independent of session history. Narrow windows
   keep the stacked layout and hide the separator.
 - Equal unit scale is maintained on initial view, reset, pan, zoom, outer-window
-  resizing and divider resizing. Fit and manual bounds expand one axis enough
-  to contain the requested window with equal units. Square axes is removed.
+  resizing and divider resizing. Manual bounds expand one axis enough to contain
+  the requested window with equal units. Fit and Square axes controls are removed.
 - Inspect Points supports toggle selection, multiple kept labels, empty-space
   clearing, and clearing on disable. Curve tracing remains separate. Explicit
   data points no longer receive a duplicate overlaid Inspect marker. The
