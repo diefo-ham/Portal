@@ -36,10 +36,11 @@ export function Practice({
   );
   const [pending, setPending] = useState(false);
   const [calculator, setCalculator] = useState(false);
-  const [calculatorShiftInverted, setCalculatorShiftInverted] = useState(false);
-  const calculatorShiftHeld = useRef(false);
-  const calculatorShiftInvertedRef = useRef(false);
-  const calculatorFocusBeforeShift = useRef<HTMLElement | null>(null);
+  const [calculatorShortcutInverted, setCalculatorShortcutInverted] =
+    useState(false);
+  const calculatorShortcutHeld = useRef(false);
+  const calculatorShortcutInvertedRef = useRef(false);
+  const calculatorFocusBeforeShortcut = useRef<HTMLElement | null>(null);
   const calculatorWork = useCalculatorState(
     session.id,
     session.calculator,
@@ -62,8 +63,8 @@ export function Practice({
       )
     : question.section === "math";
   const calculatorRendered =
-    calculatorAvailable && (calculator || calculatorShiftInverted);
-  const calculatorTemporarilyHidden = calculator && calculatorShiftInverted;
+    calculatorAvailable && (calculator || calculatorShortcutInverted);
+  const calculatorTemporarilyHidden = calculator && calculatorShortcutInverted;
   const calculatorVisible = calculatorRendered && !calculatorTemporarilyHidden;
   const openPanel = (value: Exclude<typeof panel, null>) => {
     if (!panel) trigger.current = document.activeElement as HTMLElement;
@@ -88,13 +89,16 @@ export function Practice({
   }, [attempt?.id]);
   useEffect(() => {
     const finishInversion = (restoreFocus: boolean) => {
-      if (!calculatorShiftHeld.current && !calculatorShiftInvertedRef.current)
+      if (
+        !calculatorShortcutHeld.current &&
+        !calculatorShortcutInvertedRef.current
+      )
         return;
-      calculatorShiftHeld.current = false;
-      calculatorShiftInvertedRef.current = false;
-      setCalculatorShiftInverted(false);
-      const previous = calculatorFocusBeforeShift.current;
-      calculatorFocusBeforeShift.current = null;
+      calculatorShortcutHeld.current = false;
+      calculatorShortcutInvertedRef.current = false;
+      setCalculatorShortcutInverted(false);
+      const previous = calculatorFocusBeforeShortcut.current;
+      calculatorFocusBeforeShortcut.current = null;
       if (restoreFocus && previous?.isConnected)
         requestAnimationFrame(() => previous.focus({ preventScroll: true }));
     };
@@ -102,34 +106,41 @@ export function Practice({
       finishInversion(false);
       return;
     }
-    const shortcutIsInappropriate = (target: EventTarget | null) => {
-      if (
-        target instanceof Element &&
-        target.closest(
-          'input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="textbox"],.calculator-sheet',
-        )
-      )
-        return true;
-      return !!document.querySelector('dialog[open],[aria-modal="true"]');
-    };
+    const shortcutIsInappropriate = () =>
+      !!document.querySelector('dialog[open],[aria-modal="true"]');
     const keydown = (event: KeyboardEvent) => {
       if (
-        event.key !== "Shift" ||
-        event.repeat ||
-        calculatorShiftHeld.current ||
-        shortcutIsInappropriate(event.target)
+        calculatorShortcutHeld.current &&
+        (event.key === "Shift" ||
+          event.key === "Control" ||
+          event.key === "Alt" ||
+          event.key === "Meta")
+      ) {
+        finishInversion(true);
+        return;
+      }
+      if (
+        event.code !== "Backslash" ||
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        shortcutIsInappropriate()
       )
         return;
-      calculatorShiftHeld.current = true;
-      calculatorShiftInvertedRef.current = true;
-      calculatorFocusBeforeShift.current =
+      // Repeats are prevented as well so a held shortcut cannot leak text.
+      event.preventDefault();
+      if (event.repeat || calculatorShortcutHeld.current) return;
+      calculatorShortcutHeld.current = true;
+      calculatorShortcutInvertedRef.current = true;
+      calculatorFocusBeforeShortcut.current =
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
-      setCalculatorShiftInverted(true);
+      setCalculatorShortcutInverted(true);
     };
     const keyup = (event: KeyboardEvent) => {
-      if (event.key === "Shift") finishInversion(true);
+      if (event.code === "Backslash") finishInversion(true);
     };
     const blur = () => finishInversion(false);
     const visibility = () => {
@@ -206,10 +217,10 @@ export function Practice({
     );
   const closeCalculator = () => {
     void calculatorWork.flush().catch(() => {});
-    calculatorShiftHeld.current = false;
-    calculatorShiftInvertedRef.current = false;
-    calculatorFocusBeforeShift.current = null;
-    setCalculatorShiftInverted(false);
+    calculatorShortcutHeld.current = false;
+    calculatorShortcutInvertedRef.current = false;
+    calculatorFocusBeforeShortcut.current = null;
+    setCalculatorShortcutInverted(false);
     setCalculator(false);
     requestAnimationFrame(() =>
       (
@@ -219,10 +230,10 @@ export function Practice({
     );
   };
   const openCalculator = () => {
-    calculatorShiftHeld.current = false;
-    calculatorShiftInvertedRef.current = false;
-    calculatorFocusBeforeShift.current = null;
-    setCalculatorShiftInverted(false);
+    calculatorShortcutHeld.current = false;
+    calculatorShortcutInvertedRef.current = false;
+    calculatorFocusBeforeShortcut.current = null;
+    setCalculatorShortcutInverted(false);
     setCalculator(true);
   };
   const leave = () =>
@@ -249,10 +260,9 @@ export function Practice({
             onChange={calculatorWork.change}
             onClose={closeCalculator}
             temporarilyHidden={calculatorTemporarilyHidden}
+            autoFocus={calculator}
             shortcutHint={
-              calculator
-                ? "Hold Shift to temporarily hide"
-                : "Release Shift to close"
+              calculator ? "Hold \\ to temporarily hide" : "Release \\ to close"
             }
           />
         )}
@@ -393,8 +403,8 @@ export function Practice({
               aria-expanded={calculatorVisible}
               title={
                 calculator
-                  ? "Close Calculator · Hold Shift to temporarily hide"
-                  : "Open Calculator · Hold Shift to peek at Calculator"
+                  ? "Close Calculator · Hold \\ to temporarily hide"
+                  : "Open Calculator · Hold \\ to peek at Calculator"
               }
               onClick={() => {
                 if (calculator) closeCalculator();
@@ -633,10 +643,9 @@ export function Practice({
             onChange={calculatorWork.change}
             onClose={closeCalculator}
             temporarilyHidden={calculatorTemporarilyHidden}
+            autoFocus={calculator}
             shortcutHint={
-              calculator
-                ? "Hold Shift to temporarily hide"
-                : "Release Shift to close"
+              calculator ? "Hold \\ to temporarily hide" : "Release \\ to close"
             }
           />
         )}

@@ -10,9 +10,11 @@ import "./calculator.css";
 export function CalculatorSurface({
   state,
   onChange,
+  autoFocus = true,
 }: {
   state: CalculatorState;
   onChange: (state: CalculatorState) => void;
+  autoFocus?: boolean;
 }) {
   const [apiKey, setApiKey] = useState(
     (import.meta.env.VITE_DESMOS_API_KEY || "").trim(),
@@ -203,7 +205,7 @@ export function CalculatorSurface({
           )}
         </>
       ) : (
-        <Calculator state={state} onChange={onChange} />
+        <Calculator state={state} onChange={onChange} autoFocus={autoFocus} />
       )}
     </section>
   );

@@ -61,6 +61,16 @@ export function MathEditor({
       scrollAnimationDuration: 0,
       maxDepth: 24,
       overrideKeystroke: (key: string, event: KeyboardEvent) => {
+        // Leave Shift+Backslash to the native text-input path so DesQuill
+        // receives the resulting pipe used for absolute-value delimiters.
+        if (
+          event.code === "Backslash" &&
+          event.shiftKey &&
+          !event.ctrlKey &&
+          !event.altKey &&
+          !event.metaKey
+        )
+          return;
         if (key === "Enter") {
           event.preventDefault();
           props.current.onEnter();

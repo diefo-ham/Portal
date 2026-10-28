@@ -31,12 +31,14 @@ export function CalculatorPanel({
   onChange,
   onClose,
   temporarilyHidden = false,
-  shortcutHint = "Hold Shift to temporarily hide",
+  autoFocus = true,
+  shortcutHint = "Hold \\ to temporarily hide",
 }: {
   state: CalculatorState;
   onChange: (state: CalculatorState) => void;
   onClose: () => void;
   temporarilyHidden?: boolean;
+  autoFocus?: boolean;
   shortcutHint?: string;
 }) {
   const [geometry, setGeometry] = useState(() => readGeometry(viewport()));
@@ -137,7 +139,7 @@ export function CalculatorPanel({
   };
   return createPortal(
     <aside
-      className={`calculator-sheet ${moving ? "window-moving" : ""} ${temporarilyHidden ? "shift-hidden" : ""}`}
+      className={`calculator-sheet ${moving ? "window-moving" : ""} ${temporarilyHidden ? "shortcut-hidden" : ""}`}
       aria-label="Calculator panel"
       role="dialog"
       aria-modal="false"
@@ -195,7 +197,7 @@ export function CalculatorPanel({
         position.
       </span>
       <Suspense fallback={<p className="small muted">Opening calculator…</p>}>
-        <Surface state={state} onChange={onChange} />
+        <Surface state={state} onChange={onChange} autoFocus={autoFocus} />
       </Suspense>
       {!narrow &&
         (

@@ -15,8 +15,10 @@
   max-width: calc(100% - 16px);
   max-height: calc(100dvh - 16px);
 }
-.calculator-sheet.shift-hidden {
-  display: none;
+.calculator-sheet.shortcut-hidden {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
 }
 .calc-window-heading {
   display: flex;

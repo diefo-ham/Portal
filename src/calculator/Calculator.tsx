@@ -168,9 +168,11 @@ function CalculatorHelp() {
 export function Calculator({
   state,
   onChange,
+  autoFocus = true,
 }: {
   state: CalculatorState;
   onChange: (state: CalculatorState) => void;
+  autoFocus?: boolean;
 }) {
   const deferred = useDeferredValue(state);
   const workspace = useMemo(
@@ -197,11 +199,12 @@ export function Calculator({
     return () => document.removeEventListener("pointerdown", outside);
   }, [addOpen]);
   useEffect(() => {
+    if (!autoFocus) return;
     (
       root.current?.querySelector<HTMLElement>("textarea") ??
       root.current?.querySelector<HTMLElement>("input,button")
     )?.focus();
-  }, []);
+  }, [autoFocus]);
   const change = (entry: Entry) =>
     update({
       ...current.current,
