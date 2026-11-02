@@ -40,12 +40,17 @@ test("session size is numeric, bounded, and adapts to the filtered pool", async 
   await size.fill("0");
   await expect(start).toBeDisabled();
   await size.fill("11");
-  await expect(start).toBeDisabled();
+  await expect(size).toHaveValue("10");
+  await expect(start).toBeEnabled();
   await size.fill("9");
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await expect(page.getByText("Max 5", { exact: true })).toBeVisible();
-  await expect(size).toHaveValue("9");
-  await expect(start).toBeDisabled();
+  await expect(size).toHaveValue("5");
+  await expect(start).toBeEnabled();
+  await size.fill("3");
+  await page.getByRole("group", { name: "Section" }).getByText("All").click();
+  await expect(page.getByText("Max 10", { exact: true })).toBeVisible();
+  await expect(size).toHaveValue("3");
   await size.fill("");
   await expect(start).toBeDisabled();
   await size.fill("3");
@@ -69,6 +74,7 @@ test("header order, concise help, and ordinary overlays dismiss outside", async 
     "Practice",
     "Review",
     "Browse",
+    "Tests",
     "Help and keyboard shortcuts",
     "Settings",
   ]);
@@ -80,8 +86,10 @@ test("header order, concise help, and ordinary overlays dismiss outside", async 
     .getByRole("button", { name: "Help and keyboard shortcuts" })
     .click();
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("Practice and Browse");
-  await expect(dialog).toContainText("unknown status");
+  await expect(
+    dialog.getByRole("region", { name: "SAT Study overview" }),
+  ).toContainText("Browse");
+  await expect(dialog).toContainText(/unknown status/i);
   await expect(dialog).toContainText("latest recorded answer is incorrect");
   await dialog.dispatchEvent("click");
   await expect(dialog).not.toBeVisible();

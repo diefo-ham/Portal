@@ -96,6 +96,11 @@ test("sessions can be named, starred, found, repracticed, and reset-restored", a
   await starred
     .getByRole("button", { name: /Session actions for Hard Algebra Drill/ })
     .click();
+  await expect(page.getByRole("menu").getByRole("menuitem")).toHaveText([
+    "Rename",
+    "Practice again",
+    "Delete session",
+  ]);
   await page.getByRole("menuitem", { name: "Practice again" }).click();
 
   let saved = await state(page);
@@ -159,4 +164,77 @@ test("sessions can be named, starred, found, repracticed, and reset-restored", a
     name: "Hard Algebra Drill ✓",
     starred: true,
   });
+});
+
+test("a selected session can be confirmed and durably deleted without clearing other study state", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Math.random = () => 0.999999;
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Load synthetic sample", exact: true })
+    .click();
+  await page
+    .getByRole("group", { name: "Section" })
+    .getByText("Reading & Writing")
+    .click();
+  await page.getByRole("textbox", { name: "Session size" }).fill("1");
+  await page.getByRole("button", { name: "Start practice" }).click();
+  await page
+    .getByRole("button", { name: "Bookmark question", exact: true })
+    .click();
+  await page.getByRole("radio").first().check();
+  await page.getByRole("button", { name: "Check answer" }).click();
+  await page.getByRole("button", { name: "Practice tools" }).click();
+  await page
+    .getByRole("button", { name: "Finish session", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await page.getByRole("button", { name: "Start practice" }).click();
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
+
+  const before = await state(page);
+  const deletedId = before.sessions.find((session) => !session.finishedAt)!.id;
+  const keptId = before.sessions.find((session) => !!session.finishedAt)!.id;
+  const continueArea = page.getByRole("region", {
+    name: "Continue unfinished practice",
+  });
+  await continueArea
+    .getByRole("button", { name: /^Session actions for/ })
+    .click();
+  await expect(page.getByRole("menuitem", { name: "Rename" })).toBeVisible();
+  await page.getByRole("menuitem", { name: "Delete session" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete this session?" });
+  await expect(dialog).toContainText("Delete “");
+  await expect(dialog).not.toContainText("Reset study progress");
+  await expect(dialog.getByRole("button", { name: "Cancel" })).toBeFocused();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(
+    (await state(page)).sessions.some((session) => session.id === deletedId),
+  ).toBe(true);
+
+  await continueArea
+    .getByRole("button", { name: /^Session actions for/ })
+    .click();
+  await page.getByRole("menuitem", { name: "Delete session" }).click();
+  await dialog.getByRole("button", { name: "Delete session" }).click();
+  await expect(continueArea).toHaveCount(0);
+
+  let after = await state(page);
+  expect(after.sessions.map((session) => session.id)).toEqual([keptId]);
+  expect(after.attempts).toEqual(before.attempts);
+  expect(after.annotations).toEqual(before.annotations);
+  await page.reload();
+  after = await state(page);
+  expect(after.sessions.map((session) => session.id)).toEqual([keptId]);
+  expect(after.sessions.some((session) => session.id === deletedId)).toBe(
+    false,
+  );
+  expect(after.attempts).toEqual(before.attempts);
+  expect(after.annotations).toEqual(before.annotations);
+  await expect(
+    page.getByRole("region", { name: "Continue unfinished practice" }),
+  ).toHaveCount(0);
 });

@@ -1,6 +1,6 @@
 Third-party software notices
 
-The Offline calculator libraries are bundled locally. Optional Desmos mode loads the official hosted API separately.
+The integrated Calculator libraries are bundled locally. Optional Desmos access loads the official hosted API separately.
 
 @babel/runtime 7.29.10 — MIT
   babel-runtime-LICENSE.txt

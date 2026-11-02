@@ -62,6 +62,7 @@ export function reviewQueues(data: StudyData, protectTests = true) {
   const assigned = new Set(data.sessions.flatMap((s) => s.questionIds));
   const eligible = filterQuestions(data, {
     ...defaultFilters,
+    statuses: [],
     active: protectTests ? "hide" : "include",
   });
   return {

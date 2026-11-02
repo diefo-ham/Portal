@@ -1,5 +1,6 @@
 import {
   scalar,
+  scalarFromNode,
   scalarTex,
   normalize,
   isBuiltin,
@@ -12,18 +13,40 @@ import {
   customRegression,
   relationRegression,
   regressionSpec,
+  assertAffineParameters,
   type Fit,
 } from "./regression";
 import { latexToText } from "./latex";
+import type { MathNode } from "mathjs";
+import {
+  exactListRelations,
+  solveFiniteSystem,
+  type FiniteSystemResult,
+} from "./finiteSystems";
+import {
+  affineCoefficients,
+  reverseComparator,
+  type AffineInequality,
+} from "./affine";
+import {
+  relationSource,
+  parameterBounds,
+  solveScalarRelation,
+  polynomialRootFinder,
+  type Restriction,
+} from "./relations";
 
 export type Relation = "<" | "<=" | ">" | ">=";
-export type GraphObject =
+export type GraphObject = {
+  systemIntersections?: { points: Point[]; graphIds: string[] };
+} & (
   | {
       kind: "function";
       id: string;
       color: number;
       fn: (x: number) => number;
       relation?: Relation;
+      affine?: AffineInequality;
     }
   | {
       kind: "vertical";
@@ -31,13 +54,16 @@ export type GraphObject =
       color: number;
       fn: (x: number) => number;
       relation?: Relation;
+      affine?: AffineInequality;
       boundary?: number;
+      rootsInWindow?: (min: number, max: number) => number[];
     }
   | {
       kind: "implicit";
       id: string;
       color: number;
       fn: (x: number, y: number) => number;
+      affine?: AffineInequality;
     }
   | {
       kind: "points";
@@ -45,7 +71,8 @@ export type GraphObject =
       color: number;
       points: Point[];
       drag?: { id: string; name: string; y: (x: number) => number };
-    };
+    }
+);
 export interface EntryResult {
   graphable?: boolean;
   error?: string;
@@ -55,9 +82,12 @@ export interface EntryResult {
   tex?: string;
   fit?: Fit;
   scalarRelation?: boolean;
+  relationKind?: "scalar" | "values" | "data";
+  solutions?: Record<string, number>[];
   points?: Point[];
   parameter?: { name: string; value: number };
   message?: string;
+  systemKind?: FiniteSystemResult["kind"];
 }
 export interface Workspace {
   graphs: GraphObject[];
@@ -80,7 +110,9 @@ type Parsed =
 
 function parseEntry(text: string): Parsed {
   text = normalize(text);
-  const func = text.match(/^([a-z][a-z0-9_]{0,15})\(([a-z])\)\s*=\s*(.+)$/i);
+  const func = text.match(
+    /^([a-z][a-z0-9_]{0,15})\(\s*([a-z])\s*\)\s*=\s*(.+)$/i,
+  );
   if (func) {
     if (isBuiltin(func[1]) || ["e", "y"].includes(func[2]))
       throw new Error("Choose a different function name or argument.");
@@ -91,9 +123,13 @@ function parseEntry(text: string): Parsed {
       a: scalar(func[3]),
     };
   }
-  const relation = text.match(/^(.+?)(<=|>=|=|<|>)(.+)$/);
+  // Comparisons inside a postfix domain belong to the expression AST, not to
+  // the row's equation/inequality grammar.
+  const body = text.split("{")[0];
+  const relation = body.match(/^(.+?)(<=|>=|=|<|>)(.+)$/);
   if (relation) {
-    const [, left, op, right] = relation;
+    const [, left, op] = relation;
+    const right = text.slice(left.length + op.length);
     const name = left.trim();
     if (
       op === "=" &&
@@ -146,16 +182,41 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       const source =
         entry.latex === undefined ? entry.text : latexToText(entry.latex);
       sources.set(entry.id, source);
-      const name = normalize(source).match(
-        /^([a-z][a-z0-9_]{0,15})(?:\([a-z]\))?\s*=/i,
-      )?.[1];
-      if (name) {
+      const definition = normalize(source).match(
+        /^([a-z][a-z0-9_]{0,15})(\(\s*[a-z]\s*\))?\s*=/i,
+      );
+      if (definition) {
+        const name = definition[1];
         identifiers.add(name);
-        if (name.length === 1) names.add(name);
+        if (name.length === 1 && !definition[2]) names.add(name);
       }
     } catch (error) {
       failSource(entry.id, error);
     }
+  }
+  // Unknown letters written separately in scalar equations establish product
+  // notation too: a+b=5 followed by ab=6. Explicit scalar definitions such as
+  // b=4,c=6,bc=7 continue to reserve the full identifier bc.
+  const equationLetters = new Set<string>();
+  for (const source of sources.values()) {
+    const body = normalize(source).split("{")[0];
+    if (!body.includes("=") && !body.includes("~")) continue;
+    for (const match of body.matchAll(/\b([a-z])\b(?!\s*\()/g)) {
+      if (!isBuiltin(match[1])) {
+        names.add(match[1]);
+        equationLetters.add(match[1]);
+      }
+    }
+  }
+  for (const name of [...identifiers]) {
+    if (
+      name.length > 1 &&
+      /^[a-z]+$/.test(name) &&
+      [...name].every(
+        (letter) => equationLetters.has(letter) && !identifiers.has(letter),
+      )
+    )
+      identifiers.delete(name);
   }
   function failSource(id: string, error: unknown) {
     results[id] = {
@@ -172,7 +233,10 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         ? [...token].join("*")
         : token,
     );
-  const regressions = new Map<string, ReturnType<typeof regressionSpec>>();
+  const regressions = new Map<
+    string,
+    { spec: ReturnType<typeof regressionSpec>; restrictions: Restriction[] }
+  >();
   const fail = (id: string, error: unknown) => {
     results[id] = {
       error:
@@ -181,6 +245,81 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
           : "This expression could not be evaluated.",
     };
   };
+  const systemAssignments = new Set<string>();
+  const candidates: {
+    id: string;
+    p: Extract<Parsed, { type: "variable" | "relation" }>;
+    symbols: string[];
+  }[] = [];
+  for (const [id, source] of sources) {
+    try {
+      if (source.includes("~")) continue;
+      const p = parseEntry(relationSource(products(source)).body);
+      if (
+        p.type !== "variable" &&
+        !(p.type === "relation" && p.relation === "=")
+      )
+        continue;
+      const deps = [
+        ...new Set([
+          ...(p.type === "variable" ? [p.name] : p.a.symbols),
+          ...("b" in p ? p.b.symbols : p.a.symbols),
+        ]),
+      ];
+      if (
+        !deps.length ||
+        deps.some((n) => !/^[a-df-wz]$/i.test(n)) ||
+        p.a.calls.size ||
+        p.a.node.type === "ArrayNode"
+      )
+        continue;
+      // Numeric assignments remain definitions (and sliders).
+      if (p.type === "variable" && !p.a.symbols.size) continue;
+      candidates.push({ id, p, symbols: deps });
+    } catch {
+      /* The normal parser reports malformed rows. */
+    }
+  }
+  while (candidates.length) {
+    const group = [candidates.shift()!],
+      symbols = new Set(group[0].symbols);
+    for (let changed = true; changed;) {
+      changed = false;
+      for (let i = candidates.length - 1; i >= 0; i--)
+        if (candidates[i].symbols.some((s) => symbols.has(s))) {
+          const [row] = candidates.splice(i, 1);
+          group.push(row);
+          row.symbols.forEach((s) => symbols.add(s));
+          changed = true;
+        }
+    }
+    const vars = group.filter((r) => r.p.type === "variable");
+    const cyclic = (name: string, active = new Set<string>()): boolean => {
+      if (active.has(name)) return true;
+      const row = vars.find(
+        (r) => r.p.type === "variable" && r.p.name === name,
+      );
+      return (
+        !!row &&
+        [...row.p.a.symbols].some((n) => cyclic(n, new Set([...active, name])))
+      );
+    };
+    const assigned = vars.map(
+      (r) => (r.p as Extract<Parsed, { type: "variable" }>).name,
+    );
+    let nonlinear = false;
+    for (const row of vars)
+      try {
+        assertAffineParameters(row.p.a.node, [...symbols]);
+      } catch {
+        nonlinear = true;
+      }
+    if (
+      new Set(assigned).size < assigned.length ||
+      (nonlinear && assigned.some((n) => cyclic(n)))
+    )
+      vars.forEach((r) => systemAssignments.add(r.id));
+  }
   for (const entry of state.entries) {
     if (results[entry.id]?.error) continue;
     results[entry.id] = {};
@@ -189,10 +328,23 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       const source = products(sources.get(entry.id) ?? "");
       if (!source.trim()) continue;
       if (source.includes("~")) {
-        regressions.set(entry.id, regressionSpec(normalize(source)));
+        const { body, restrictions } = relationSource(source);
+        regressions.set(entry.id, { spec: regressionSpec(body), restrictions });
         continue;
       }
-      const p = parseEntry(source);
+      let p = parseEntry(source);
+      if (systemAssignments.has(entry.id) && p.type === "variable") {
+        const { body } = relationSource(source),
+          [left, right] = body.split("=");
+        p = {
+          type: "relation",
+          left,
+          right,
+          a: scalar(left),
+          b: scalar(right),
+          relation: "=",
+        };
+      }
       parsed.set(entry.id, p);
       if (p.type === "function" || p.type === "variable") {
         if (definitions.has(p.name)) {
@@ -241,25 +393,37 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
   // Resolve dependencies transitively without evaluating at a sample x or
   // caching a point-specific result as a global scalar.
   const dependencyCache = new Map<string, Set<string>>();
-  const dependencies = (s: Scalar, active = new Set<string>()): Set<string> => {
+  const dependencies = (
+    s: Scalar,
+    active = new Set<string>(),
+    bound = new Set<string>(),
+  ): Set<string> => {
     const out = new Set<string>();
     const visit = (name: string, call: boolean) => {
+      if (!call && bound.has(name)) return;
       const def = definitions.get(name);
       if (
         !def ||
         (call ? def.parsed.type !== "function" : def.parsed.type !== "variable")
       ) {
-        if (!call) out.add(name);
+        if (call) throw new Error(`Define ${name}(x) first.`);
+        out.add(name);
         return;
       }
       const key = `${call ? "fn" : "var"}:${name}`;
       if (active.has(key))
         throw new Error(`Circular definition involving ${name}.`);
-      let nested = dependencyCache.get(key);
+      const cacheKey = `${key}:${[...bound].sort().join(",")}`;
+      let nested = dependencyCache.get(cacheKey);
       if (!nested) {
-        nested = dependencies(def.parsed.a, new Set([...active, key]));
-        if (def.parsed.type === "function") nested.delete(def.parsed.argument);
-        dependencyCache.set(key, nested);
+        nested = dependencies(
+          def.parsed.a,
+          new Set([...active, key]),
+          def.parsed.type === "function"
+            ? new Set([def.parsed.argument])
+            : bound,
+        );
+        dependencyCache.set(cacheKey, nested);
       }
       nested.forEach((name) => out.add(name));
     };
@@ -267,9 +431,61 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     s.calls.forEach((name) => visit(name, true));
     return out;
   };
+  // Substitute definitions structurally, with lexical function arguments. The
+  // resulting AST exposes transitive free parameters to relation/degree analysis
+  // instead of pretending a named function is a constant coefficient.
+  const expand = (s: Scalar): Scalar => {
+    let count = 0;
+    const visit = (
+      node: MathNode,
+      bindings = new Map<string, MathNode>(),
+      active = new Set<string>(),
+    ): MathNode => {
+      if (++count > 2048)
+        throw new Error(
+          "This relation is too complex after expanding definitions.",
+        );
+      const n = node as any;
+      if (n.type === "SymbolNode" && bindings.has(n.name))
+        return bindings.get(n.name)!;
+      const call = n.type === "FunctionNode";
+      const name = call
+        ? n.fn.name
+        : n.type === "SymbolNode"
+          ? n.name
+          : undefined;
+      const def = name && definitions.get(name);
+      if (
+        def &&
+        ((call && def.parsed.type === "function") ||
+          (!call && def.parsed.type === "variable"))
+      ) {
+        const key = `${call ? "fn" : "var"}:${name}`;
+        if (active.has(key))
+          throw new Error(`Circular definition involving ${name}.`);
+        // Named functions have their own argument scope; a caller's argument
+        // must not capture a free coefficient in a different named function.
+        const locals =
+          def.parsed.type === "function"
+            ? new Map<string, MathNode>()
+            : new Map(bindings);
+        if (def.parsed.type === "function")
+          locals.set(def.parsed.argument, visit(n.args[0], bindings, active));
+        return visit(def.parsed.a.node, locals, new Set([...active, key]));
+      }
+      return node.map((child: MathNode, path: string) =>
+        path === "fn" ? child : visit(child, bindings, active),
+      );
+    };
+    return scalarFromNode(visit(s.node));
+  };
   for (const [id, p] of parsed) {
     try {
-      dependencies(p.a);
+      dependencies(
+        p.a,
+        undefined,
+        p.type === "function" ? new Set([p.argument]) : undefined,
+      );
       if ("b" in p) dependencies(p.b);
     } catch (error) {
       fail(id, error);
@@ -342,11 +558,140 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         return evaluate(p.a, { [p.argument]: x });
       };
     }
-  for (const [id, spec] of regressions) {
+  const systemQuantities: { names: string[]; solved: FiniteSystemResult }[] =
+    [];
+  const solvedEquationIds = new Set<string>();
+  const systemRestrictions = (systemNames: string[]) => {
+    const rows: { id: string; restriction: Restriction }[] = [];
+    for (const [id, p] of parsed) {
+      if (p.type !== "relation" || p.relation === "=") continue;
+      try {
+        const left = expand(p.a),
+          right = expand(p.b);
+        const deps = [...new Set([...left.symbols, ...right.symbols])];
+        if (deps.length && deps.every((name) => systemNames.includes(name)))
+          rows.push({ id, restriction: { left, right, op: p.relation } });
+      } catch {
+        /* Normal dependency checks report invalid definitions. */
+      }
+    }
+    return rows;
+  };
+  const storeSystem = (
+    ids: string[],
+    systemNames: string[],
+    solved: FiniteSystemResult,
+  ) => {
+    Object.assign(values, solved.parameters);
+    systemNames.forEach((name) => missing.delete(name));
+    systemQuantities.push({ names: systemNames, solved });
+    for (const row of systemRestrictions(systemNames)) {
+      solvedEquationIds.add(row.id);
+      results[row.id] = { message: "Restriction applied to the system." };
+    }
+    for (const id of ids) {
+      solvedEquationIds.add(id);
+      results[id] = {
+        parameters: solved.parameters,
+        solutions: solved.solutions,
+        scalarRelation: true,
+        relationKind: "values",
+        systemKind: solved.kind,
+        message: solved.message,
+      };
+    }
+  };
+  // Connected equations in scalar parameters are exact systems. Coordinate
+  // equations and ordinary acyclic named definitions retain their existing roles.
+  const equationRows: {
+    id: string;
+    left: Scalar;
+    right: Scalar;
+    names: string[];
+    restrictions: Restriction[];
+  }[] = [];
+  for (const [id, p] of parsed) {
+    if (p.type !== "relation" || p.relation !== "=") continue;
     try {
-      if ("kind" in spec && spec.kind === "relation") {
-        const relation = scalar(`(${spec.left})-(${spec.right})`);
-        const names = [...relation.symbols].filter(
+      const { body, restrictions } = relationSource(products(sources.get(id)!));
+      const [left, right] = body.split("=").map((s) => expand(scalar(s)));
+      const deps = [...new Set([...left.symbols, ...right.symbols])];
+      if (
+        !deps.length ||
+        deps.some((name) => !/^[a-df-wz]$/i.test(name) || columns.has(name))
+      )
+        continue;
+      equationRows.push({ id, left, right, names: deps, restrictions });
+    } catch (error) {
+      fail(id, error);
+    }
+  }
+  while (equationRows.length) {
+    const group = [equationRows.shift()!],
+      groupNames = new Set(group[0].names);
+    for (let changed = true; changed;) {
+      changed = false;
+      for (let i = equationRows.length - 1; i >= 0; i--)
+        if (equationRows[i].names.some((n) => groupNames.has(n))) {
+          const [row] = equationRows.splice(i, 1);
+          group.push(row);
+          row.names.forEach((n) => groupNames.add(n));
+          changed = true;
+        }
+    }
+    const ids = group.map((r) => r.id),
+      ns = [...groupNames];
+    try {
+      const restrictions = [
+        ...group.flatMap((r) => r.restrictions),
+        ...systemRestrictions(ns).map((r) => r.restriction),
+      ];
+      storeSystem(
+        ids,
+        ns,
+        solveFiniteSystem(
+          group,
+          ns,
+          parameterBounds(restrictions, ns, expand, evaluate),
+          state.angle,
+        ),
+      );
+    } catch (error) {
+      for (const id of ids) {
+        solvedEquationIds.add(id);
+        fail(id, error);
+      }
+    }
+  }
+  for (const [id, { spec, restrictions }] of regressions) {
+    try {
+      // Statistical templates are used only for paired data. All other forms
+      // retain both sides as value expressions, including generated lists.
+      let pairedData = false;
+      if (
+        !("kind" in spec) &&
+        (spec.model !== "custom" || !scalar(spec.formula).calls.size)
+      ) {
+        try {
+          pairedData =
+            Array.isArray(evaluateAny(scalar(spec.x))) &&
+            Array.isArray(evaluateAny(scalar(spec.y)));
+        } catch {
+          /* Resolve/report missing data through the general dependency path. */
+        }
+      }
+      const statistical =
+        pairedData &&
+        !restrictions.length &&
+        !("kind" in spec) &&
+        spec.names.every(
+          (name) => !definitions.has(name) && !Object.hasOwn(values, name),
+        );
+      if (!statistical) {
+        const source = relationSource(products(sources.get(id) ?? "")).body;
+        const [left, right] = source.split("~");
+        const relation = expand(scalar(`(${left})-(${right})`));
+        const names = [...dependencies(relation)].filter(
           (name) =>
             !definitions.has(name) &&
             !columns.has(name) &&
@@ -354,16 +699,133 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         );
         if (
           !names.length ||
+          names.length > 5 ||
           new Set(names).size !== names.length ||
           names.some((name) => isBuiltin(name) || !/^[a-z]$/i.test(name))
         )
           throw new Error(
-            "Use one to five undefined single-letter regression parameters.",
+            names.some((name) => !/^[a-z]$/i.test(name) || isBuiltin(name))
+              ? `Define ${names.find((name) => !/^[a-z]$/i.test(name) || isBuiltin(name))} first.`
+              : "Use one to five free scalar parameters in a relation.",
           );
+        const bounds = parameterBounds(restrictions, names, expand, evaluate);
         const scope: Record<string, Numeric> = Object.create(null);
         for (const name of relation.symbols) {
           if (names.includes(name)) continue;
           scope[name] = evaluateAny(scalar(name));
+        }
+        const exactSide = (text: string) =>
+          scalarFromNode(
+            expand(scalar(text)).node.transform((node) => {
+              const value =
+                node.type === "SymbolNode" ? scope[node.toString()] : undefined;
+              return typeof value === "number"
+                ? scalar(String(value)).node
+                : node;
+            }),
+          );
+        const exact = exactListRelations(
+          exactSide(left),
+          exactSide(right),
+          names,
+        );
+        if (exact) {
+          const systemBounds = parameterBounds(
+            [
+              ...restrictions,
+              ...systemRestrictions(names).map((r) => r.restriction),
+            ],
+            names,
+            expand,
+            evaluate,
+          );
+          const solved = solveFiniteSystem(
+            exact,
+            names,
+            systemBounds,
+            state.angle,
+          );
+          if (solved.representative && solved.free.length) {
+            const parameters = Object.fromEntries(
+              Object.entries(solved.representative).sort(([a], [b]) =>
+                a.localeCompare(b),
+              ),
+            );
+            Object.assign(values, parameters);
+            names.forEach((name) => missing.delete(name));
+            for (const row of systemRestrictions(names)) {
+              solvedEquationIds.add(row.id);
+              results[row.id] = { message: "Restriction applied to the fit." };
+            }
+            const raw = evaluateAny(relation, parameters);
+            const residuals = (Array.isArray(raw) ? raw : [raw]).map((value) =>
+              Math.abs(value) <= 1e-12 ? 0 : value,
+            );
+            const sse = residuals.reduce(
+              (sum, residual) => sum + residual * residual,
+              0,
+            );
+            results[id] = {
+              parameters,
+              scalarRelation: true,
+              relationKind: "values",
+              fit: {
+                coefficients: Object.values(parameters),
+                predict: () => NaN,
+                residuals,
+                rmse: Math.sqrt(sse / residuals.length),
+                logSpace: false,
+              },
+              message: "Representative fit; parameters are not unique.",
+            };
+          } else storeSystem([id], names, solved);
+          continue;
+        }
+        const sampleParameters = Object.fromEntries(
+          names.map((name) => [name, 0.731]),
+        );
+        const sample = evaluateAny(relation, sampleParameters);
+        if (!Array.isArray(sample)) {
+          if (names.length > 1)
+            throw new Error(
+              "Underdetermined parameter system: too few residuals to determine all parameters.",
+            );
+          const solved = solveScalarRelation(
+            relation,
+            names[0],
+            evaluate,
+            state.angle,
+            bounds[names[0]],
+          );
+          const solutions = solved.solutions.map((value) => ({
+            [names[0]]: value,
+          }));
+          if (solutions.length > 1) {
+            results[id] = {
+              solutions,
+              scalarRelation: true,
+              relationKind: "scalar",
+              message: solved.message,
+            };
+          } else {
+            const parameters = solutions[0];
+            Object.assign(values, parameters);
+            results[id] = {
+              parameters,
+              solutions,
+              scalarRelation: true,
+              relationKind: "scalar",
+              message: solved.message,
+              fit: {
+                coefficients: Object.values(parameters),
+                predict: () => NaN,
+                residuals: [evaluate(relation)],
+                rmse: Math.abs(evaluate(relation)),
+                logSpace: false,
+              },
+            };
+          }
+          continue;
         }
         const fit = relationRegression(
           relation,
@@ -371,14 +833,41 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
           scope,
           functions,
           state.angle,
+          bounds,
         );
         const parameters = Object.fromEntries(
           names.map((name, index) => [name, fit.coefficients[index]]),
         );
         Object.assign(values, parameters);
-        results[id] = { fit, parameters, scalarRelation: true };
+        if (pairedData && !("kind" in spec)) {
+          const model = scalar(right);
+          fit.predict = (x) => evaluate(model, { ...parameters, [spec.x]: x });
+          fit.custom = {
+            formula: model.node
+              .toString({ implicit: "show" })
+              .replaceAll(spec.x, "x"),
+            names,
+          };
+          const observed = evaluateAny(scalar(left)) as number[];
+          const mean = observed.reduce(
+            (sum, v) => sum + v / observed.length,
+            0,
+          );
+          const sst = observed.reduce((sum, v) => sum + (v - mean) ** 2, 0);
+          fit.r2 =
+            sst > 0
+              ? 1 - fit.residuals.reduce((sum, r) => sum + r * r, 0) / sst
+              : undefined;
+        }
+        results[id] = {
+          fit,
+          parameters,
+          scalarRelation: !pairedData,
+          relationKind: pairedData ? "data" : "values",
+        };
         continue;
       }
+      if ("kind" in spec) throw new Error("Unsupported relation form.");
       const x = evaluateAny(scalar(spec.x)),
         y = evaluateAny(scalar(spec.y));
       if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length)
@@ -422,7 +911,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         ]),
       );
       Object.assign(values, parameters);
-      results[id] = { fit, parameters };
+      results[id] = { fit, parameters, relationKind: "data" };
     } catch (error) {
       fail(id, error);
     }
@@ -475,6 +964,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       return;
     }
     const p = parsed.get(entry.id);
+    if (solvedEquationIds.has(entry.id)) return;
     if (!p || results[entry.id].error) return;
     try {
       const tex = scalarTex;
@@ -483,7 +973,44 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         if (!entry.hidden) graphs.push(g);
       };
       if (p.type === "variable") {
+        const expanded = expand(p.a);
+        const system = systemQuantities.find(
+          (s) =>
+            [...expanded.symbols].some((name) => s.names.includes(name)) &&
+            [...expanded.symbols].every((name) => s.names.includes(name)),
+        );
+        if (system) {
+          const quantity = system.solved.quantity(expanded);
+          results[entry.id] = {
+            tex: `${p.name} = ${tex(p.a)}`,
+            ...quantity,
+            ...(!Object.keys(quantity).length
+              ? { message: "This quantity is not uniquely determined." }
+              : {}),
+          };
+          if (quantity.value !== undefined) values[p.name] = quantity.value;
+          return;
+        }
         const deps = dependencies(p.a);
+        const free = [...deps].filter(
+          (name) => /^[a-df-wz]$/i.test(name) && !Object.hasOwn(values, name),
+        );
+        const unknown = [...deps].find(
+          (name) =>
+            !["x", "y"].includes(name) &&
+            !free.includes(name) &&
+            !columns.has(name) &&
+            !Object.hasOwn(values, name),
+        );
+        if (unknown) throw new Error(`Define ${unknown} first.`);
+        if (free.length) {
+          free.forEach((name) => missing.add(name));
+          results[entry.id] = {
+            tex: `${p.name} = ${tex(p.a)}`,
+            message: `Free parameters: ${free.join(", ")}.`,
+          };
+          return;
+        }
         if (deps.has("y"))
           throw new Error("Named expressions in y need an explicit equation.");
         if (deps.has("x")) {
@@ -517,6 +1044,26 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
               : undefined,
         };
       } else if (p.type === "function") {
+        const deps = dependencies(p.a, undefined, new Set([p.argument]));
+        const free = [...deps].filter(
+          (name) => /^[a-df-wz]$/i.test(name) && !Object.hasOwn(values, name),
+        );
+        const unknown = [...deps].find(
+          (name) =>
+            !["x", "y"].includes(name) &&
+            !free.includes(name) &&
+            !columns.has(name) &&
+            !Object.hasOwn(values, name),
+        );
+        if (unknown) throw new Error(`Define ${unknown} first.`);
+        if (free.length) {
+          free.forEach((name) => missing.add(name));
+          results[entry.id] = {
+            tex: `${p.name}(${p.argument}) = ${tex(p.a)}`,
+            message: `Free parameters: ${free.join(", ")}.`,
+          };
+          return;
+        }
         evaluate(p.a, { [p.argument]: 0.731 }); // domain NaN is allowed; undefined names are not
         results[entry.id].tex = `${p.name}(${p.argument}) = ${tex(p.a)}`;
         add({ kind: "function", id: entry.id, color, fn: functions[p.name] });
@@ -563,6 +1110,23 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       } else if (p.type === "value") {
         const symbols = dependencies(p.a);
         results[entry.id].tex = tex(p.a);
+        const expanded = expand(p.a);
+        const system = systemQuantities.find(
+          (s) =>
+            [...expanded.symbols].some((name) => s.names.includes(name)) &&
+            [...expanded.symbols].every((name) => s.names.includes(name)),
+        );
+        if (system) {
+          const quantity = system.solved.quantity(expanded);
+          results[entry.id] = {
+            ...results[entry.id],
+            ...quantity,
+            ...(!Object.keys(quantity).length
+              ? { message: "This quantity is not uniquely determined." }
+              : {}),
+          };
+          return;
+        }
         if (symbols.has("y"))
           throw new Error("Use an equation such as x^2+y^2=25.");
         if (symbols.has("x")) {
@@ -601,6 +1165,60 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
           !Number.isFinite(evaluate(p.b))
         )
           throw new Error("Undefined or outside the supported numeric range.");
+        if (p.relation !== "=" && (hasX || hasY)) {
+          const residual = expand(
+            scalarFromNode(
+              scalar("x-y").node.map((_child, path) =>
+                path === "args[0]" ? p.a.node : p.b.node,
+              ),
+            ),
+          );
+          const coefficients = affineCoefficients(residual.node, (node) =>
+            evaluate(scalarFromNode(node)),
+          );
+          if (coefficients) {
+            const { a, b, c } = coefficients;
+            const affine = { ...coefficients, op: p.relation as Relation };
+            if (b !== 0) {
+              add({
+                kind: "function",
+                id: entry.id,
+                color,
+                affine,
+                fn: (x) => -(a / b) * x - c / b,
+                relation: b > 0 ? affine.op : reverseComparator(affine.op),
+              });
+            } else if (a !== 0) {
+              add({
+                kind: "vertical",
+                id: entry.id,
+                color,
+                affine,
+                fn: (x) => x + c / a,
+                boundary: -c / a,
+                relation: a > 0 ? affine.op : reverseComparator(affine.op),
+              });
+            } else {
+              // Cancellation/zero coefficients can produce the whole plane or
+              // the empty set. Neither has a boundary or isolated POIs.
+              add({
+                kind: "implicit",
+                id: entry.id,
+                color,
+                affine,
+                fn: () => c,
+              });
+            }
+            return;
+          }
+          if (
+            !(p.left === "y" && !bDeps.has("y")) &&
+            !(p.left === "x" && !bDeps.has("x") && !bDeps.has("y"))
+          )
+            throw new Error(
+              "Implicit inequalities must be affine in x and y (Ax + By + C < 0). Nonlinear implicit inequalities are unsupported.",
+            );
+        }
         if (p.left === "y" && !bDeps.has("y"))
           add({
             kind: "function",
@@ -623,6 +1241,20 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             fn,
             relation: p.relation === "=" ? undefined : (p.relation as Relation),
             boundary: p.relation === "=" ? undefined : evaluate(p.b),
+            rootsInWindow:
+              p.relation === "="
+                ? polynomialRootFinder(
+                    expand(
+                      scalarFromNode(
+                        scalar("x-y").node.map((_child, path) =>
+                          path === "args[0]" ? p.a.node : p.b.node,
+                        ),
+                      ),
+                    ),
+                    "x",
+                    evaluate,
+                  )
+                : undefined,
           });
           results[entry.id].message =
             "Solutions are located numerically within the graph window.";
@@ -631,6 +1263,44 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             throw new Error(
               "Implicit inequalities are not supported; use y < f(x) or x < a.",
             );
+          // Only structurally affine equations qualify. Sampling alone could
+          // mistake a nonlinear curve for a line and manufacture intercepts.
+          const residual = expand(
+            scalarFromNode(
+              scalar("x-y").node.map((_child, path) =>
+                path === "args[0]" ? p.a.node : p.b.node,
+              ),
+            ),
+          );
+          let affine = true;
+          try {
+            assertAffineParameters(residual.node, ["x", "y"]);
+          } catch {
+            affine = false;
+          }
+          if (affine) {
+            const c = evaluate(residual, { x: 0, y: 0 }),
+              a = evaluate(residual, { x: 1, y: 0 }) - c,
+              b = evaluate(residual, { x: 0, y: 1 }) - c;
+            if ([a, b, c].every(Number.isFinite) && b !== 0) {
+              add({
+                kind: "function",
+                id: entry.id,
+                color,
+                fn: (x) => -(a * x + c) / b,
+              });
+              return;
+            }
+            if ([a, b, c].every(Number.isFinite) && a !== 0) {
+              add({
+                kind: "vertical",
+                id: entry.id,
+                color,
+                fn: (x) => a * x + c,
+              });
+              return;
+            }
+          }
           add({
             kind: "implicit",
             id: entry.id,
@@ -654,6 +1324,68 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       fail(entry.id, e);
     }
   });
+  // Coordinate equations remain graphs. Attach the same bounded finite-system
+  // answer without publishing x/y as global parameters or depending on view.
+  const coordinateRows: {
+    id: string;
+    left: Scalar;
+    right: Scalar;
+    restrictions: Restriction[];
+  }[] = [];
+  for (const [id, p] of parsed) {
+    if (p.type !== "relation" || p.relation !== "=" || results[id].error)
+      continue;
+    try {
+      const { body, restrictions } = relationSource(products(sources.get(id)!));
+      const [left, right] = body.split("=").map((s) => expand(scalar(s)));
+      const deps = [...new Set([...left.symbols, ...right.symbols])];
+      if (deps.length && deps.every((n) => n === "x" || n === "y"))
+        coordinateRows.push({ id, left, right, restrictions });
+    } catch {
+      /* Existing graph diagnostics handle malformed expressions. */
+    }
+  }
+  if (
+    coordinateRows.length >= 2 &&
+    ["x", "y"].every((n) =>
+      coordinateRows.some(
+        (r) => r.left.symbols.has(n) || r.right.symbols.has(n),
+      ),
+    )
+  ) {
+    const ids = coordinateRows.map((r) => r.id);
+    try {
+      const restrictions = [
+        ...coordinateRows.flatMap((r) => r.restrictions),
+        ...systemRestrictions(["x", "y"]).map((r) => r.restriction),
+      ];
+      const solved = solveFiniteSystem(
+        coordinateRows,
+        ["x", "y"],
+        parameterBounds(restrictions, ["x", "y"], expand, evaluate),
+        state.angle,
+      );
+      for (const id of ids)
+        results[id] = {
+          ...results[id],
+          parameters: solved.parameters,
+          solutions: solved.solutions,
+          systemKind: solved.kind,
+          message: solved.message,
+        };
+      const points = solved.solutions?.map(({ x, y }) => ({ x, y }));
+      if (points) {
+        const graph = graphs.find((g) => ids.includes(g.id));
+        if (graph) graph.systemIntersections = { points, graphIds: ids };
+      }
+    } catch (error) {
+      for (const id of ids)
+        results[id].message =
+          error instanceof Error
+            ? error.message
+            : "Unsupported coordinate system.";
+    }
+  }
   return {
     graphs,
     results,

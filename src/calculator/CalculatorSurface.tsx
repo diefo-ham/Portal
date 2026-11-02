@@ -22,8 +22,11 @@ export function CalculatorSurface({
   const [failed, setFailed] = useState("");
   const [ready, setReady] = useState(false);
   const [retry, setRetry] = useState(0);
-  // Explicit Offline choice persists. Otherwise configured Desmos is primary.
-  const desired = state.mode ?? (apiKey ? "desmos" : "offline");
+  // The integrated calculator is canonical. Desmos remains an explicit,
+  // session-local alternative while both saved workspaces stay independent.
+  const [desired, setDesired] = useState<"offline" | "desmos">(() =>
+    state.mode === "desmos" ? "desmos" : "offline",
+  );
   const connecting = desired === "desmos" && !!apiKey && !failed;
   const frame = useRef<HTMLIFrameElement>(null);
   const latest = useRef(state);
@@ -65,7 +68,7 @@ export function CalculatorSurface({
     const timeout = setTimeout(
       () =>
         setFailed(
-          "Desmos did not respond. Try again when connected, or use Offline.",
+          "Desmos did not respond. Try again when connected, or return to Calculator.",
         ),
       6500,
     );
@@ -86,7 +89,7 @@ export function CalculatorSurface({
       if (message.type === "error") {
         clearTimeout(timeout);
         setFailed(
-          "Desmos is unavailable. Try again when connected, or use Offline.",
+          "Desmos is unavailable. Try again when connected, or return to Calculator.",
         );
       }
       if (message.type === "state") {
@@ -113,6 +116,7 @@ export function CalculatorSurface({
     if (mode === desired && ready && !failed) return;
     setReady(false);
     setFailed("");
+    setDesired(mode);
     onChange({ ...latest.current, mode });
     if (mode === "desmos") setRetry((value) => value + 1);
   };
@@ -134,22 +138,14 @@ export function CalculatorSurface({
       aria-label="Calculator workspace"
     >
       <div className="calc-provider-bar">
-        <div role="group" aria-label="Calculator engine">
-          <button
-            aria-pressed={desired === "desmos"}
-            title="Official online calculator"
-            onClick={() => switchMode("desmos")}
-          >
-            Desmos
-          </button>
-          <button
-            aria-pressed={desired === "offline"}
-            title="Local fallback; no internet needed"
-            onClick={() => switchMode("offline")}
-          >
-            Offline
-          </button>
-        </div>
+        <button
+          className="text-button calc-provider-switch"
+          onClick={() =>
+            switchMode(desired === "desmos" ? "offline" : "desmos")
+          }
+        >
+          {desired === "desmos" ? "Back to Calculator" : "Use Desmos"}
+        </button>
         <button
           className="text-button"
           disabled={desired === "desmos" && !ready}
@@ -164,31 +160,19 @@ export function CalculatorSurface({
             <div className="calc-provider-status" role="status">
               <p>
                 {failed ||
-                  "Desmos needs an API key. Offline is available without one."}
+                  "Desmos needs an API key. Calculator remains available without one."}
               </p>
               {apiKey && (
                 <button onClick={() => switchMode("desmos")}>
                   Retry Desmos
                 </button>
               )}
-              <button
-                className="text-button"
-                onClick={() => switchMode("offline")}
-              >
-                Use Offline
-              </button>
             </div>
           ) : (
             <>
               {!ready && (
                 <p className="calc-provider-status" role="status">
-                  Connecting to Desmos…{" "}
-                  <button
-                    className="text-button"
-                    onClick={() => switchMode("offline")}
-                  >
-                    Use Offline now
-                  </button>
+                  Connecting to Desmos…
                 </p>
               )}
               <iframe

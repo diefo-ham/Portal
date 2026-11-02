@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   beginSession,
+  deleteSession,
   renameSession,
   resetStudyProgress,
   toggleSessionStar,
@@ -14,10 +15,15 @@ import {
 } from "../core/model";
 import { filterQuestions, selectSessionQuestions } from "../core/practice";
 import { parseQuestions, mergeQuestions } from "../importing/json";
-import { parseBackup, downloadJson } from "../importing/backup";
+import {
+  parseBackupPayload,
+  downloadJson,
+  type ParsedBackup,
+} from "../importing/backup";
 import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
 import { Practice } from "./Practice";
+import { PracticeTestSetup, PracticeTestRun } from "./PracticeTest";
 import { Home } from "./Home";
 import { Review } from "./Review";
 import { Help } from "./Help";
@@ -51,7 +57,12 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [limit, setLimit] = useState("10");
   const [visible, setVisible] = useState(40);
-  const [restore, setRestore] = useState<StudyData>();
+  const [restore, setRestore] = useState<ParsedBackup>();
+  const [pendingStart, setPendingStart] = useState<{
+    ids: string[];
+    filters: FilterValues;
+    name?: string;
+  }>();
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError("");
@@ -90,16 +101,44 @@ export function App() {
     if (file.size > 768 * 1024 * 1024)
       throw new Error("Choose a backup smaller than 768 MB.");
     const raw: unknown = JSON.parse(await file.text());
-    setRestore(parseBackup(raw));
+    setRestore(parseBackupPayload(raw));
   };
   const exportBackup = (filename: string) =>
     void run(async () => {
       setMessage("Preparing a portable backup, including original PDF images…");
-      downloadJson(await portableBackup(data!), filename);
+      downloadJson(
+        await portableBackup(data!, {
+          theme: appearance.theme,
+          originalPdf: appearance.originalPdf,
+          timerDefault,
+          showCorrectExplanations,
+          protectTests: protectedTests,
+        }),
+        filename,
+      );
       setMessage(
         "Portable backup exported, including PDF question and explanation images.",
       );
     });
+  const beginSelectedSession = async ({
+    ids,
+    filters: sessionFilters,
+    name,
+  }: {
+    ids: string[];
+    filters: FilterValues;
+    name?: string;
+  }) => {
+    await run(async () => {
+      let id = "";
+      await mutate((d) => {
+        id = beginSession(d, ids, sessionFilters, name, timerDefault).id;
+      });
+      setSessionId(id);
+      setMessage("");
+      setPage("practice");
+    });
+  };
   const start = async (
     ids: string[],
     size = 0,
@@ -112,24 +151,16 @@ export function App() {
       size,
       data?.sessions.at(-1)?.questionIds,
     );
+    const request = { ids: selected, filters: sessionFilters, name };
     if (
       data?.questions.some(
         (q) => selected.includes(q.id) && q.testStatus === "active",
-      ) &&
-      !window.confirm(
-        "This session includes active practice-test questions and may spoil a future Bluebook test. Begin anyway?",
       )
-    )
+    ) {
+      setPendingStart(request);
       return;
-    await run(async () => {
-      let id = "";
-      await mutate((d) => {
-        id = beginSession(d, selected, sessionFilters, name, timerDefault).id;
-      });
-      setSessionId(id);
-      setMessage("");
-      setPage("practice");
-    });
+    }
+    await beginSelectedSession(request);
   };
   if (!data)
     return (
@@ -153,6 +184,8 @@ export function App() {
     void run(() => mutate((draft) => renameSession(draft, id, name)));
   const changeSessionStar = (id: string) =>
     void run(() => mutate((draft) => toggleSessionStar(draft, id)));
+  const removeSession = (id: string) =>
+    void run(() => mutate((draft) => deleteSession(draft, id)));
   const repracticeSession = (session: Session) =>
     void start(
       session.questionIds,
@@ -177,10 +210,25 @@ export function App() {
               ["home", "Practice"],
               ["review", "Review"],
               ["library", "Browse"],
+              ["tests", "Tests"],
             ].map(([id, label]) => (
               <button
-                className={page === id ? "active" : ""}
-                aria-current={page === id ? "page" : undefined}
+                className={
+                  page === id ||
+                  (id === "tests" &&
+                    page === "practice" &&
+                    current?.practiceTest)
+                    ? "active"
+                    : ""
+                }
+                aria-current={
+                  page === id ||
+                  (id === "tests" &&
+                    page === "practice" &&
+                    current?.practiceTest)
+                    ? "page"
+                    : undefined
+                }
                 key={id}
                 onClick={() => {
                   setPage(id);
@@ -222,7 +270,67 @@ export function App() {
           </button>
         </div>
       )}
-      {page === "practice" && current ? (
+      {pendingStart && (
+        <div className="portal-modal-backdrop" role="presentation">
+          <section
+            className="portal-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="active-question-warning-heading"
+          >
+            <p className="eyebrow">ACTIVE PRACTICE-TEST QUESTIONS</p>
+            <h2 id="active-question-warning-heading">
+              Practice these questions again?
+            </h2>
+            <p>
+              This session includes active practice-test questions and may
+              spoil a future Bluebook test.
+            </p>
+            <div className="modal-actions">
+              <button onClick={() => setPendingStart(undefined)}>Cancel</button>
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => {
+                  const request = pendingStart;
+                  setPendingStart(undefined);
+                  void beginSelectedSession(request);
+                }}
+              >
+                Begin anyway
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+      {page === "tests" ? (
+        <PracticeTestSetup
+          data={data}
+          mutate={mutate}
+          onOpen={openSession}
+          onSettings={() => setPage("data")}
+        />
+      ) : page === "practice" && current?.practiceTest ? (
+        <PracticeTestRun
+          data={data}
+          session={current}
+          mutate={mutate}
+          onBack={() => setPage("tests")}
+          onRetry={(ids, kind) =>
+            void start(ids, 0, {
+              ...defaultFilters,
+              active: "only",
+              statuses: [],
+              status:
+                kind === "mistakes"
+                  ? "incorrect"
+                  : kind === "unanswered"
+                    ? "unanswered"
+                    : "",
+            })
+          }
+        />
+      ) : page === "practice" && current ? (
         <Practice
           key={current.id}
           data={data}
@@ -264,6 +372,7 @@ export function App() {
           sessionActions={{
             onOpen: openSession,
             onRename: changeSessionName,
+            onDelete: removeSession,
             onToggleStar: changeSessionStar,
             onRepractice: repracticeSession,
           }}
@@ -373,8 +482,8 @@ export function App() {
             </label>
             <p className="small muted">
               Active questions are hidden by default. You can override this for
-              a session in Refine selection. Unknown questions may still appear
-              in a practice test.
+              a session in Refine selection. Unknown status is not a guarantee
+              against future College Board test spoilers.
             </p>
           </section>
           <section
@@ -390,8 +499,8 @@ export function App() {
               <section className="data-card">
                 <h2>Back up your work</h2>
                 <p>
-                  Export questions, answers, bookmarks, and sessions together.
-                  Keep backups somewhere you control.
+                  Export questions, answers, bookmarks, sessions, and durable
+                  study settings together. Keep backups somewhere you control.
                 </p>
                 <button
                   className="primary"
@@ -429,8 +538,9 @@ export function App() {
               <section className="restore-confirm" role="alert">
                 <h2>Replace local data with this backup?</h2>
                 <p>
-                  {restore.questions.length} questions,{" "}
-                  {restore.attempts.length} attempts, {restore.sessions.length}{" "}
+                  {restore.data.questions.length} questions,{" "}
+                  {restore.data.attempts.length} attempts,{" "}
+                  {restore.data.sessions.length}{" "}
                   sessions. This replaces the current library and history.
                 </p>
                 <button
@@ -444,14 +554,48 @@ export function App() {
                   disabled={busy}
                   onClick={() =>
                     void run(async () => {
-                      const normalized = await storeInlineDocuments(restore);
+                      const normalized = await storeInlineDocuments(restore.data);
                       await mutate((d) => {
                         Object.assign(d, normalized);
                       }, {});
+                      const preferences = restore.preferences;
+                      if (preferences?.theme !== undefined)
+                        appearance.setTheme(preferences.theme);
+                      if (preferences?.originalPdf !== undefined)
+                        appearance.setOriginalPdf(preferences.originalPdf);
+                      if (preferences?.timerDefault !== undefined) {
+                        setTimerDefault(preferences.timerDefault);
+                        localStorage.setItem(
+                          "sat-timer-default",
+                          String(preferences.timerDefault),
+                        );
+                      }
+                      if (preferences?.showCorrectExplanations !== undefined) {
+                        setShowCorrectExplanations(
+                          preferences.showCorrectExplanations,
+                        );
+                        localStorage.setItem(
+                          "sat-show-correct-explanations",
+                          String(preferences.showCorrectExplanations),
+                        );
+                      }
+                      if (preferences?.protectTests !== undefined) {
+                        setProtectedTests(preferences.protectTests);
+                        localStorage.setItem(
+                          "sat-protect-tests",
+                          String(preferences.protectTests),
+                        );
+                        changeFilters({
+                          ...filters,
+                          active: preferences.protectTests ? "hide" : "include",
+                        });
+                      }
                       setRestore(undefined);
                       setSessionId("");
                       setMessage(
-                        "Backup restored. Saved session timers are paused.",
+                        normalized.sessions.some((s) => s.practiceTest)
+                          ? "Backup restored. Ordinary session timers are paused; Practice Test pause state and active module time are preserved."
+                          : "Backup restored. Saved session timers are paused.",
                       );
                     })
                   }
@@ -477,25 +621,6 @@ export function App() {
                 required; an internet connection is not.
               </p>
             </section>
-            <h2>Import history</h2>
-            {data.imports.length ? (
-              data.imports
-                .slice()
-                .reverse()
-                .map((x) => (
-                  <div className="import-row" key={x.id}>
-                    <span>
-                      {x.filename}
-                      <small>{new Date(x.importedAt).toLocaleString()}</small>
-                    </span>
-                    <span>
-                      {x.added} added · {x.skipped} skipped
-                    </span>
-                  </div>
-                ))
-            ) : (
-              <p className="muted">No imports yet.</p>
-            )}
             <ResetProgress
               busy={busy}
               archiveDate={archive?.createdAt}

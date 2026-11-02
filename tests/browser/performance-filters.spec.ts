@@ -56,15 +56,21 @@ test("Section, Domain, Skill, and Answer Status remain compatible", async ({
   await expect(page.getByRole("button", { name: "Skill: Any" })).toBeVisible();
   await expect(page.getByText("Max 5", { exact: true })).toBeVisible();
 
-  await page
-    .getByRole("button", { name: "Answer status: All questions" })
-    .click();
+  await page.getByRole("button", { name: "Answer status: Unanswered" }).click();
   const statuses = page.getByRole("group", {
     name: "Answer status",
     exact: true,
   });
+  await expect(
+    statuses.getByLabel("Unanswered", { exact: true }),
+  ).toBeChecked();
+  await expect(
+    statuses.getByLabel("Mistakes", { exact: true }),
+  ).not.toBeChecked();
+  await expect(
+    statuses.getByLabel("Completed", { exact: true }),
+  ).not.toBeChecked();
   await statuses.getByLabel("Mistakes", { exact: true }).check();
-  await statuses.getByLabel("Unanswered", { exact: true }).check();
   await statuses.getByRole("button", { name: "Done", exact: true }).click();
   await expect(
     page.getByRole("button", {
@@ -90,6 +96,11 @@ test("Section, Domain, Skill, and Answer Status remain compatible", async ({
   await expect(
     page.getByRole("button", { name: "Start practice", exact: false }),
   ).toBeDisabled();
+  const unavailable = page.getByText("No questions match or remain", {
+    exact: false,
+  });
+  await expect(unavailable).toContainText("No questions match or remain");
+  await expect(unavailable).toContainText("reset relevant study progress");
 
   await page
     .getByRole("button", { name: "Answer status: Completed", exact: true })
@@ -110,6 +121,11 @@ test("Section, Domain, Skill, and Answer Status remain compatible", async ({
     page.getByRole("button", { name: "Difficulty: Easy, Hard" }),
   ).toBeVisible();
   await expect(page.getByText("Max 3", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Reset filters" }).click();
+  await expect(
+    page.getByRole("button", { name: "Answer status: Unanswered" }),
+  ).toBeVisible();
 });
 
 async function seedAttempts(page: Page) {

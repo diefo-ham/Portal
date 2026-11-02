@@ -2,6 +2,7 @@ import { Matrix, QrDecomposition } from "ml-matrix";
 import type { FitModel, Point } from "./model";
 import { scalar, type Angle, type Scalar } from "./math";
 import type { MathNode } from "mathjs";
+import type { ParameterBounds } from "./relations";
 
 export interface Fit {
   coefficients: number[]; // increasing powers of x; exponential: a, b in a*b^x
@@ -16,7 +17,7 @@ export interface Fit {
   custom?: { formula: string; names: string[] };
 }
 
-function assertAffineParameters(node: MathNode, names: string[]): void {
+export function assertAffineParameters(node: MathNode, names: string[]): void {
   const degree = (node: MathNode): number => {
     const n = node as MathNode & {
       name: string;
@@ -48,7 +49,7 @@ function assertAffineParameters(node: MathNode, names: string[]): void {
     if (n.type === "FunctionNode") {
       if (n.args.some((a) => degree(a)))
         throw new Error(
-          "General nonlinear regression parameters need Desmos; Offline parameters must enter linearly.",
+          "Calculator nonlinear list fitting is unsupported; parameters must enter linearly.",
         );
       return 0;
     }
@@ -58,10 +59,11 @@ function assertAffineParameters(node: MathNode, names: string[]): void {
       if (n.op === "*" && ds.reduce((a, b) => a + b, 0) <= 1)
         return Math.max(...ds);
       if (n.op === "/" && !ds[1]) return ds[0];
+      if (n.op === "^" && !ds[1] && n.args[1].toString() === "1") return ds[0];
       if (n.op === "^" && !ds.some(Boolean)) return 0;
     }
     throw new Error(
-      "General nonlinear regression parameters need Desmos. Offline parameters must enter linearly.",
+      "Calculator nonlinear list fitting is unsupported; parameters must enter linearly.",
     );
   };
   degree(node);
@@ -75,6 +77,7 @@ export function relationRegression(
   scope: Record<string, number | number[]>,
   functions: Record<string, (x: number) => number>,
   angle: Angle,
+  bounds: ParameterBounds = {},
 ): Fit {
   if (names.length < 1 || names.length > 5)
     throw new Error("Use between one and five free regression parameters.");
@@ -91,13 +94,14 @@ export function relationRegression(
   const offset = vector(zero);
   if (!offset.length || offset.some((value) => !Number.isFinite(value)))
     throw new Error("The regression relation is undefined in its data domain.");
+  const basis = names.map((name) => {
+    const sample = vector({ ...zero, [name]: 1 });
+    if (sample.length !== offset.length)
+      throw new Error("Regression lists must have compatible lengths.");
+    return sample;
+  });
   const rows = offset.map((base, row) =>
-    names.map((name) => {
-      const sample = vector({ ...zero, [name]: 1 });
-      if (sample.length !== offset.length)
-        throw new Error("Regression lists must have compatible lengths.");
-      return sample[row] - base;
-    }),
+    basis.map((sample) => sample[row] - base),
   );
   if (offset.length < names.length)
     throw new Error(
@@ -117,10 +121,92 @@ export function relationRegression(
   const diagonal = qr.upperTriangularMatrix.diag().map(Math.abs);
   if (!qr.isFullRank() || Math.min(...diagonal) < Math.max(...diagonal) * 1e-10)
     throw new Error("The regression is underdetermined or ill-conditioned.");
-  const coefficients = qr
+  let coefficients = qr
     .solve(Matrix.columnVector(offset.map((value) => -value)))
     .to1DArray()
     .map((value, i) => value / scales[i]);
+  // Box-constrained least squares: at most five parameters, so enumerating
+  // active bounds is small and deterministic. Solve each remaining free system
+  // with QR rather than clipping a coupled unconstrained fit.
+  const permitted = (cs: number[], closed = false) =>
+    names.every((name, i) => {
+      const b = bounds[name];
+      return (
+        !b ||
+        ((b.min === undefined ||
+          (b.minOpen && !closed ? cs[i] > b.min : cs[i] >= b.min)) &&
+          (b.max === undefined ||
+            (b.maxOpen && !closed ? cs[i] < b.max : cs[i] <= b.max)))
+      );
+    });
+  if (!permitted(coefficients)) {
+    let best: number[] | undefined,
+      bestError = Infinity;
+    const search = (fixed: Map<number, number>, column: number) => {
+      if (column < names.length) {
+        search(fixed, column + 1);
+        const bound = bounds[names[column]];
+        for (const value of [bound?.min, bound?.max])
+          if (value !== undefined) {
+            const next = new Map(fixed);
+            next.set(column, value);
+            search(next, column + 1);
+          }
+        return;
+      }
+      if (!fixed.size) return;
+      const free = names.map((_, i) => i).filter((i) => !fixed.has(i));
+      const rhs = offset.map(
+        (base, row) =>
+          -base - [...fixed].reduce((sum, [i, v]) => sum + rows[row][i] * v, 0),
+      );
+      const cs = names.map((_, i) => fixed.get(i) ?? 0);
+      if (free.length) {
+        const reduced = new QrDecomposition(
+          new Matrix(rows.map((row) => free.map((i) => row[i] / scales[i]))),
+        );
+        if (!reduced.isFullRank()) return;
+        const solution = reduced.solve(Matrix.columnVector(rhs)).to1DArray();
+        free.forEach((i, j) => {
+          cs[i] = solution[j] / scales[i];
+        });
+      }
+      if (!permitted(cs, true)) return;
+      const error = rows.reduce(
+        (sum, row, j) =>
+          sum + (offset[j] + row.reduce((v, r, i) => v + r * cs[i], 0)) ** 2,
+        0,
+      );
+      if (error < bestError) {
+        bestError = error;
+        best = cs;
+      }
+    };
+    search(new Map(), 0);
+    if (!best || !permitted(best))
+      throw new Error(
+        "No fitted minimum satisfies the parameter restrictions.",
+      );
+    coefficients = best;
+  }
+  const coefficientTolerance = scales.map(
+    (scale) =>
+      (4 *
+        Number.EPSILON *
+        names.length *
+        (Math.max(...offset.map(Math.abs)) || 1) *
+        Math.max(...diagonal)) /
+      Math.min(...diagonal) /
+      scale,
+  );
+  const clean = coefficients.map((value, i) => {
+    if (Math.abs(value) <= coefficientTolerance[i]) return 0;
+    const integer = Math.round(value);
+    return Math.abs(value - integer) <= coefficientTolerance[i]
+      ? integer
+      : value;
+  });
+  if (permitted(clean)) coefficients = clean;
   const parameters = Object.fromEntries(
     names.map((name, i) => [name, coefficients[i]]),
   );
@@ -138,16 +224,7 @@ export function relationRegression(
     residuals,
     rmse: Math.sqrt(sse / residuals.length),
     logSpace: false,
-    coefficientTolerance: scales.map(
-      (scale) =>
-        (4 *
-          Number.EPSILON *
-          names.length *
-          Math.max(1, ...offset.map(Math.abs)) *
-          Math.max(...diagonal)) /
-        Math.min(...diagonal) /
-        scale,
-    ),
+    coefficientTolerance,
   };
 }
 

@@ -24,7 +24,7 @@ import {
 } from "./model";
 import type { Fit } from "./regression";
 import { displayedCoefficients, fittedExpression } from "./fitDisplay";
-import { exactForm } from "./exact";
+import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
 
 function MathDisplay({ tex }: { tex: string }) {
@@ -134,7 +134,7 @@ function CalculatorHelp() {
   const topics = [
     [
       "Expressions",
-      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter advances a row; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list.",
+      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list.",
     ],
     [
       "Tables & regressions",
@@ -200,10 +200,12 @@ export function Calculator({
   }, [addOpen]);
   useEffect(() => {
     if (!autoFocus) return;
-    (
-      root.current?.querySelector<HTMLElement>("textarea") ??
-      root.current?.querySelector<HTMLElement>("input,button")
-    )?.focus();
+    if (document.querySelector('dialog[open],[aria-modal="true"]')) return;
+    const target =
+      state.entries.find((entry) => entry.id === state.activeEntryId) ??
+      state.entries.find((entry) => entry.type === "expression") ??
+      state.entries[0];
+    if (target) requestAnimationFrame(() => focusMath(target.id));
   }, [autoFocus]);
   const change = (entry: Entry) =>
     update({
@@ -251,8 +253,9 @@ export function Calculator({
       )
     )
       entries.push(newExpression());
-    update({ ...current.current, entries });
-    focus(entries[Math.max(0, Math.min(index - 1, entries.length - 1))].id);
+    const next = entries[Math.max(0, Math.min(index - 1, entries.length - 1))];
+    update({ ...current.current, entries, activeEntryId: next.id });
+    focus(next.id);
   };
   const table = (replace?: string) => {
     const used = new Set(
@@ -288,7 +291,15 @@ export function Calculator({
     <section
       className="offline-workspace"
       ref={root}
-      aria-label="Offline graphing calculator"
+      aria-label="Graphing calculator"
+      onFocusCapture={(event) => {
+        const entry = (event.target as HTMLElement).closest<HTMLElement>(
+          "[data-calculator-entry]",
+        );
+        const id = entry?.dataset.calculatorEntry;
+        if (id && current.current.activeEntryId !== id)
+          update({ ...current.current, activeEntryId: id });
+      }}
     >
       <div className="calc-options">
         <div className="calc-angle" role="group" aria-label="Angle mode">
@@ -374,6 +385,7 @@ export function Calculator({
                 <section
                   className={`calc-entry graph-color-${entry.color ?? index % 8}`}
                   key={entry.id}
+                  data-calculator-entry={entry.id}
                   aria-label={`${entry.type === "table" ? "Data table" : "Expression"} ${index + 1}`}
                 >
                   <div className="calc-entry-heading">
@@ -410,7 +422,7 @@ export function Calculator({
                         onChange={(text, latex) =>
                           change({ ...entry, text, latex })
                         }
-                        onEnter={() => nextRow(entry, index)}
+                        onEnter={() => add(newExpression(), entry.id)}
                         onRemove={() => remove(entry, index)}
                         onMove={(direction) => {
                           const next = state.entries[index + direction];
@@ -444,6 +456,33 @@ export function Calculator({
                           scalarRelation={result.scalarRelation}
                         />
                       )}
+                      {result?.systemKind &&
+                        Object.keys(result.parameters ?? {}).length > 0 &&
+                        result.solutions?.length !== 1 && (
+                          <output aria-label="Determined system parameters">
+                            {Object.entries(result.parameters!)
+                              .map(
+                                ([name, value]) =>
+                                  `${name} = ${exactForm(value, entry.text) ?? fmt(value)}`,
+                              )
+                              .join(", ")}
+                          </output>
+                        )}
+                      {result?.solutions &&
+                        (result.solutions.length > 1 || result.systemKind) && (
+                          <output aria-label="Real parameter solutions">
+                            {result.solutions
+                              .map((solution) =>
+                                Object.entries(solution)
+                                  .map(
+                                    ([name, value]) =>
+                                      `${name} = ${exactForm(value, entry.text) ?? radicalForm(value) ?? fmt(value)}`,
+                                  )
+                                  .join(", "),
+                              )
+                              .join(" or ")}
+                          </output>
+                        )}
                       {result?.parameter && (
                         <label className="calc-slider">
                           <span className="sr-only">

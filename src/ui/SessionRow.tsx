@@ -8,6 +8,7 @@ export function SessionRow({
   session,
   onOpen,
   onRename,
+  onDelete,
   onToggleStar,
   onRepractice,
 }: {
@@ -15,6 +16,7 @@ export function SessionRow({
   session: Session;
   onOpen: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   onToggleStar: (id: string) => void;
   onRepractice?: (session: Session) => void;
 }) {
@@ -27,6 +29,8 @@ export function SessionRow({
   const root = useRef<HTMLDivElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
   const renameInput = useRef<HTMLInputElement>(null);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const deleteCancel = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -119,6 +123,17 @@ export function SessionRow({
                 Practice again
               </button>
             )}
+            <button
+              className="danger"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                deleteDialog.current?.showModal();
+                deleteCancel.current?.focus();
+              }}
+            >
+              Delete session
+            </button>
           </div>
         )}
       </div>
@@ -164,6 +179,34 @@ export function SessionRow({
           </span>
         </div>
       )}
+      <dialog
+        ref={deleteDialog}
+        className="practice-dialog session-delete-dialog"
+        aria-labelledby={`delete-session-${session.id}`}
+      >
+        <h2 id={`delete-session-${session.id}`}>Delete this session?</h2>
+        <p>
+          Delete “{label}”? Your answers and bookmarks will stay in your study
+          history.
+        </p>
+        <div className="row reset-actions">
+          <button
+            ref={deleteCancel}
+            onClick={() => deleteDialog.current?.close()}
+          >
+            Cancel
+          </button>
+          <button
+            className="danger"
+            onClick={() => {
+              deleteDialog.current?.close();
+              onDelete(session.id);
+            }}
+          >
+            Delete session
+          </button>
+        </div>
+      </dialog>
     </div>
   );
 }

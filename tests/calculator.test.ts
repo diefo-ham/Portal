@@ -42,6 +42,311 @@ import {
 
 const evaluate = (s: string, angle: "radians" | "degrees" = "radians") =>
   scalar(s).value({}, {}, angle);
+
+describe("Focused Calculator correctness regressions", () => {
+  it("multiplies coordinate parentheses and preserves named calls and scalar identifiers", () => {
+    const expression = scalar("8x(x^9-x^8+11)");
+    expect([...expression.calls]).toEqual([]);
+    expect(expression.value({ x: 2 }, {}, "radians")).toBe(
+      8 * 2 * (2 ** 9 - 2 ** 8 + 11),
+    );
+    expect(scalar("y(y+1)").value({ y: 3 }, {}, "radians")).toBe(12);
+    expect(scalar("a x(x+1)").value({ a: 2, x: 3 }, {}, "radians")).toBe(24);
+    expect([...scalar("foo2x(2)").calls]).toEqual(["foo2x"]);
+    for (const source of ["b c", "bc"]) {
+      for (const latex of [false, true]) {
+        const entries = ["b=4", "c=-6", source].map((text) => ({
+          ...newExpression(text),
+          ...(latex ? { latex: textToLatex(text) } : {}),
+        }));
+        const w = calculateWorkspace({ ...emptyCalculator(), entries });
+        expect(Object.values(w.results).at(-1)?.value).toBe(-24);
+      }
+    }
+    const w = workspace(
+      "b=4",
+      "c=-6",
+      "bc=7",
+      "f(x)=x^2",
+      "g(t)=f(t)+bc",
+      "g(3)",
+    );
+    expect(Object.values(w.results).at(-1)?.value).toBe(16);
+    expect(
+      Object.values(workspace("b=4", "c=-6", "bc(t)=t+1", "bc(3)").results).at(
+        -1,
+      )?.value,
+    ).toBe(4);
+    expect(
+      Object.values(workspace("f(x)=x", "g(t)=t", "fg").results).at(-1)?.error,
+    ).toContain("Define fg");
+    expect(scalar("sin(0)+mean([2,4])").value({}, {}, "radians")).toBe(3);
+  });
+
+  it.each([10, 100, 1000, 10000, 1000000])(
+    "retains visible high-growth crossings at x range ±%s within the sample budget",
+    (range) => {
+      let evaluations = 0;
+      const paths = sampleFunction(
+        (x) => {
+          evaluations++;
+          return 52 * (x ** 3 + 64) * (x ** 4 - 81);
+        },
+        { xMin: -range, xMax: range, yMin: -range, yMax: range },
+        640,
+        400,
+      );
+      const points = paths.flat();
+      for (const root of [-4, -3, 3]) {
+        expect(
+          paths.some((path) =>
+            path.slice(1).some((b, i) => {
+              const a = path[i];
+              if (a.y === b.y) return a.y === 0 && a.x <= root && b.x >= root;
+              const t = -a.y / (b.y - a.y);
+              return (
+                t >= 0 &&
+                t <= 1 &&
+                Math.abs(a.x + t * (b.x - a.x) - root) <
+                  Math.max(0.01, range / 640)
+              );
+            }),
+          ),
+          `visible crossing near ${root}`,
+        ).toBe(true);
+      }
+      expect(evaluations).toBeLessThanOrEqual(640 * 7);
+      expect(
+        points.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)),
+      ).toBe(true);
+    },
+  );
+
+  it("does not let overflowing offscreen samples erase a finite visible transition", () => {
+    let evaluations = 0;
+    const paths = sampleFunction(
+      (x) => {
+        evaluations++;
+        return x ** 100;
+      },
+      { xMin: -1e6, xMax: 1e6, yMin: -10, yMax: 10 },
+    );
+    expect(paths.flat().some((p) => p.x > 0 && p.y > 0 && p.y <= 10)).toBe(
+      true,
+    );
+    expect(paths.flat().some((p) => p.x < 0 && p.y > 0 && p.y <= 10)).toBe(
+      true,
+    );
+    expect(evaluations).toBeLessThanOrEqual(640 * 7);
+  });
+
+  it("exports polynomial coefficient products without dots and preserves fitted values", () => {
+    const fit = regression(
+      [
+        { x: -1, y: -8 },
+        { x: 0, y: -6 },
+        { x: 1, y: 0 },
+        { x: 2, y: 10 },
+      ],
+      "quadratic",
+    );
+    const source = fittedExpression(fit);
+    expect(source).toBe("2x^2+4x-6");
+    expect(textToLatex(source)).not.toContain("\\cdot");
+    expect(
+      scalar(latexToText(textToLatex(source))).value({ x: 3 }, {}, "radians"),
+    ).toBeCloseTo(fit.predict(3), 12);
+  });
+});
+
+describe("Offline expression domain restrictions", () => {
+  const curve = (source: string, ...definitions: string[]) => {
+    const w = workspace(...definitions, source);
+    expect(
+      Object.values(w.results).filter((r) => r.error),
+      source,
+    ).toEqual([]);
+    const graph = w.graphs.at(-1)!;
+    if (graph.kind !== "function") throw new Error("Expected explicit curve");
+    return graph.fn;
+  };
+
+  it("parses required named, equation and direct-expression forms structurally", () => {
+    for (const source of [
+      "f(x)=x{x>2}",
+      "y=x^2{x<=3}",
+      "y=sqrt(x){x>=0}",
+      "y=x{1<x<5}",
+      "f(x)=2x+1{-3<=x<=4}",
+      "x{x>2}",
+    ]) {
+      expect(Number.isFinite(curve(source)(3))).toBe(true);
+      expect(curve(latexToText(textToLatex(source)))(3)).toBe(curve(source)(3));
+    }
+    const s = scalar("2x+1{-3<=x<=4}");
+    expect(s.node.type).toBe("ConditionalNode");
+    expect([...s.symbols]).toEqual(["x"]);
+    expect(scalarTex(s)).toContain("\\left\\{");
+  });
+
+  it("rejects malformed/unsafe restrictions with a useful error", () => {
+    for (const suffix of [
+      "{}",
+      "{x>}",
+      "{x>2",
+      "{x=2}",
+      "{1<x<}",
+      "{x>2}junk",
+      "{x>2,}",
+      "{x>2}{",
+      "{x>unknown.a}",
+      "{x>2;x=1}",
+    ])
+      expect(
+        Object.values(workspace(`f(x)=x${suffix}`).results)[0].error,
+      ).toMatch(/restriction/i);
+  });
+
+  it("evaluates open/closed bounds, chained intervals and nonfinite conditions", () => {
+    const open = curve("f(x)=x{x>2}");
+    expect(open(3)).toBe(3);
+    expect(open(10)).toBe(10);
+    expect(open(2)).toBeNaN();
+    expect(open(1)).toBeNaN();
+    expect(curve("y=x{x>=2}")(2)).toBe(2);
+    expect(curve("y=x^2{x<=3}")(3)).toBe(9);
+    expect(curve("y=x^2{x<=3}")(4)).toBeNaN();
+    const interval = curve("f(x)=2x+1{-3<=x<=4}");
+    expect(interval(-3)).toBe(-5);
+    expect(interval(4)).toBe(9);
+    expect(interval(-3.01)).toBeNaN();
+    expect(interval(4.01)).toBeNaN();
+    const strict = curve("y=x{1<x<5}");
+    expect(strict(1)).toBeNaN();
+    expect(strict(5)).toBeNaN();
+    expect(strict(2)).toBe(2);
+    expect(curve("y=x{x>sqrt(-1)}")(2)).toBeNaN();
+    expect(curve("y=x{mod(x,2)>=1,x<5}")(3)).toBe(3);
+    expect(curve("y=x{mod(x,2)>=1}{x<5}")(2)).toBeNaN();
+  });
+
+  it("tracks constants and restriction-only dependencies after edits", () => {
+    const state = {
+      ...emptyCalculator(),
+      entries: [
+        newExpression("a=3"),
+        newExpression("f(x)=x{x>a}"),
+        newExpression("f(3)"),
+      ],
+    };
+    let w = calculateWorkspace(state);
+    expect(Object.values(w.results)[2].error).toContain("Undefined");
+    state.entries[0].text = "a=2";
+    w = calculateWorkspace(state);
+    expect(Object.values(w.results)[2].value).toBe(3);
+    expect(curve("f(x)=x{x<k}", "k=4")(4)).toBeNaN();
+    expect(curve("f(x)=x{x<k}", "k=5")(4)).toBe(4);
+    expect(curve("f(t)=t{t>a}", "a=3")(4)).toBe(4);
+    expect(curve("f(x)=x{h(x)>0}", "h(t)=t-2")(1)).toBeNaN();
+    for (const definitions of [
+      ["a=f(3)", "f(x)=x{x>a}"],
+      ["f(x)=x{g(x)>0}", "g(t)=f(t)"],
+    ])
+      expect(
+        Object.values(workspace(...definitions).results).every((r) =>
+          r.error?.includes("Circular"),
+        ),
+      ).toBe(true);
+  });
+
+  it("propagates undefined values through downstream functions and expression expansion", () => {
+    const fn = curve("g(x)=f(x)+1", "f(x)=x^2{x>0}");
+    expect(fn(2)).toBe(5);
+    expect(fn(0)).toBeNaN();
+    expect(fn(-2)).toBeNaN();
+    const w = workspace(
+      "f(x)=x{x>2}",
+      "g(x)=f(x)^0+1",
+      "g(1)",
+      "g(3)",
+      "f(c)~3{c>0}",
+    );
+    expect(Object.values(w.results)[2].error).toContain("Undefined");
+    expect(Object.values(w.results)[3].value).toBe(2);
+    expect(Object.values(w.results)[4].solutions?.[0].c).toBeCloseTo(3, 8);
+  });
+
+  it("samples valid domains, keeps disconnected regions separate and retains curve health", () => {
+    for (const [source, valid] of [
+      ["y=x{x>2}", (x: number) => x > 2],
+      ["y=x^2{-3<x<3}", (x: number) => x > -3 && x < 3],
+      ["y=sqrt(x){x>=1}", (x: number) => x >= 1],
+      ["y=x{x^2>1}", (x: number) => Math.abs(x) > 1],
+    ] as const) {
+      const fn = curve(source);
+      const paths = sampleFunction(fn, defaultView());
+      expect(paths.flat().length).toBeGreaterThan(20);
+      expect(paths.flat().every((p) => valid(p.x) && p.y === fn(p.x))).toBe(
+        true,
+      );
+      if (source.includes("x^2>1")) {
+        expect(paths).toHaveLength(2);
+        expect(
+          paths.every(
+            (path) => path.every((p) => p.x < -1) || path.every((p) => p.x > 1),
+          ),
+        ).toBe(true);
+      }
+    }
+    const paths = sampleFunction(curve("y=1/x{x^2<9}"), defaultView());
+    expect(
+      paths.every((p) => p.every((v) => v.x < 0) || p.every((v) => v.x > 0)),
+    ).toBe(true);
+    for (const source of [
+      "y=100000(x-2.5){x>2}",
+      "y=10000(x-2.137)^2{x>0}",
+      "y=sqrt(x){x>=1}",
+    ])
+      expect(
+        sampleFunction(curve(source), {
+          xMin: -10,
+          xMax: 10,
+          yMin: -10,
+          yMax: 10,
+        }).flat().length,
+      ).toBeGreaterThan(0);
+  });
+
+  it("omits excluded intercepts, roots and intersections from inspection", () => {
+    const w = workspace("y=x{x>2}", "y=1", "x=1", "y=4");
+    const restricted = w.graphs[0];
+    const points = interests(w.graphs, defaultView()).filter((p) =>
+      p.graphIds.includes(restricted.id),
+    );
+    expect(points).toHaveLength(1);
+    expect(points[0]).toMatchObject({ x: 4, y: 4, label: "intersection" });
+    expect(interests(workspace("y=x^2{x>0}").graphs, defaultView())).toEqual(
+      [],
+    );
+    expect(
+      interests(workspace("y=x^2{x>=0}").graphs, defaultView()),
+    ).toContainEqual(expect.objectContaining({ x: 0, y: 0 }));
+  });
+
+  it("keeps solver and regression braces as parameter bounds alongside domain expressions", () => {
+    const w = workspace(
+      "f(x)=x{x>2}",
+      "n^2~4{n>0}",
+      "x_1=[1,2,3]",
+      "y_1=[3,2,1]",
+      "y_1~mx_1+b{m>=0}",
+    );
+    expect(Object.values(w.results).filter((r) => r.error)).toEqual([]);
+    expect(Object.values(w.results)[1].solutions).toEqual([{ n: 2 }]);
+    expect(Object.values(w.results)[4].parameters).toEqual({ m: 0, b: 2 });
+    expect(curve("f(x)=x{x>2}")(1)).toBeNaN();
+  });
+});
 const workspace = (...texts: string[]) =>
   calculateWorkspace({
     ...emptyCalculator(),
@@ -119,9 +424,9 @@ describe("Offline expression semantics", () => {
           result.error?.includes("Circular"),
         ),
       ).toBe(true);
-    expect(Object.values(workspace("p=3x+a").results)[0].error).toContain(
-      "Define a",
-    );
+    expect(Object.values(workspace("p=3x+a").results)[0]).toMatchObject({
+      message: "Free parameters: a.",
+    });
   });
   it("recognizes conservative small radical coordinates without guessing arbitrary decimals", () => {
     for (const [value, form] of [
@@ -170,7 +475,7 @@ describe("floating window bounds and parameter points", () => {
       "too few residuals",
     );
     expect(Object.values(workspace("a*b~3").results)[0].error).toContain(
-      "nonlinear",
+      "Underdetermined",
     );
     const table = workspace("x_1=[1,2,3]", "y_1=[4,7,10]", "y_1~m*x_1+b");
     const fit = Object.values(table.results).find((result) => result.fit);
@@ -382,9 +687,283 @@ describe("floating window bounds and parameter points", () => {
     const invalid = workspace("x_1=[1,2,3]", "y_1=[2,4,8]", "y_1~a*sin(b*x_1)");
     expect(
       Object.values(invalid.results).some((result) =>
-        result.error?.includes("General nonlinear"),
+        result.error?.includes("nonlinear"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("Offline relation architecture and domain correctness", () => {
+  const last = (...texts: string[]) =>
+    Object.values(workspace(...texts).results).at(-1)!;
+
+  it.each([
+    ["52(c^3+64)(c^4-81)~0", [-4, -3, 3]],
+    ["1e100(c+4)(c+3)(c-3)~0", [-4, -3, 3]],
+    ["1e90(c+1000.1)(c+1000.2)(c-3000)~0", [-1000.2, -1000.1, 3000]],
+    ["(c+4)^2(c+3)(c-3)^3~0", [-4, -3, 3]],
+    ["(c+4.001)(c+4)(c+3.999)(c-3)~0", [-4.001, -4, -3.999, 3]],
+    ["(c+16)(c+0.125)(c-0.25)(c-32)~0", [-16, -0.125, 0.25, 32]],
+    ["(c+4)(c+3)(c-3)/(c+4)~0", [-3, 3]],
+  ] as const)(
+    "isolates real polynomial roots independently of grid scale: %s",
+    (source, expected) => {
+      const result = last(source);
+      expect(result.error).toBeUndefined();
+      expect(result.solutions).toHaveLength(expected.length);
+      result.solutions!.forEach((solution, i) =>
+        expect(solution.c).toBeCloseTo(expected[i], 7),
+      );
+    },
+  );
+
+  it("keeps polynomial equation intercepts consistent with scalar solutions", () => {
+    const graph = workspace("52(x^3+64)(x^4-81)=0").graphs[0];
+    expect(graph.kind).toBe("vertical");
+    if (graph.kind !== "vertical") return;
+    expect(roots(graph.fn, -10, 10)).toEqual([-4, -3, 3]);
+    expect(graph.rootsInWindow?.(-4, 3)).toEqual([-4, -3, 3]);
+    expect(last("52(c^3+64)(c^4-81)~0{-4<=c<=3}").solutions).toEqual([
+      { c: -4 },
+      { c: -3 },
+      { c: 3 },
+    ]);
+    expect(last("52(c^3+64)(c^4-81)~0{-4<c<3}").solutions).toEqual([{ c: -3 }]);
+    for (const range of [10, 1000, 1e6]) {
+      expect(graph.rootsInWindow?.(-range, range)).toEqual([-4, -3, 3]);
+      expect(
+        interests([graph], {
+          xMin: -range,
+          xMax: range,
+          yMin: -range,
+          yMax: range,
+        }).map((p) => p.x),
+      ).toEqual([-4, -3, 3]);
+    }
+    expect(last("52(c^3+64)(c^4-81)~0").solutions).toEqual([
+      { c: -4 },
+      { c: -3 },
+      { c: 3 },
+    ]);
+  });
+
+  it("solves powers with both real branches, repeated roots, rational domains and no-real cases", () => {
+    expect(last("(c+5)^2~4").solutions).toEqual([{ c: -7 }, { c: -3 }]);
+    expect(last("(c+5)^2~0").solutions).toEqual([{ c: -5 }]);
+    expect(last("c^2~2").solutions?.[0].c).toBeCloseTo(-Math.SQRT2, 14);
+    expect(last("c^2~2").solutions?.[1].c).toBeCloseTo(Math.SQRT2, 14);
+    expect(last("345~353/c").parameters?.c).toBeCloseTo(353 / 345, 13);
+    expect(last("c^2+1~0").error).toContain("No real solution");
+    expect(last("1/c~0").error).toContain("No real solution");
+    expect(last("(c^2-1)/(c-1)~2").error).toContain("No real solution");
+    expect(last("c/c~1").error).toContain("Underdetermined");
+    expect(last("c~1e-16").parameters?.c).toBe(1e-16);
+    const smallRoots = last("c^2~1e-24").solutions;
+    expect(smallRoots).toHaveLength(2);
+    expect(smallRoots?.[0].c).toBe(-1e-12);
+    expect(smallRoots?.[1].c).toBe(1e-12);
+    expect(last("a+b~3").error).toContain("Underdetermined");
+  });
+
+  it.each(["radians", "degrees"] as const)(
+    "solves trigonometric relations in %s with an explicit bounded search",
+    (angle) => {
+      const result = Object.values(
+        calculateWorkspace({
+          ...emptyCalculator(),
+          angle,
+          entries: [newExpression("sin(c)~16/23")],
+        }).results,
+      )[0];
+      expect(result.error).toBeUndefined();
+      expect(result.solutions).toHaveLength(2);
+      const scale = angle === "degrees" ? 180 / Math.PI : 1;
+      expect(result.solutions?.[0].c).toBeCloseTo(
+        Math.asin(16 / 23) * scale,
+        10,
+      );
+      expect(result.solutions?.[1].c).toBeCloseTo(
+        (Math.PI - Math.asin(16 / 23)) * scale,
+        10,
+      );
+      expect(result.message).toContain(angle);
+      expect(last("sin(c)~2").error).toContain("No real solution");
+    },
+  );
+
+  it("retains free parameters through named functions, named expressions and transitive calls", () => {
+    const pending = Object.values(workspace("f(x)=4x+b", "p=4x+b").results);
+    expect(pending.every((r) => !r.error && r.message?.includes("b"))).toBe(
+      true,
+    );
+    expect(last("f(x)=4x+b", "f(0)~6").parameters).toEqual({ b: 6 });
+    expect(last("p=4x+b", "f(t)=p+t", "f(0)~6").error).toContain("Define x");
+    const w = workspace(
+      "f(x)=a x^2+b x+c",
+      "g(x)=f(x)+4",
+      "[g(21),g(23),g(25)]~[-8,8,-8]",
+      "g([21,23,25])",
+    );
+    expect(
+      Object.values(w.results)
+        .map((r) => r.error)
+        .filter(Boolean),
+    ).toEqual([]);
+    const fit = Object.values(w.results)[2];
+    expect(fit.relationKind).toBe("values");
+    expect(fit.parameters?.a).toBeCloseTo(-4, 9);
+    expect(fit.parameters?.b).toBeCloseTo(184, 8);
+    expect(fit.parameters?.c).toBeCloseTo(-2112, 7);
+    Object.values(w.results)[3].values?.forEach((v, i) =>
+      expect(v).toBeCloseTo([-8, 8, -8][i], 8),
+    );
+    expect(last("f(t)=4t+b", "g(x)=f(x)+1", "g(0)~7").parameters?.b).toBe(6);
+    const shadowed = workspace(
+      "t=x+1",
+      "f(t)=4t+b",
+      "g(x)=f(x)+1",
+      "g(0)~7",
+      "f(2)",
+    );
+    expect(Object.values(shadowed.results).filter((r) => r.error)).toEqual([]);
+    expect(Object.values(shadowed.results).at(-1)?.value).toBe(14);
+    const lexical = workspace(
+      "f(x)=a*x+b",
+      "g(a)=f(a)",
+      "[g(0),g(1)]~[2,5]",
+      "g(2)",
+    );
+    expect(Object.values(lexical.results).filter((r) => r.error)).toEqual([]);
+    expect(Object.values(lexical.results)[2].parameters).toEqual({
+      a: 3,
+      b: 2,
+    });
+    expect(Object.values(lexical.results)[3].value).toBe(8);
+    expect(last("p=4x+b", "x_1=[0,1]", "p~[6,10]").error).toContain("Define x");
+    for (const definitions of [
+      ["f(x)=g(x)", "g(t)=f(t)"],
+      ["p=q+1", "q=p+1"],
+    ])
+      expect(
+        Object.values(workspace(...definitions).results).every((r) =>
+          r.error?.includes("Circular"),
+        ),
+      ).toBe(true);
+    expect(last("f(x)=unknown(x)").error).toContain("Define unknown(x)");
+    expect(last("p=unknown+1").error).toContain("Define unknown");
+  });
+
+  it("fits generated/evaluated lists with broadcasting, dimension errors, and stable coefficient matching", () => {
+    expect(last("x_1=[1...100]", "2x_1+3~a x_1+b").parameters).toMatchObject({
+      a: expect.any(Number),
+      b: expect.any(Number),
+    });
+    const generated = last("x_1=[1...100]", "2x_1+3~a x_1+b");
+    expect(generated.parameters?.a).toBeCloseTo(2, 11);
+    expect(generated.parameters?.b).toBeCloseTo(3, 10);
+    expect(last("[n,n+1,n+2]~[3,4,5]").parameters?.n).toBeCloseTo(3, 12);
+    expect(last("[n,n]~4").parameters?.n).toBeCloseTo(4, 12);
+    expect(last("[n,n]~[1e-16,1e-16]").parameters?.n).toBeCloseTo(1e-16, 30);
+    expect(last("[n,n]~[1,2,3]").error).toContain("same length");
+    expect(last("[n]~[[1,2]]").error).toContain("flat list");
+    expect(last("[a+b,a+b]~[1,2]").error).toContain("underdetermined");
+    expect(last("[sin(n),sin(n+1)]~[1,2]").error).toContain("nonlinear");
+    const polynomial = last(
+      "x_1=[1...100]",
+      "(1/2 x_1+3/2)(3/2 x_1+1/2)~a x_1^2+b x_1+c",
+    );
+    expect(polynomial.error).toBeUndefined();
+    expect(polynomial.parameters?.a).toBeCloseTo(0.75, 10);
+    expect(polynomial.parameters?.b).toBeCloseTo(2.5, 9);
+    expect(polynomial.parameters?.c).toBeCloseTo(0.75, 8);
+    const data = last("x_1=[1...100]", "y_1=3x_1+2", "y_1~mx_1+b");
+    expect(data.relationKind).toBe("data");
+    expect(data.parameters?.m).toBeCloseTo(3, 11);
+    expect(data.parameters?.b).toBeCloseTo(2, 10);
+  });
+
+  it("applies open/closed parameter bounds and parses only safe comparison conjunctions", () => {
+    expect(last("n^2~4{n>0}").solutions).toEqual([{ n: 2 }]);
+    expect(last("k=0", "n^2~4{n<k}").solutions).toEqual([{ n: -2 }]);
+    expect(last("n^2~4{0<n<=2}").solutions).toEqual([{ n: 2 }]);
+    expect(last("n^2~4{n>0,n<3}").solutions).toEqual([{ n: 2 }]);
+    expect(last("n^2~4{n>3}").error).toContain("No real solution");
+    expect(last("n^2~0{n>=0}").solutions).toEqual([{ n: 0 }]);
+    expect(last("sin(n)~0{0<=n<=0}").solutions).toEqual([{ n: 0 }]);
+    expect(last("n^2~0{n>0}").error).toContain("No real solution");
+    expect(last("[n,n]~[-1,-2]{n>=0}").parameters?.n).toBe(0);
+    expect(last("[n,n]~[-1,-2]{n>0}").error).toContain("No fitted minimum");
+    const constrainedLine = last(
+      "x_1=[1,2,3]",
+      "y_1=[3,2,1]",
+      "y_1~m*x_1+b{m>=0}",
+    );
+    expect(constrainedLine.parameters).toEqual({ m: 0, b: 2 });
+    expect(constrainedLine.relationKind).toBe("data");
+    expect(constrainedLine.fit?.predict(10)).toBe(2);
+    for (const source of ["n^2~4{n>}", "n^2~4{}", "n^2~4{n>0", "n^2~4{n=2}"])
+      expect(last(source).error).toContain("Malformed parameter restriction");
+    expect(last("n^2~4{n+1>0}").error).toContain("Restrictions need");
+    for (const source of ["n^2~4{n>0}", "n^2~4{0<n<=2}", "n^2~4{n>0,n<3}"])
+      expect(last(latexToText(textToLatex(source))).solutions).toEqual([
+        { n: 2 },
+      ]);
+    expect(scalar("2{n>0}").value({ n: -1 }, {}, "radians")).toBeNaN();
+  });
+
+  it("samples one-sided and bounded real domains without losing their curves or bridging gaps", () => {
+    for (const [source, min, max] of [
+      ["sqrt(x)", 0, 10],
+      ["√x", 0, 10],
+      ["sqrt(x-1)", 1, 10],
+      ["sqrt(1-x^2)", -1, 1],
+      ["x", -10, 10],
+    ] as const) {
+      const graph = workspace(source).graphs[0];
+      expect(graph.kind).toBe("function");
+      if (graph.kind !== "function") throw new Error("Expected explicit graph");
+      const paths = sampleFunction(graph.fn, defaultView());
+      expect(paths.flat().length).toBeGreaterThan(20);
+      expect(Math.min(...paths.flat().map((p) => p.x))).toBeCloseTo(min, 3);
+      expect(Math.max(...paths.flat().map((p) => p.x))).toBeCloseTo(max, 3);
+      expect(
+        paths.flat().every((p) => p.x >= min - 1e-8 && p.x <= max + 1e-8),
+      ).toBe(true);
+    }
+    expect(sampleFunction(Math.sqrt, defaultView()).flat()).toContainEqual({
+      x: 0,
+      y: 0,
+    });
+    for (const path of sampleFunction(
+      (x) => Math.sqrt(x * x - 1),
+      defaultView(),
+    ))
+      expect(path.every((p) => p.x <= -1) || path.every((p) => p.x >= 1)).toBe(
+        true,
+      );
+  });
+
+  it("normalizes implicit lines for reliable intercepts and retains complex implicit fallback", () => {
+    const w = workspace("4y+8x=6");
+    expect(w.graphs[0].kind).toBe("function");
+    const points = interests(w.graphs, defaultView());
+    expect(
+      points.some(
+        (p) => p.label.includes("y-intercept") && p.x === 0 && p.y === 1.5,
+      ),
+    ).toBe(true);
+    expect(
+      points.some(
+        (p) =>
+          p.label.includes("zero") && Math.abs(p.x - 0.75) < 1e-9 && p.y === 0,
+      ),
+    ).toBe(true);
+    const circle = workspace("x^2+y^2=25");
+    expect(circle.graphs[0].kind).toBe("implicit");
+    expect(interests(circle.graphs, defaultView())).toEqual([]);
+    expect(Object.values(circle.results)[0].message).toContain(
+      "no automatic special points",
+    );
   });
 });
 describe("offline calculator arithmetic and syntax", () => {
@@ -414,6 +993,16 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(scalarTex(scalar("log(100)"))).toContain("log_{10}");
     expect(scalarTex(scalar("ln(e)"))).toContain("\\ln");
   });
+  it("covers low-risk SAT arithmetic commands found in the built-in audit", () => {
+    expect(evaluate("round(1.3254,2)")).toBe(1.33);
+    expect(evaluate("sign(-12)")).toBe(-1);
+    expect(evaluate("gcd(54,24)")).toBe(6);
+    expect(evaluate("lcm(6,8)")).toBe(24);
+    expect(evaluate("nCr(6,2)")).toBe(15);
+    expect(evaluate("nPr(6,2)")).toBe(30);
+    expect(evaluate("nCr(2,6)")).toBeNaN();
+    expect(scalarTex(scalar("nCr(6,2)"))).toContain("\\operatorname{nCr}");
+  });
   it("converts supported structural LaTeX without evaluating commands", () => {
     expect(evaluate(latexToText("\\frac{1}{2}+\\sqrt{81}"))).toBeCloseTo(
       9.5,
@@ -435,6 +1024,70 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(evaluate(latexToText(textToLatex("cbrt(-8)")))).toBe(-2);
     expect(evaluate(latexToText(textToLatex("log(8,2)")))).toBeCloseTo(3, 12);
     expect(evaluate(latexToText(textToLatex("floor(1.7)")))).toBe(1);
+  });
+  it("uses Desmos-style percent-of syntax rather than modulo", () => {
+    expect(evaluate("20% of 50")).toBe(10);
+    expect(evaluate("80+15% of 80")).toBe(92);
+    expect(evaluate("200-12.5% of 200")).toBe(175);
+    expect(latexToText("20\\%\\operatorname{of}50")).toBe("20*0.01*50");
+    expect(evaluate(latexToText("20\\%\\operatorname{of}50"))).toBe(10);
+    expect(() => evaluate("20%3")).toThrow("operator");
+  });
+  it("supports Desmos-style mod without changing percentage syntax", () => {
+    expect(evaluate("mod(17,5)")).toBe(2);
+    expect(evaluate("mod(20,4)")).toBe(0);
+    expect(evaluate("mod(-17,5)")).toBe(3);
+    expect(evaluate("mod(17,-5)")).toBe(-3);
+    expect(evaluate("mod(17,0)")).toBeNaN();
+    expect(evaluate("20% of 50")).toBe(10);
+    expect(() => evaluate("20%3")).toThrow("operator");
+    expect(scalarTex(scalar("mod(17,5)"))).toContain("\\operatorname{mod}");
+  });
+  it("parses, renders, edits, and evaluates arbitrary real nth roots", () => {
+    expect(evaluate("nthroot(27,3)")).toBe(3);
+    expect(evaluate("nthroot(16,4)")).toBe(2);
+    expect(evaluate("nthroot(2^15+11,5)")).toBeCloseTo(
+      Math.pow(2 ** 15 + 11, 1 / 5),
+      12,
+    );
+    expect(evaluate("nthroot(-125,3)")).toBeCloseTo(-5, 12);
+    expect(evaluate("nthroot(-16,4)")).toBeNaN();
+    expect(evaluate("sqrt(81)")).toBe(9);
+    const source = latexToText("\\sqrt[5]{x+3}");
+    expect(source).toBe("nthroot(x+3,5)");
+    expect(scalarTex(scalar(source))).toMatch(/\\sqrt\[5\]\{\s*x\s*\+\s*3\}/);
+    expect(latexToText(textToLatex("nthroot(32,5)"))).toBe("nthroot(32,5)");
+  });
+  it("evaluates SAT-useful descriptive statistics over lists", () => {
+    const any = (source: string) => scalar(source).evaluate({}, {}, "radians");
+    expect(any("mean([-2,1.5,4.5])")).toBeCloseTo(4 / 3, 12);
+    expect(any("median([-5,1,9])")).toBe(1);
+    expect(any("median([1,2,3,4])")).toBe(2.5);
+    expect(any("min([-5,-2,-9])")).toBe(-9);
+    expect(any("max([.1,.25,.2])")).toBe(0.25);
+    expect(any("quartile([1,2,3,4,5],1)")).toBe(1.5);
+    expect(any("quartile([1,2,3,4,5],3)")).toBe(4.5);
+    expect(any("quantile([1,2,3,4],.25)")).toBe(1.75);
+    expect(any("stdev([1,2,3,4])")).toBeCloseTo(Math.sqrt(5 / 3), 12);
+    expect(any("stdevp([1,2,3,4])")).toBeCloseTo(Math.sqrt(1.25), 12);
+    expect(any("var([1,2,3,4])")).toBeCloseTo(5 / 3, 12);
+    expect(any("variance([1,2,3,4])")).toBeCloseTo(5 / 3, 12);
+    expect(any("varp([1,2,3,4])")).toBeCloseTo(1.25, 12);
+    expect(any("mad([1,2,3])")).toBeCloseTo(2 / 3, 12);
+    expect(any("count([-2,0,2])")).toBe(3);
+    expect(any("total([-2,.5,4])")).toBe(2.5);
+    expect(any("stats([1,2,3,4,5])")).toEqual([1, 1.5, 3, 4.5, 5]);
+  });
+  it("keeps descriptive-statistics edge cases explicit", () => {
+    const any = (source: string) => scalar(source).evaluate({}, {}, "radians");
+    expect(any("count([])")).toBe(0);
+    expect(any("total([])")).toBe(0);
+    expect(any("mean([])")).toBeNaN();
+    expect(any("stdev([1])")).toBeNaN();
+    expect(any("stdevp([1])")).toBe(0);
+    expect(any("quartile([1,2,3],5)")).toBeNaN();
+    expect(any("quantile([1,2,3],-0.1)")).toBeNaN();
+    expect(any("mean(2)")).toBeNaN();
   });
   it("supports reciprocal, inverse, powered trig and pole domains in both angle modes", () => {
     expect(evaluate("sec(0)")).toBeCloseTo(1, 12);

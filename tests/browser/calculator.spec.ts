@@ -33,6 +33,28 @@ async function start(page: Page) {
     page.getByRole("textbox", { name: "Expression 1", exact: true }),
   ).toBeFocused();
 }
+test("Calculator restores its relevant entry focus and yields to modal focus", async ({
+  page,
+}) => {
+  await start(page);
+  await enterExpression(page, 1, "1+1");
+  await page.keyboard.press("Enter");
+  const second = page.getByRole("textbox", { name: "Expression 2" });
+  await expect(second).toBeFocused();
+  await page.getByRole("button", { name: "Close calculator" }).click();
+  await page.getByRole("button", { name: "Calculator", exact: true }).click();
+  await expect(second).toBeFocused();
+
+  await page.getByRole("button", { name: "Practice tools" }).click();
+  const dialog = page.locator("dialog.practice-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(second).not.toBeFocused();
+  expect(
+    await dialog.evaluate((element) =>
+      element.contains(document.activeElement),
+    ),
+  ).toBe(true);
+});
 const overflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
 
@@ -119,9 +141,9 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
     .click();
   await expect(page.locator(".graph-curve").first()).toBeVisible();
   await enterExpression(page, 1, "x<100");
-  await expect(page.locator("rect.graph-shade")).toHaveAttribute(
-    "width",
-    /[1-9]/,
+  await expect(page.locator("path.graph-shade")).toHaveAttribute(
+    "d",
+    /Z$/,
   );
   await enterExpression(page, 1, "y<100");
   await expect(page.locator("path.graph-shade").first()).toHaveAttribute(

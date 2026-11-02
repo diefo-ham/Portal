@@ -9,7 +9,9 @@ export function ContinueSessions({
   data: StudyData;
   actions: SessionActions;
 }) {
-  const sessions = data.sessions.filter((s) => !s.finishedAt).toReversed();
+  const sessions = data.sessions
+    .filter((s) => !s.finishedAt && !s.practiceTest)
+    .toReversed();
   if (!sessions.length) return null;
   const rows = sessions.map((session) => (
     <SessionRow key={session.id} data={data} session={session} {...actions} />

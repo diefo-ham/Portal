@@ -83,10 +83,15 @@ test("confirmed progress reset preserves the bank and preferences across reload;
     .getByRole("button", { name: "Finish session", exact: true })
     .click();
   await page.getByRole("button", { name: "Practice", exact: true }).click();
+  // One item is now answered; the default unanswered pool contains four.
+  await page.getByRole("textbox", { name: "Session size" }).fill("4");
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByLabel("Your numeric answer").fill("99");
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Import history", exact: true }),
+  ).toHaveCount(0);
   await page.getByLabel("Protect unused practice-test questions").uncheck();
   await expect(
     page.getByRole("button", { name: "Reset study progress", exact: true }),

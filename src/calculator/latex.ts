@@ -48,8 +48,14 @@ export function latexToText(latex: string): string {
           root === "3"
             ? `cbrt(${body})`
             : root
-              ? `((${body})^(1/(${root})))`
+              ? `nthroot(${body},${root})`
               : `sqrt(${body})`;
+      } else if (command === "%") {
+        const percentOf = "\\operatorname{of}";
+        if (latex.slice(index).startsWith(percentOf)) {
+          index += percentOf.length;
+          out += "*0.01*";
+        } else out += "*0.01";
       } else if (command === "operatorname" || command === "mathrm")
         out += group();
       else if (["left", "right", " ", ",", "!"].includes(command)) continue;
@@ -58,6 +64,7 @@ export function latexToText(latex: string): string {
       else if (command === "le" || command === "leq") out += "<=";
       else if (command === "ge" || command === "geq") out += ">=";
       else if (command === "sim") out += "~";
+      else if (command === "{" || command === "}") out += command;
       else if (["ldots", "dots", "cdots"].includes(command)) out += "...";
       else if (command === "lvert" || command === "rvert" || command === "vert")
         out += "|";
@@ -84,6 +91,19 @@ export function latexToText(latex: string): string {
           "floor",
           "ceil",
           "round",
+          "mean",
+          "median",
+          "quartile",
+          "quantile",
+          "stdev",
+          "stdevp",
+          "var",
+          "varp",
+          "variance",
+          "mad",
+          "count",
+          "total",
+          "stats",
           "pi",
           "theta",
         ].includes(command)
@@ -105,6 +125,22 @@ export function latexToText(latex: string): string {
 /** Legacy plain-text work opens structurally without changing its engine text. */
 export function textToLatex(text: string): string {
   if (!text.trim()) return "";
+  // Visible restriction braces are delimiters, unlike TeX's structural groups.
+  // Keep the suffix out of scalar TeX generation and preserve comparison signs.
+  const restrictionStart = text.indexOf("{");
+  if (restrictionStart >= 0) {
+    return (
+      textToLatex(text.slice(0, restrictionStart)) +
+      text
+        .slice(restrictionStart)
+        .replace(/\{/g, "\\left\\{")
+        .replace(/\}/g, "\\right\\}")
+        .replace(/>=/g, "\\ge ")
+        .replace(/<=/g, "\\le ")
+        .replace(/\*/g, "\\cdot ")
+        .replace(/_([0-9]+)/g, "_{$1}")
+    );
+  }
   try {
     return text
       .split(/([=~<>])/)

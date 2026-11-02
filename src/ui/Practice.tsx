@@ -3,31 +3,59 @@ import { ShortcutHelp } from "./Help";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
 import type { Session, StudyData } from "../core/model";
+import {
+  saveTestDraft,
+  deadlinePassed,
+  toggleReviewMark,
+} from "../core/practiceTest";
 import { numericValue } from "../core/practice";
 import { sectionName } from "./Filters";
 import "../calculator/layout.css";
 import { useCalculatorState } from "../calculator/useCalculatorState";
 import { CalculatorPanel } from "../calculator/CalculatorPanel";
 import { DocumentPanels } from "./DocumentPanels";
+import { PracticeTestResults } from "./PracticeTestResults";
 import { SessionResults, displayAnswer, correctAnswer } from "./SessionResults";
 type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
 export const time = (ms: number) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
 export function Practice({
   data,
-  session,
+  session: storedSession,
   mutate,
   showCorrectExplanations,
   onBack,
   onRetry,
+  testClock,
+  onFinishModule,
+  onPauseTest,
+  onResumeTest,
+  onCancelTest,
 }: {
+  testClock?: { label: string; ms: number; warning?: boolean };
+  onFinishModule?: () => Promise<unknown>;
+  onPauseTest?: () => Promise<unknown>;
+  onResumeTest?: () => Promise<unknown>;
+  onCancelTest?: () => Promise<unknown>;
   data: StudyData;
   session: Session;
   mutate: Mutate;
   showCorrectExplanations: boolean;
-  onBack: () => void;
+  onBack: () => void | Promise<unknown>;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
 }) {
+  const test = storedSession.practiceTest;
+  const isTest = !!test && !storedSession.finishedAt;
+  const module = isTest ? test.modules[test.currentModule] : undefined;
+  const session = module
+    ? {
+        ...storedSession,
+        questionIds: module.questionIds,
+        index: module.questionIds.indexOf(
+          storedSession.questionIds[storedSession.index],
+        ),
+      }
+    : storedSession;
   const question = data.questions.find(
     (q) => q.id === session.questionIds[session.index],
   )!;
@@ -36,21 +64,17 @@ export function Practice({
   );
   const [pending, setPending] = useState(false);
   const [calculator, setCalculator] = useState(false);
-  const [calculatorShortcutInverted, setCalculatorShortcutInverted] =
-    useState(false);
-  const calculatorShortcutHeld = useRef(false);
-  const calculatorShortcutInvertedRef = useRef(false);
-  const calculatorFocusBeforeShortcut = useRef<HTMLElement | null>(null);
+  const [calculatorAutoFocus, setCalculatorAutoFocus] = useState(true);
   const calculatorWork = useCalculatorState(
     session.id,
     session.calculator,
     mutate,
   );
   const [panel, setPanel] = useState<
-    "overview" | "details" | "tools" | "leave" | null
+    "overview" | "details" | "tools" | "leave" | "cancel-test" | null
   >(null);
   const [panelParent, setPanelParent] = useState<"tools" | null>(null);
-  const showTime = session.timerVisible ?? false;
+  const showTime = isTest || (session.timerVisible ?? false);
   const dialog = useRef<HTMLDialogElement>(null);
   const questionTop = useRef<HTMLElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
@@ -62,10 +86,7 @@ export function Practice({
         ),
       )
     : question.section === "math";
-  const calculatorRendered =
-    calculatorAvailable && (calculator || calculatorShortcutInverted);
-  const calculatorTemporarilyHidden = calculator && calculatorShortcutInverted;
-  const calculatorVisible = calculatorRendered && !calculatorTemporarilyHidden;
+  const calculatorVisible = calculatorAvailable && calculator;
   const openPanel = (value: Exclude<typeof panel, null>) => {
     if (!panel) trigger.current = document.activeElement as HTMLElement;
     setPanelParent(null);
@@ -88,37 +109,10 @@ export function Practice({
     if (attempt) nextButton.current?.focus({ preventScroll: true });
   }, [attempt?.id]);
   useEffect(() => {
-    const finishInversion = (restoreFocus: boolean) => {
-      if (
-        !calculatorShortcutHeld.current &&
-        !calculatorShortcutInvertedRef.current
-      )
-        return;
-      calculatorShortcutHeld.current = false;
-      calculatorShortcutInvertedRef.current = false;
-      setCalculatorShortcutInverted(false);
-      const previous = calculatorFocusBeforeShortcut.current;
-      calculatorFocusBeforeShortcut.current = null;
-      if (restoreFocus && previous?.isConnected)
-        requestAnimationFrame(() => previous.focus({ preventScroll: true }));
-    };
-    if (!calculatorAvailable || panel || pending) {
-      finishInversion(false);
-      return;
-    }
+    if (!calculatorAvailable || panel || pending || session.paused) return;
     const shortcutIsInappropriate = () =>
       !!document.querySelector('dialog[open],[aria-modal="true"]');
     const keydown = (event: KeyboardEvent) => {
-      if (
-        calculatorShortcutHeld.current &&
-        (event.key === "Shift" ||
-          event.key === "Control" ||
-          event.key === "Alt" ||
-          event.key === "Meta")
-      ) {
-        finishInversion(true);
-        return;
-      }
       if (
         event.code !== "Backslash" ||
         event.shiftKey ||
@@ -128,35 +122,35 @@ export function Practice({
         shortcutIsInappropriate()
       )
         return;
-      // Repeats are prevented as well so a held shortcut cannot leak text.
       event.preventDefault();
-      if (event.repeat || calculatorShortcutHeld.current) return;
-      calculatorShortcutHeld.current = true;
-      calculatorShortcutInvertedRef.current = true;
-      calculatorFocusBeforeShortcut.current =
+      if (event.repeat) return;
+      const previous =
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
-      setCalculatorShortcutInverted(true);
-    };
-    const keyup = (event: KeyboardEvent) => {
-      if (event.code === "Backslash") finishInversion(true);
-    };
-    const blur = () => finishInversion(false);
-    const visibility = () => {
-      if (document.hidden) finishInversion(false);
+      if (calculator) void calculatorWork.flush().catch(() => {});
+      setCalculatorAutoFocus(false);
+      setCalculator((visible) => !visible);
+      requestAnimationFrame(() => {
+        if (previous?.isConnected) previous.focus({ preventScroll: true });
+        else questionTop.current?.focus({ preventScroll: true });
+      });
     };
     window.addEventListener("keydown", keydown, true);
-    window.addEventListener("keyup", keyup, true);
-    window.addEventListener("blur", blur);
-    document.addEventListener("visibilitychange", visibility);
     return () => {
       window.removeEventListener("keydown", keydown, true);
-      window.removeEventListener("keyup", keyup, true);
-      window.removeEventListener("blur", blur);
-      document.removeEventListener("visibilitychange", visibility);
     };
-  }, [calculatorAvailable, panel, pending]);
+  }, [
+    calculator,
+    calculatorAvailable,
+    calculatorWork,
+    panel,
+    pending,
+    session.paused,
+  ]);
+  useEffect(() => {
+    if (session.paused) setCalculator(false);
+  }, [session.paused]);
   const [draft, setDraft] = useState<{ id: string; value: string }>();
   const timer = useQuestionTimer(
     session.id,
@@ -182,45 +176,72 @@ export function Practice({
   };
   const navigate = (index: number) =>
     run(async () => {
+      if (session.paused) return;
       await timer.flush();
       await mutate((d) => {
-        d.sessions.find((s) => s.id === session.id)!.index = index;
+        const current = d.sessions.find((s) => s.id === session.id)!;
+        if (
+          isTest &&
+          (current.paused ||
+            deadlinePassed(current) ||
+            current.practiceTest?.currentModule !== test?.currentModule)
+        )
+          return;
+        current.index = current.questionIds.indexOf(session.questionIds[index]);
       });
     });
   const submit = () =>
-    run(async () => {
-      await timer.flush();
-      await mutate((d) => submitAnswer(d, session.id, question.id, answer));
-    });
+    isTest
+      ? session.index < session.questionIds.length - 1
+        ? navigate(session.index + 1)
+        : finish()
+      : run(async () => {
+          await timer.flush();
+          await mutate((d) => submitAnswer(d, session.id, question.id, answer));
+        });
   const finish = () =>
     run(async () => {
       await timer.flush();
       await calculatorWork.flush();
-      await mutate((d) => finishSession(d, session.id));
+      if (onFinishModule) await onFinishModule();
+      else await mutate((d) => finishSession(d, session.id));
     });
   const choose = (value: string) => {
+    if (session.paused) return;
     setDraft({ id: question.id, value });
     // Keep radio focus while its draft saves; transaction ordering still ensures
     // the draft is committed before a subsequent submission.
     void mutate((d) => {
-      d.sessions.find((s) => s.id === session.id)!.drafts[question.id] = value;
+      const current = d.sessions.find((s) => s.id === session.id)!;
+      if (isTest) saveTestDraft(d, session.id, question.id, value);
+      else current.drafts[question.id] = value;
     }).catch(() => {});
   };
+  const toggleChoice = (value: string) => choose(answer === value ? "" : value);
   const toggleBookmark = () =>
     run(() =>
       mutate((d) => {
+        if (isTest) {
+          toggleReviewMark(d, session.id, question.id);
+          return;
+        }
         d.annotations[question.id] = {
           note: d.annotations[question.id]?.note || "",
           bookmarked: !d.annotations[question.id]?.bookmarked,
         };
       }),
     );
+  const markedForReview =
+    isTest && !!test?.markedForReview?.includes(question.id);
+  const pauseTest = () =>
+    run(async () => {
+      await timer.flush();
+      await calculatorWork.flush();
+      setCalculator(false);
+      await onPauseTest?.();
+    });
   const closeCalculator = () => {
     void calculatorWork.flush().catch(() => {});
-    calculatorShortcutHeld.current = false;
-    calculatorShortcutInvertedRef.current = false;
-    calculatorFocusBeforeShortcut.current = null;
-    setCalculatorShortcutInverted(false);
     setCalculator(false);
     requestAnimationFrame(() =>
       (
@@ -230,10 +251,7 @@ export function Practice({
     );
   };
   const openCalculator = () => {
-    calculatorShortcutHeld.current = false;
-    calculatorShortcutInvertedRef.current = false;
-    calculatorFocusBeforeShortcut.current = null;
-    setCalculatorShortcutInverted(false);
+    setCalculatorAutoFocus(true);
     setCalculator(true);
   };
   const leave = () =>
@@ -241,29 +259,36 @@ export function Practice({
       await timer.flush();
       await calculatorWork.flush();
       setPanel(null);
-      onBack();
+      await onBack();
     });
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   if (session.finishedAt)
     return (
       <div className="completed-calculator-context">
-        <SessionResults
-          data={data}
-          session={session}
-          onBack={onBack}
-          onRetry={onRetry}
-          onCalculator={calculatorAvailable ? openCalculator : undefined}
-        />
-        {calculatorRendered && (
+        {storedSession.practiceTest ? (
+          <PracticeTestResults
+            data={data}
+            session={storedSession}
+            mutate={mutate}
+            onBack={onBack}
+            onRetry={onRetry}
+          />
+        ) : (
+          <SessionResults
+            data={data}
+            session={session}
+            mutate={mutate}
+            onBack={onBack}
+            onRetry={onRetry}
+            onCalculator={calculatorAvailable ? openCalculator : undefined}
+          />
+        )}
+        {calculatorVisible && (
           <CalculatorPanel
             state={calculatorWork.state}
             onChange={calculatorWork.change}
             onClose={closeCalculator}
-            temporarilyHidden={calculatorTemporarilyHidden}
-            autoFocus={calculator}
-            shortcutHint={
-              calculator ? "Hold \\ to temporarily hide" : "Release \\ to close"
-            }
+            autoFocus={calculatorAutoFocus}
           />
         )}
       </div>
@@ -273,6 +298,7 @@ export function Practice({
       onKeyDown={(e) => {
         if (
           e.defaultPrevented ||
+          session.paused ||
           panel ||
           pending ||
           e.altKey ||
@@ -321,7 +347,7 @@ export function Practice({
             (e.target instanceof HTMLInputElement && e.target.type === "radio"))
         ) {
           e.preventDefault();
-          choose(choice.id);
+          toggleChoice(choice.id);
         } else if (
           (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
           !(
@@ -375,7 +401,7 @@ export function Practice({
             void run(async () => {
               await timer.flush();
               await calculatorWork.flush();
-              onBack();
+              await onBack();
             })
           }
         >
@@ -383,29 +409,42 @@ export function Practice({
         </button>
         <button
           className="text-button"
-          onClick={() => openPanel("overview")}
+          onClick={() => {
+            if (isTest) void finish();
+            else openPanel("overview");
+          }}
           aria-label="Open question overview"
         >
           Question {session.index + 1}{" "}
           <span className="muted">of {session.questionIds.length}</span>
         </button>
         <div className="toolbar-right">
-          {session.paused && (
-            <button onClick={() => openPanel("tools")}>Timing paused</button>
-          )}
           {showTime && (
-            <span className="timer" aria-label="Time on this question">
-              {time((session.elapsed[question.id] || 0) + timer.pendingMs)}
+            <span
+              className={`timer ${testClock ? "test-timer" : ""} ${testClock?.warning ? "timer-warning" : ""}`}
+              aria-label={testClock?.label || "Time on this question"}
+            >
+              {time(
+                testClock
+                  ? testClock.ms
+                  : (session.elapsed[question.id] || 0) + timer.pendingMs,
+              )}
             </span>
+          )}
+          {isTest && (
+            <button
+              className="pause-test"
+              disabled={pending || session.paused}
+              onClick={() => void pauseTest()}
+            >
+              Pause
+            </button>
           )}
           {question.section === "math" && (
             <button
+              disabled={session.paused}
               aria-expanded={calculatorVisible}
-              title={
-                calculator
-                  ? "Close Calculator · Hold \\ to temporarily hide"
-                  : "Open Calculator · Hold \\ to peek at Calculator"
-              }
+              title={`${calculator ? "Close" : "Open"} Calculator · \\ toggles`}
               onClick={() => {
                 if (calculator) closeCalculator();
                 else openCalculator();
@@ -422,10 +461,16 @@ export function Practice({
           </button>
         </div>
       </div>
+      {module && (
+        <p className="test-module-label small muted">
+          {module.section === "math" ? "Math" : "Reading and Writing"} · Module{" "}
+          {module.mix === "first" ? "1" : "2"}
+        </p>
+      )}
       <div className="progress-track">
         <div
           style={{
-            width: `${(100 * attempts.length) / session.questionIds.length}%`,
+            width: `${(100 * (isTest ? session.questionIds.filter((id) => session.drafts[id]).length : attempts.length)) / session.questionIds.length}%`,
           }}
         />
       </div>
@@ -443,17 +488,23 @@ export function Practice({
               <span className="muted small">{question.domain || ""}</span>
             </div>
             <button
-              className={
-                annotation.bookmarked ? "bookmark selected" : "bookmark"
-              }
-              aria-pressed={annotation.bookmarked}
+              className={`${isTest ? "review-mark" : "bookmark"} ${(isTest ? markedForReview : annotation.bookmarked) ? "selected" : ""}`}
+              aria-pressed={isTest ? markedForReview : annotation.bookmarked}
               aria-label={
-                annotation.bookmarked ? "Remove bookmark" : "Bookmark question"
+                isTest
+                  ? markedForReview
+                    ? "Unmark for review"
+                    : "Mark for review"
+                  : annotation.bookmarked
+                    ? "Remove bookmark"
+                    : "Bookmark question"
               }
               title={
-                annotation.bookmarked
-                  ? "Remove bookmark (E)"
-                  : "Bookmark question (E)"
+                isTest
+                  ? `${markedForReview ? "Unmark" : "Mark"} for review (E)`
+                  : annotation.bookmarked
+                    ? "Remove bookmark (E)"
+                    : "Bookmark question (E)"
               }
               onClick={(e) => {
                 // Pointer activation returns to reading; keyboard activation keeps
@@ -463,7 +514,16 @@ export function Practice({
                 void toggleBookmark();
               }}
             >
-              {annotation.bookmarked ? "★" : "☆"}
+              <span aria-hidden="true">
+                {isTest
+                  ? markedForReview
+                    ? "⚑"
+                    : "⚐"
+                  : annotation.bookmarked
+                    ? "★"
+                    : "☆"}
+              </span>
+              {isTest && <span>Mark for review</span>}
             </button>
           </div>
           {question.passage && (
@@ -493,19 +553,28 @@ export function Practice({
           ) : (
             <h1 className="question-text">{question.stem}</h1>
           )}
-          <fieldset className="answers" disabled={!!attempt || pending}>
+          <fieldset
+            className="answers"
+            disabled={!!attempt || pending || session.paused}
+          >
             <legend className="sr-only">Your answer</legend>
             {question.answer.type === "choice" ? (
               question.choices!.map((c) => (
                 <label
-                  key={c.id}
                   className={`answer-choice ${answer === c.id ? "chosen" : ""} ${attempt && !attempt.correct && answer === c.id ? "wrong-answer" : ""} ${attempt && question.answer.type === "choice" && question.answer.value === c.id ? "right-answer" : ""}`}
+                  key={c.id}
                 >
                   <input
                     type="radio"
                     name="answer"
                     value={c.id}
                     checked={answer === c.id}
+                    onClick={(event) => {
+                      if (answer === c.id) {
+                        event.preventDefault();
+                        choose("");
+                      }
+                    }}
                     onChange={() => choose(c.id)}
                   />
                   <span className="choice-letter">{c.id}</span>
@@ -523,9 +592,11 @@ export function Practice({
                     const v = e.target.value;
                     setDraft({ id: question.id, value: v });
                     void mutate((d) => {
-                      d.sessions.find((s) => s.id === session.id)!.drafts[
-                        question.id
-                      ] = v;
+                      if (isTest) saveTestDraft(d, session.id, question.id, v);
+                      else
+                        d.sessions.find((s) => s.id === session.id)!.drafts[
+                          question.id
+                        ] = v;
                     }).catch(() => {});
                   }}
                   placeholder="Enter a number or fraction"
@@ -552,7 +623,7 @@ export function Practice({
               </label>
             )}
           </fieldset>
-          {!attempt ? (
+          {isTest ? null : !attempt ? (
             <button
               className="primary submit"
               disabled={
@@ -611,7 +682,7 @@ export function Practice({
           )}
           <div className="question-footer">
             <button
-              disabled={session.index === 0 || pending}
+              disabled={session.index === 0 || pending || session.paused}
               onClick={() => void navigate(session.index - 1)}
             >
               ← Previous
@@ -620,35 +691,37 @@ export function Practice({
               <button
                 ref={nextButton}
                 className={attempt ? "primary" : "text-button"}
-                disabled={pending}
+                disabled={pending || session.paused}
                 onClick={() => void navigate(session.index + 1)}
               >
-                {attempt ? "Next question →" : "Skip for now →"}
+                {isTest
+                  ? "Next question →"
+                  : attempt
+                    ? "Next question →"
+                    : "Skip for now →"}
               </button>
             ) : (
               <button
                 ref={nextButton}
                 className={attempt ? "primary" : "text-button"}
-                disabled={pending}
+                disabled={pending || session.paused}
                 onClick={() => void finish()}
               >
-                Review session →
+                {isTest ? "Finish module →" : "Review session →"}
               </button>
             )}
           </div>
         </article>
-        {calculatorRendered && question.section === "math" && (
-          <CalculatorPanel
-            state={calculatorWork.state}
-            onChange={calculatorWork.change}
-            onClose={closeCalculator}
-            temporarilyHidden={calculatorTemporarilyHidden}
-            autoFocus={calculator}
-            shortcutHint={
-              calculator ? "Hold \\ to temporarily hide" : "Release \\ to close"
-            }
-          />
-        )}
+        {calculatorVisible &&
+          question.section === "math" &&
+          !session.paused && (
+            <CalculatorPanel
+              state={calculatorWork.state}
+              onChange={calculatorWork.change}
+              onClose={closeCalculator}
+              autoFocus={calculatorAutoFocus}
+            />
+          )}
       </div>
       <dialog
         ref={dialog}
@@ -691,7 +764,9 @@ export function Practice({
                 ? "Question details"
                 : panel === "leave"
                   ? "Leave this session?"
-                  : "Practice tools"}
+                  : panel === "cancel-test"
+                    ? "Cancel Practice Test?"
+                    : "Practice tools"}
           </h2>
           <button aria-label="Close panel" onClick={() => setPanel(null)}>
             ×
@@ -700,7 +775,9 @@ export function Practice({
         {panel === "leave" && (
           <div className="tool-menu">
             <p>
-              Your work is saved. You can resume this session from Practice.
+              {isTest
+                ? "Your work is saved. Leaving pauses the module. Resume explicitly when you return."
+                : "Your work is saved. You can resume this session from Practice."}
             </p>
             <button onClick={() => setPanel(null)}>Cancel</button>
             <button
@@ -718,47 +795,90 @@ export function Practice({
               <summary>Keyboard shortcuts & help</summary>
               <ShortcutHelp />
             </details>
-            <button onClick={() => openToolDetail("overview")}>
+            <button
+              onClick={() => {
+                if (isTest) {
+                  setPanel(null);
+                  void finish();
+                } else openToolDetail("overview");
+              }}
+            >
               Question overview
             </button>
-            <label>
-              <input
-                type="checkbox"
-                checked={showTime}
-                onChange={(e) => {
-                  const visible = e.target.checked;
-                  void mutate((d) => {
-                    const current = d.sessions.find((s) => s.id === session.id);
-                    if (current) current.timerVisible = visible;
-                  }).catch(() => {});
-                }}
-              />{" "}
-              Show timer
-            </label>
-            <button
-              onClick={() =>
-                void run(async () => {
-                  await timer.flush();
-                  await mutate((d) => {
-                    const s = d.sessions.find((s) => s.id === session.id)!;
-                    s.paused = !s.paused;
-                  });
-                })
-              }
-            >
-              {session.paused ? "Resume timer" : "Pause timer"}
-            </button>
+            {!isTest && (
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showTime}
+                  onChange={(e) => {
+                    const visible = e.target.checked;
+                    void mutate((d) => {
+                      const current = d.sessions.find(
+                        (s) => s.id === session.id,
+                      );
+                      if (current) current.timerVisible = visible;
+                    }).catch(() => {});
+                  }}
+                />{" "}
+                Show timer
+              </label>
+            )}
+            {!isTest && (
+              <button
+                onClick={() =>
+                  void run(async () => {
+                    await timer.flush();
+                    await mutate((d) => {
+                      const s = d.sessions.find((s) => s.id === session.id)!;
+                      s.paused = !s.paused;
+                    });
+                  })
+                }
+              >
+                {session.paused ? "Resume timer" : "Pause timer"}
+              </button>
+            )}
             <button onClick={() => openToolDetail("details")}>
               Question details
             </button>
+            {isTest && onCancelTest && (
+              <button
+                className="danger"
+                onClick={() => {
+                  setPanelParent("tools");
+                  setPanel("cancel-test");
+                }}
+              >
+                Cancel Practice Test
+              </button>
+            )}
+            {!isTest && (
+              <button
+                onClick={() => {
+                  setPanel(null);
+                  void finish();
+                }}
+                disabled={pending}
+              >
+                Finish session
+              </button>
+            )}
+          </div>
+        )}
+        {panel === "cancel-test" && onCancelTest && (
+          <div className="tool-menu">
+            <p>
+              The resumable attempt will be removed without results or an SAT
+              estimate. Questions already shown will remain used for Practice
+              Tests.
+            </p>
+            <button onClick={() => setPanel("tools")}>Keep test</button>
             <button
-              onClick={() => {
-                setPanel(null);
-                void finish();
-              }}
+              className="danger"
               disabled={pending}
+              onClick={() => void run(onCancelTest)}
             >
-              Finish session
+              Cancel Practice Test
             </button>
           </div>
         )}
@@ -769,14 +889,15 @@ export function Practice({
               <div className="question-map">
                 {session.questionIds.map((id, index) => {
                   const a = attempts.find((a) => a.questionId === id);
+                  const saved = isTest && !!session.drafts[id];
                   return (
                     <button
                       key={id}
-                      aria-label={`Go to question ${index + 1}${a ? (a.correct ? ", correct" : ", incorrect") : ""}`}
+                      aria-label={`Go to question ${index + 1}${saved ? ", answered" : a ? (a.correct ? ", correct" : ", incorrect") : ""}`}
                       aria-current={
                         index === session.index ? "step" : undefined
                       }
-                      className={`${a ? (a.correct ? "map-correct" : "map-incorrect") : ""} ${index === session.index ? "current" : ""}`}
+                      className={`${saved ? "map-answered" : a ? (a.correct ? "map-correct" : "map-incorrect") : ""} ${index === session.index ? "current" : ""}`}
                       disabled={pending}
                       onClick={() => {
                         setPanel(null);
@@ -799,7 +920,7 @@ export function Practice({
               }}
               disabled={pending}
             >
-              Finish session
+              {isTest ? "Finish module" : "Finish session"}
             </button>
           </>
         )}
@@ -829,6 +950,33 @@ export function Practice({
           </div>
         )}
       </dialog>
+      {isTest && session.paused && (
+        <div
+          className="test-paused-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="paused-heading"
+        >
+          <section className="test-paused-card">
+            <p className="eyebrow">PRACTICE TEST PAUSED</p>
+            <h1 id="paused-heading">Your time is frozen.</h1>
+            <p className="muted">
+              Answers, navigation, and the Calculator stay unavailable until you
+              resume.
+            </p>
+            <button
+              className="primary"
+              disabled={pending}
+              onClick={() => void run(async () => onResumeTest?.())}
+            >
+              Resume test
+            </button>
+            <button className="text-button" disabled={pending} onClick={onBack}>
+              Exit test
+            </button>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

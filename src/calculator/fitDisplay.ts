@@ -25,8 +25,7 @@ export function fittedExpression(fit: Fit, displayPrecision?: number): string {
     terms
       .map(({ value, power }, i) => {
         const magnitude = Math.abs(value);
-        const coefficient =
-          power && magnitude === 1 ? "" : `${magnitude}${power ? "*" : ""}`;
+        const coefficient = power && magnitude === 1 ? "" : `${magnitude}`;
         return `${value < 0 ? "-" : i ? "+" : ""}${coefficient}${power ? `x${power > 1 ? `^${power}` : ""}` : ""}`;
       })
       .join("") || "0"

@@ -19,6 +19,7 @@ import {
 import sample from "../src/data/synthetic.json";
 import {
   beginSession,
+  deleteSession,
   renameSession,
   submitAnswer,
   finishSession,
@@ -52,10 +53,24 @@ describe("question integrity and practice rules", () => {
     );
     first.index = 1;
     first.drafts[questions[1].id] = "28";
+    first.eliminated = { [questions[0].id]: ["A", "D"] };
     const saved = structuredClone(first);
     beginSession(d, [questions[2].id], defaultFilters);
     expect(d.sessions.filter((s) => !s.finishedAt)).toHaveLength(2);
     expect(first).toEqual(saved);
+  });
+  it("defaults fresh and reset Practice filters to unanswered without masking explicit legacy status", () => {
+    const d = { ...emptyData(), questions };
+    expect(defaultFilters.statuses).toEqual(["unanswered"]);
+    expect(filterQuestions(d, defaultFilters)).toHaveLength(10);
+    const session = beginSession(d, [questions[0].id], defaultFilters);
+    submitAnswer(d, session.id, questions[0].id, "B");
+    expect(filterQuestions(d, defaultFilters)).toHaveLength(9);
+    expect(
+      filterQuestions(d, { ...defaultFilters, status: "completed" }).map(
+        (question) => question.id,
+      ),
+    ).toEqual([questions[0].id]);
   });
   it("snapshots timer visibility and calculates performance from answers only", () => {
     const d = { ...emptyData(), questions };
@@ -129,7 +144,9 @@ describe("question integrity and practice rules", () => {
       [questions[0].id, questions[1].id],
       defaultFilters,
     );
-    expect(sessionDefaultName(d, session)).toBe("Math · Algebra · 2 questions");
+    expect(sessionDefaultName(d, session)).toBe(
+      "Unanswered · Math · Algebra · 2 questions",
+    );
     renameSession(d, session.id, "  Functions   Review ✓  ");
     toggleSessionStar(d, session.id);
     expect(session.name).toBe("Functions Review ✓");
@@ -137,7 +154,9 @@ describe("question integrity and practice rules", () => {
     expect(sessionDisplayName(d, session)).toBe("Functions Review ✓");
     renameSession(d, session.id, "   ");
     expect(session.name).toBeUndefined();
-    expect(sessionDisplayName(d, session)).toBe("Math · Algebra · 2 questions");
+    expect(sessionDisplayName(d, session)).toBe(
+      "Unanswered · Math · Algebra · 2 questions",
+    );
     session.filters.status = "incorrect";
     expect(sessionDefaultName(d, session)).toBe(
       "Mistakes · Math · Algebra · 2 questions",
@@ -147,6 +166,31 @@ describe("question integrity and practice rules", () => {
     expect(Array.from(normalizeSessionName("🌿".repeat(100))!)).toHaveLength(
       80,
     );
+  });
+  it("deletes one session while retaining its answers and unrelated study state", () => {
+    const d = { ...emptyData(), questions };
+    const deleted = beginSession(d, [questions[0].id], defaultFilters);
+    const kept = beginSession(d, [questions[1].id], defaultFilters);
+    submitAnswer(d, deleted.id, questions[0].id, "B");
+    d.annotations[questions[0].id] = { bookmarked: true, note: "" };
+
+    deleteSession(d, deleted.id);
+
+    expect(d.sessions).toEqual([kept]);
+    expect(d.attempts).toHaveLength(1);
+    expect(d.attempts[0]).toMatchObject({
+      questionId: questions[0].id,
+      correct: true,
+    });
+    expect(d.attempts[0].sessionId).toBeUndefined();
+    expect(d.annotations[questions[0].id].bookmarked).toBe(true);
+    expect(performanceOverview(d).all).toMatchObject({
+      attempts: 1,
+      correct: 1,
+    });
+    expect(() =>
+      parseBackup({ format: "sat-study-backup-v1", data: d }),
+    ).not.toThrow();
   });
   it("atomically replaces one reset archive and restores complete study state without replacing the corpus", async () => {
     const original = { ...emptyData(), questions };
@@ -159,6 +203,7 @@ describe("question integrity and practice rules", () => {
     s.starred = true;
     s.elapsed[questions[0].id] = 1234;
     s.drafts[questions[1].id] = "28";
+    s.eliminated = { [questions[0].id]: ["A"] };
     s.index = 1;
     submitAnswer(original, s.id, questions[0].id, "B");
     original.annotations[questions[0].id] = {
@@ -517,6 +562,7 @@ describe("question integrity and practice rules", () => {
   it("validates and pauses restored sessions", () => {
     const d = { ...emptyData(), questions };
     d.sessions = [createSession([questions[0].id])];
+    d.sessions[0].eliminated = { [questions[0].id]: ["A", "C"] };
     d.annotations[questions[0].id] = {
       bookmarked: true,
       note: "Remember inverse operations.",
@@ -525,6 +571,10 @@ describe("question integrity and practice rules", () => {
       parseBackup({ format: "sat-study-backup-v1", data: d }).sessions[0]
         .paused,
     ).toBe(true);
+    expect(
+      parseBackup({ format: "sat-study-backup-v1", data: d }).sessions[0]
+        .eliminated,
+    ).toEqual({ [questions[0].id]: ["A", "C"] });
     d.sessions[0].name = "  Saved   session  ";
     d.sessions[0].starred = true;
     expect(

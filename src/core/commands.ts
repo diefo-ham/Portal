@@ -38,6 +38,14 @@ export function toggleSessionStar(data: StudyData, sessionId: string) {
   session.starred = !session.starred;
 }
 
+export function deleteSession(data: StudyData, sessionId: string) {
+  const index = data.sessions.findIndex((session) => session.id === sessionId);
+  if (index < 0) throw new Error("Session no longer exists.");
+  data.sessions.splice(index, 1);
+  for (const attempt of data.attempts)
+    if (attempt.sessionId === sessionId) delete attempt.sessionId;
+}
+
 export function submitAnswer(
   data: StudyData,
   sessionId: string,
@@ -48,6 +56,7 @@ export function submitAnswer(
   const question = data.questions.find((q) => q.id === questionId);
   if (
     !session ||
+    session.practiceTest ||
     session.finishedAt ||
     !question ||
     !session.questionIds.includes(questionId)
@@ -81,6 +90,8 @@ export function submitAnswer(
 export function finishSession(data: StudyData, sessionId: string) {
   const session = data.sessions.find((s) => s.id === sessionId);
   if (!session) throw new Error("Session no longer exists.");
+  if (session.practiceTest)
+    throw new Error("Finish the current Practice Test module instead.");
   session.finishedAt ??= new Date().toISOString();
 }
 
@@ -91,6 +102,7 @@ export function finishSession(data: StudyData, sessionId: string) {
 export function resetStudyProgress(data: StudyData, clearBookmarks = false) {
   data.attempts = [];
   data.sessions = [];
+  data.practiceTestUsedIds = [];
   data.annotations = clearBookmarks
     ? {}
     : Object.fromEntries(

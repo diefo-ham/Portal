@@ -36,6 +36,8 @@ export interface CalculatorState {
   mode?: "desmos" | "offline";
   /** Official getState() JSON, kept opaque and separate from offline entries. */
   desmos?: Record<string, unknown>;
+  /** Last expression/table that legitimately owned focus in Offline mode. */
+  activeEntryId?: string;
 }
 export const defaultView = (): Viewport => ({
   xMin: -10,
@@ -117,6 +119,11 @@ export function validateCalculator(raw: unknown): CalculatorState {
     )
       throw new Error("Invalid calculator expression or table.");
   }
+  if (
+    s.activeEntryId !== undefined &&
+    (typeof s.activeEntryId !== "string" || !ids.has(s.activeEntryId))
+  )
+    throw new Error("Invalid active calculator entry.");
   if (s.desmos !== undefined) validateDesmosState(s.desmos);
   return structuredClone(s);
 }

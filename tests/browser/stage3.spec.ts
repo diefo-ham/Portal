@@ -49,9 +49,7 @@ test("compact domain and skill combinations persist in a deterministically resum
   await expect(
     page.getByRole("button", { name: "Skill: 2 selected" }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Answer status: All questions" })
-    .click();
+  await page.getByRole("button", { name: "Answer status: Unanswered" }).click();
   await expect(
     page.getByRole("group", { name: "Answer status", exact: true }),
   ).toContainText("MistakesUnansweredCompleted");

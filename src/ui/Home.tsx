@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { Filters as FilterValues, StudyData } from "../core/model";
 import { filterQuestions } from "../core/practice";
 import { reviewQueues } from "../core/review";
@@ -35,6 +36,10 @@ export function Home({
   const questions = filterQuestions(data, value);
   const maximum = questions.length;
   const numericLimit = Number(limit);
+  useEffect(() => {
+    if (maximum > 0 && /^\d+$/.test(limit) && numericLimit > maximum)
+      setLimit(String(maximum));
+  }, [limit, maximum, numericLimit, setLimit]);
   const validLimit =
     /^\d+$/.test(limit) &&
     Number.isInteger(numericLimit) &&
@@ -53,7 +58,7 @@ export function Home({
       active: protectTests ? "hide" : "include",
       domains: [],
       skills: [],
-      statuses: [],
+      statuses: ["unanswered"],
       difficulties: [],
     });
   return (
@@ -146,9 +151,10 @@ export function Home({
               </span>
             </div>
             {!questions.length && (
-              <p className="muted small">
-                No questions match this combination. Broaden your focus or reset
-                the filters.
+              <p className="muted small" role="status">
+                No questions match or remain for these filters. Change the
+                filters, or reset relevant study progress in Settings to restore
+                availability when appropriate.
               </p>
             )}
           </section>

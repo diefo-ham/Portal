@@ -84,6 +84,8 @@ test("offline local workflow, history, reload persistence and backup restore", a
   const file = await download;
   const path = await file.path();
   expect(path).toBeTruthy();
+  await page.getByLabel("Theme").selectOption("light");
+  await page.getByLabel("Timer on by default").uncheck();
   await page.getByLabel("Restore backup JSON").setInputFiles(path!);
   await expect(
     page.getByText("Replace local data with this backup?"),
@@ -94,6 +96,8 @@ test("offline local workflow, history, reload persistence and backup restore", a
   await expect(
     page.getByText("Backup restored. Saved session timers are paused."),
   ).toBeVisible();
+  await expect(page.getByLabel("Theme")).toHaveValue("auto");
+  await expect(page.getByLabel("Timer on by default")).toBeChecked();
   expect(remote).toEqual([]);
 });
 test("progress survives closing and reopening the browser process", async ({}, testInfo) => {

@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("question details return to tools and Help only scrolls when constrained", async ({
+test("question details return to tools and Help stays usable at tall and constrained sizes", async ({
   page,
 }) => {
   await loadMath(page, "1");
@@ -66,23 +66,38 @@ test("question details return to tools and Help only scrolls when constrained", 
     })
     .click();
   const help = page.getByRole("dialog");
+  const overview = help.getByLabel("SAT Study overview");
+  for (const area of ["Practice", "Review", "Browse", "Tests"])
+    await expect(overview).toContainText(area);
+  await expect(help.locator("details[open]")).toHaveCount(0);
+  await expect(help).toContainText("Protect active questions");
+  await expect(help).not.toContainText("Practice-test question protection");
   const before = await help.boundingBox();
   await page.getByText("Keyboard shortcuts", { exact: true }).click();
   const after = await help.boundingBox();
   expect(after!.height).toBeGreaterThan(before!.height);
-  expect(
-    await help.evaluate(
-      (element) => element.scrollHeight <= element.clientHeight + 1,
-    ),
-  ).toBe(true);
+  expect(after!.y).toBeGreaterThanOrEqual(0);
+  expect(after!.y + after!.height).toBeLessThanOrEqual(1100);
   const shortcuts = help.locator("details").filter({
     hasText: "Keyboard shortcuts",
   });
-  const statuses = help.locator("details").filter({ hasText: "Answer status" });
+  const tests = help.locator("details").filter({ hasText: /^Tests/ });
   await expect(shortcuts).toHaveAttribute("open", "");
-  await statuses.getByText("Answer status", { exact: true }).click();
-  await expect(statuses).toHaveAttribute("open", "");
+  await tests.getByText("Tests", { exact: true }).click();
+  await expect(tests).toHaveAttribute("open", "");
   await expect(shortcuts).not.toHaveAttribute("open", "");
+  await expect(tests).toContainText("Mark for Review");
+  await expect(tests).toContainText("only a live-test aid");
+  const protection = help.locator("details").filter({
+    hasText: /^Protect active questions/,
+  });
+  await protection
+    .getByText("Protect active questions", { exact: true })
+    .click();
+  await expect(protection).toHaveAttribute("open", "");
+  await expect(tests).not.toHaveAttribute("open", "");
+  await expect(protection).toContainText("ordinary Practice");
+  await expect(protection).toContainText("Tests intentionally use active");
   await page.getByRole("button", { name: "Close help" }).click();
 
   await page
@@ -142,6 +157,8 @@ test("timer and correct-explanation preferences apply to new sessions", async ({
     page.getByLabel("Show explanations after correct answers"),
   ).toBeChecked();
   await page.getByRole("button", { name: "Practice", exact: true }).click();
+  // Reload restores the default size of ten; one sample item is already answered.
+  await page.getByRole("textbox", { name: "Session size" }).fill("1");
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByLabel("Time on this question")).toHaveCount(0);
   const sessions = (await state(page)).sessions;
@@ -149,8 +166,12 @@ test("timer and correct-explanation preferences apply to new sessions", async ({
     true,
     false,
   ]);
-  await page.keyboard.press("b");
-  await page.keyboard.press("Enter");
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: /Resume practice:.*Linear equations in one variable/,
+    })
+    .click();
   await expect(page.getByText(/Subtract 7 from both sides/)).toBeVisible();
 });
 

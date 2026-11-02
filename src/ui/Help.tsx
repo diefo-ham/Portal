@@ -14,8 +14,13 @@ export function ShortcutHelp() {
         </dd>
         <dt>E</dt>
         <dd>Toggle the current question’s bookmark</dd>
+        <dt>\</dt>
+        <dd>Toggle calculator</dd>
         <dt>Escape</dt>
-        <dd>Close a temporary panel first. While reading, open Leave session; press Escape again to leave.</dd>
+        <dd>
+          Close a temporary panel first. While reading, open Leave session;
+          press Escape again to leave.
+        </dd>
       </dl>
       <p className="small muted">
         Shortcuts apply while reading. Focused controls keep their normal keys;
@@ -77,77 +82,154 @@ export function Help() {
           </button>
         </div>
         <div className="help-content">
-          <section>
-            <h3>Practice and Browse</h3>
+          <section className="help-overview" aria-label="SAT Study overview">
             <p>
-              <strong>Practice</strong> creates and resumes study sessions.
-              <strong> Browse</strong> lets you search the library and inspect
-              individual questions without starting a session.
+              SAT Study has four main areas. Start a focused set, return to
+              past work, inspect the library, or take a test.
             </p>
+            <dl>
+              <div>
+                <dt>Practice</dt>
+                <dd>Work through a focused study session.</dd>
+              </div>
+              <div>
+                <dt>Review</dt>
+                <dd>Revisit attempts and saved questions.</dd>
+              </div>
+              <div>
+                <dt>Browse</dt>
+                <dd>Search and inspect the question library.</dd>
+              </div>
+              <div>
+                <dt>Tests</dt>
+                <dd>Run timed or untimed test modules.</dd>
+              </div>
+            </dl>
           </section>
-          <details open={openSection === "protection"}>
-            <summary {...detail("protection")}>
-              Practice-test question protection
-            </summary>
+          <details open={openSection === "practice"}>
+            <summary {...detail("practice")}>Practice</summary>
             <p>
-              Some imported questions may belong to active practice tests.
-              Protection hides those questions during ordinary study so you do
-              not accidentally spoil a future test. Inactive questions remain
-              available. Questions with unknown status also remain available
-              because the portal cannot confidently identify them as active.
-            </p>
-            <p>
-              Turning protection off makes active questions eligible again. The
-              portal asks for confirmation before opening or starting a set that
-              contains one.
+              Practice creates focused, shuffled study sessions from your
+              filters. Answers receive feedback as you work. Exit saves your
+              place, drafts, timing, question order, and calculator workspace
+              so an unfinished session can resume later.
             </p>
           </details>
-          <details open={openSection === "status"}>
-            <summary {...detail("status")}>Answer status</summary>
+          <details open={openSection === "review"}>
+            <summary {...detail("review")}>Review</summary>
             <p>
-              Choose one or more statuses; an empty selection means all
-              questions. Status reflects the latest submitted answer, while
-              earlier attempts remain in history.
+              Review summarizes submitted attempts and keeps repeated attempts
+              separate. Mistakes, unanswered assigned questions, completed
+              questions, and ordinary bookmarks can become new Practice sets.
+              Accuracy excludes unanswered questions.
+            </p>
+            <p>
+              Bookmarks are persistent study markers, not answers. They remain
+              available after the normal progress reset unless you explicitly
+              choose to clear them.
+            </p>
+          </details>
+          <details open={openSection === "browse"}>
+            <summary {...detail("browse")}>Browse</summary>
+            <p>
+              Browse searches the library and opens individual questions
+              without creating a session or recording an answer. You can add
+              or remove an ordinary bookmark while inspecting a question.
+            </p>
+          </details>
+          <details open={openSection === "tests"}>
+            <summary {...detail("tests")}>Tests</summary>
+            <p>
+              Choose a Full Test or one module. Timed modules count down;
+              untimed modules use an unlimited stopwatch. A live module can be
+              paused and resumed, including after closing the portal. The
+              Question Overview shows answered and unanswered questions.
+              <strong> Mark for Review</strong> is only a live-test aid and is
+              cleared when that module is completed.
+            </p>
+            <p>
+              Full Tests route each Higher or Lower Module 2 from scored Module
+              1 performance and include an automatic, skippable break before
+              Math. Every module contains two portal-simulated unscored
+              questions; this does not identify real SAT pretest questions.
+              Results exclude those simulated items and delay answer feedback
+              until the test is complete.
+            </p>
+            <p>
+              Starting a Practice Test exposes its active questions, and the
+              portal does not reuse them for another Practice Test. Deleting a
+              result does not reset that exposure history; resetting study
+              progress does.
+            </p>
+          </details>
+          <details open={openSection === "protection"}>
+            <summary {...detail("protection")}>Protect active questions</summary>
+            <p>
+              Active questions may belong to current or future official
+              Bluebook practice material. With protection enabled, ordinary
+              Practice hides them by default; Tests intentionally use active
+              questions. Disabling protection can expose them in ordinary
+              Practice.
+            </p>
+            <p>
+              Inactive questions remain available. Unknown status stays
+              explicit and is not a promise that a question is spoiler-safe.
+              The portal does not know which questions are unscored on the real
+              SAT.
+            </p>
+          </details>
+          <details open={openSection === "sessions"}>
+            <summary {...detail("sessions")}>
+              Sessions, bookmarks, and filters
+            </summary>
+            <p>
+              Resuming a session preserves its saved order and place. Session
+              names and stars organize sets; they are separate from ordinary
+              question bookmarks. Answer-status filters use the latest
+              submitted answer, while Review keeps earlier attempts in history.
+              An empty status selection means all statuses.
             </p>
             <dl className="help-definitions">
-              <dt>All</dt>
-              <dd>No answer-status restriction.</dd>
               <dt>Unanswered</dt>
               <dd>
-                In Practice filters, questions with no recorded answer. In
-                Review, only questions previously assigned to a session and
-                still without a recorded answer.
+                In Practice, no recorded answer. In Review, assigned to a
+                session but still without a recorded answer.
               </dd>
               <dt>Mistakes</dt>
               <dd>Questions whose latest recorded answer is incorrect.</dd>
               <dt>Completed</dt>
               <dd>Questions with at least one submitted answer.</dd>
             </dl>
-          </details>
-          <details open={openSection === "taxonomy"}>
-            <summary {...detail("taxonomy")}>
-              Section, domain, and skill
-            </summary>
             <p>
               Section sets the broad SAT scope. Domains are limited to that
               scope, and skills are limited to the selected domains. With All
               selected, a domain can narrow the scope on its own.
             </p>
           </details>
-          <details open={openSection === "sessions"}>
-            <summary {...detail("sessions")}>
-              Sessions and saved questions
-            </summary>
+          <details open={openSection === "calculator"}>
+            <summary {...detail("calculator")}>Calculator</summary>
             <p>
-              New sessions are shuffled; resuming preserves the saved order and
-              your place. Session stars keep important sets easy to find and are
-              separate from question bookmarks. Bookmarks are available from
-              Review and do not count as answers.
+              The calculator is available during Practice and Tests and can be
+              reopened from completed Math results. The integrated Calculator
+              works without internet. Use Desmos when the optional official
+              hosted tool is configured and reachable; its separate workspace
+              saves with the session too.
+            </p>
+          </details>
+          <details open={openSection === "backup"}>
+            <summary {...detail("backup")}>Backup, restore, and reset</summary>
+            <p>
+              A full backup carries the question library, answers, bookmarks,
+              sessions, Practice Test state and exposure history, calculator
+              work, and durable study settings. Restoring validates the file
+              before replacing local data.
             </p>
             <p>
-              Review accuracy uses correct submitted attempts divided by all
-              submitted attempts in the selected scope. Unanswered questions are
-              excluded, and repeated attempts remain separate.
+              Reset study progress clears attempts, sessions, and Practice Test
+              exposure so test questions become eligible again. It preserves
+              the library, settings, and bookmarks unless you explicitly clear
+              bookmarks, and keeps one local recovery snapshot of the previous
+              study state.
             </p>
           </details>
           <details open={openSection === "shortcuts"}>

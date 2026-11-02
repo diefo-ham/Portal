@@ -20,7 +20,7 @@ export function ResetProgress({
       <h2>Reset study progress</h2>
       <p>
         Clear your answers and sessions to start fresh. You can keep your
-        bookmarks.
+        bookmarks. This also restores Practice Test question eligibility.
       </p>
       <button
         className="text-button danger"
@@ -67,7 +67,8 @@ export function ResetProgress({
             This replaces your current answers, sessions, drafts, recorded time,
             and bookmarks with the state saved immediately before your last
             reset. Your question bank and preferences stay unchanged. Saved
-            timers will be paused.
+            ordinary timers will be paused. Practice Test clocks retain their
+            original start times and exposure history.
           </p>
         ) : (
           <>

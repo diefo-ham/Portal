@@ -1,7 +1,15 @@
-import { create, parseDependencies } from "mathjs/number";
+import {
+  create,
+  parseDependencies,
+  ConditionalNodeDependencies,
+} from "mathjs/number";
 import type { MathNode } from "mathjs";
 import { parseListRanges, rangeValues } from "./listRanges";
-const { parse } = create({ parseDependencies });
+import { restrictionSource } from "./restrictionSyntax";
+const { parse, ConditionalNode } = create({
+  parseDependencies,
+  ConditionalNodeDependencies,
+});
 
 export type Angle = "radians" | "degrees";
 export type Numeric = number | number[];
@@ -28,6 +36,7 @@ const constants: Record<string, number> = {
 const builtin = new Set([
   "sqrt",
   "cbrt",
+  "nthroot",
   "abs",
   "sin",
   "cos",
@@ -47,8 +56,42 @@ const builtin = new Set([
   "floor",
   "ceil",
   "round",
+  "sign",
+  "gcd",
+  "lcm",
+  "mod",
+  "ncr",
+  "npr",
   "min",
   "max",
+  "mean",
+  "median",
+  "quartile",
+  "quantile",
+  "stdev",
+  "stdevp",
+  "var",
+  "varp",
+  "variance",
+  "mad",
+  "count",
+  "total",
+  "stats",
+]);
+const listAggregates = new Set([
+  "mean",
+  "median",
+  "quartile",
+  "quantile",
+  "stdev",
+  "stdevp",
+  "var",
+  "varp",
+  "variance",
+  "mad",
+  "count",
+  "total",
+  "stats",
 ]);
 export const normalize = (text: string) => {
   text = text
@@ -60,6 +103,9 @@ export const normalize = (text: string) => {
     .replaceAll("²", "^2")
     .replaceAll("³", "^3")
     .replaceAll("√", "sqrt")
+    .replace(/%\s*of\b/gi, "*0.01*")
+    .replace(/\bnCr\b/g, "ncr")
+    .replace(/\bnPr\b/g, "npr")
     .replace(/\|([^|]+)\|/g, "abs($1)")
     .replace(/\b([a-zA-Z])([a-zA-Z]_\d+)\b/g, "$1*$2")
     .replace(/\b(?:arc)(sin|cos|tan|sec|csc|cot)\b/g, "a$1");
@@ -107,7 +153,13 @@ export const normalize = (text: string) => {
       `log(${text.slice(start, end - 1)},${match[1]})` +
       text.slice(end);
   }
-  return text.replace(/\b([a-z])([xy])\b/g, "$1*$2");
+  text = text.replace(/\b([a-z])([xy])\b/g, "$1*$2");
+  // Coordinates are never callable names. Keep other names intact so f(x),
+  // g(t), and built-ins still use the ordinary function grammar. Match complete
+  // identifier tokens, including after a coefficient in 8x(...).
+  return text.replace(/[a-z][a-z0-9_]*\s*(?=\()/gi, (token) =>
+    ["x", "y"].includes(token.trim()) ? `${token.trim()}*` : token,
+  );
 };
 
 /** Math.js supplies grammar/precedence and TeX. Only this deliberately small AST
@@ -124,15 +176,58 @@ export function scalar(text: string): Scalar {
     )
       throw new Error("This number is outside the supported numeric range.");
   }
-  const node = parse(parseListRanges(normalize(text))) as MathNode;
+  const { body, comparisons } = restrictionSource(normalize(text), "domain");
+  let node = parse(parseListRanges(body)) as MathNode;
+  try {
+    // Each comparison guards the entire expression. Conditional AST nodes
+    // preserve the domain through structural substitution of named functions.
+    for (const { left, op, right } of [...comparisons].reverse())
+      node = new ConditionalNode(
+        parse(`(${parseListRanges(left)})${op}(${parseListRanges(right)})`),
+        node,
+        parse("0/0"),
+      );
+    return scalarFromNode(node);
+  } catch (error) {
+    if (comparisons.length)
+      throw new Error(
+        `Invalid domain restriction. ${error instanceof Error ? error.message : "Use numeric comparisons."}`,
+      );
+    throw error;
+  }
+}
+
+/** Revalidate expanded ASTs without serializing domain nodes back to text. */
+export function scalarFromNode(node: MathNode): Scalar {
   const symbols = new Set<string>(),
     calls = new Set<string>();
   let count = 0;
-  const check = (n: MathNode, depth = 0) => {
+  const check = (n: MathNode, depth = 0, condition = false) => {
     if (++count > 512 || depth > 24)
       throw new Error("This expression is too complex.");
     const a = n as any;
+    if (
+      condition &&
+      (n.type !== "OperatorNode" || !["<", "<=", ">", ">="].includes(a.op))
+    )
+      throw new Error("Use a numeric comparison in a domain restriction.");
     switch (n.type) {
+      case "ConditionalNode":
+        if (
+          a.falseExpr.type !== "OperatorNode" ||
+          a.falseExpr.op !== "/" ||
+          a.falseExpr.args.length !== 2 ||
+          !a.falseExpr.args.every(
+            (arg: any) => arg.type === "ConstantNode" && arg.value === 0,
+          )
+        )
+          throw new Error(
+            "Use a trailing {comparison} for a domain restriction.",
+          );
+        check(a.condition, depth + 1, true);
+        check(a.trueExpr, depth + 1);
+        check(a.falseExpr, depth + 1);
+        break;
       case "ConstantNode":
         if (typeof a.value !== "number")
           throw new Error("Use real numbers only.");
@@ -159,7 +254,11 @@ export function scalar(text: string): Scalar {
         a.items.forEach((child: MathNode) => check(child, depth + 1));
         break;
       case "OperatorNode":
-        if (!["+", "-", "*", "/", "^"].includes(a.op))
+        if (
+          !(
+            condition ? ["<", "<=", ">", ">="] : ["+", "-", "*", "/", "^"]
+          ).includes(a.op)
+        )
           throw new Error("That operator is not supported.");
         a.args.forEach((child: MathNode) => check(child, depth + 1));
         break;
@@ -172,8 +271,36 @@ export function scalar(text: string): Scalar {
         )
           throw new Error("Use a supported numeric function.");
         if (!builtin.has(a.fn.name)) calls.add(a.fn.name);
-        if (!["log", "min", "max"].includes(a.fn.name) && a.args.length !== 1)
+        const acceptsTwo = [
+          "log",
+          "min",
+          "max",
+          "round",
+          "gcd",
+          "lcm",
+          "mod",
+          "ncr",
+          "npr",
+          "nthroot",
+          "quartile",
+          "quantile",
+        ].includes(a.fn.name);
+        if (!acceptsTwo && a.args.length !== 1)
           throw new Error("This function takes one argument.");
+        if (
+          [
+            "gcd",
+            "lcm",
+            "mod",
+            "ncr",
+            "npr",
+            "nthroot",
+            "quartile",
+            "quantile",
+          ].includes(a.fn.name) &&
+          a.args.length !== 2
+        )
+          throw new Error("This function takes two arguments.");
         a.args.forEach((child: MathNode) => check(child, depth + 1));
         break;
       default:
@@ -187,6 +314,14 @@ export function scalar(text: string): Scalar {
     const inputAngle = angle === "degrees" ? Math.PI / 180 : 1;
     const inverseAngle = angle === "degrees" ? 180 / Math.PI : 1;
     const visit = (n: any): Numeric => {
+      if (n.type === "ConditionalNode") {
+        const condition = visit(n.condition);
+        if (Array.isArray(condition))
+          throw new Error(
+            "Domain restriction comparisons must use scalar numbers.",
+          );
+        return condition === 1 ? visit(n.trueExpr) : NaN;
+      }
       if (n.type === "ConstantNode") return n.value;
       if (n.type === "SymbolNode") {
         const v = Object.hasOwn(constants, n.name)
@@ -221,6 +356,16 @@ export function scalar(text: string): Scalar {
         if (args.some((n) => !Number.isFinite(n))) return NaN;
         if (n.type === "OperatorNode") {
           const [a, b] = args;
+          if (["<", "<=", ">", ">="].includes(n.op))
+            return Number(
+              n.op === "<"
+                ? a < b
+                : n.op === "<="
+                  ? a <= b
+                  : n.op === ">"
+                    ? a > b
+                    : a >= b,
+            );
           const result =
             n.op === "+"
               ? b === undefined
@@ -272,6 +417,46 @@ export function scalar(text: string): Scalar {
             ? Math.log(a) / Math.log(b ?? 10)
             : NaN;
         if (name === "ln") return Math.log(a);
+        if (name === "nthroot") {
+          if (!Number.isInteger(b) || b <= 0) return NaN;
+          if (a < 0) return b % 2 === 1 ? -Math.pow(-a, 1 / b) : NaN;
+          return Math.pow(a, 1 / b);
+        }
+        if (name === "round" && b !== undefined) {
+          if (!Number.isInteger(b) || Math.abs(b) > 15) return NaN;
+          const scale = 10 ** b;
+          return Math.round((a + Number.EPSILON) * scale) / scale;
+        }
+        if (name === "gcd" || name === "lcm") {
+          if (![a, b].every(Number.isSafeInteger)) return NaN;
+          let x = Math.abs(a),
+            y = Math.abs(b);
+          while (y) [x, y] = [y, x % y];
+          return name === "gcd"
+            ? x
+            : a === 0 || b === 0
+              ? 0
+              : Math.abs(a / x) * Math.abs(b);
+        }
+        if (name === "mod") return b === 0 ? NaN : ((a % b) + b) % b;
+        if (name === "ncr" || name === "npr") {
+          if (
+            !Number.isSafeInteger(a) ||
+            !Number.isSafeInteger(b) ||
+            a < 0 ||
+            b < 0 ||
+            b > a
+          )
+            return NaN;
+          const count = name === "ncr" ? Math.min(b, a - b) : b;
+          let result = 1;
+          for (let i = 0; i < count; i++) {
+            result *= (a - i) / (name === "ncr" ? i + 1 : 1);
+            if (!Number.isFinite(result)) return NaN;
+          }
+          return result;
+        }
+        if (listAggregates.has(name)) return NaN;
         if (builtin.has(name)) {
           const result = (
             Math as unknown as Record<string, (...args: number[]) => number>
@@ -282,6 +467,89 @@ export function scalar(text: string): Scalar {
           throw new Error(`Define ${name}(x) first.`);
         return functions[name](a);
       };
+      const name: string | undefined =
+        n.type === "FunctionNode" ? n.fn.name : undefined;
+      if (
+        name &&
+        (listAggregates.has(name) || ["min", "max"].includes(name)) &&
+        Array.isArray(args[0])
+      ) {
+        const values = args[0] as number[];
+        if (args.slice(1).some(Array.isArray))
+          throw new Error("Use one data list and a scalar parameter.");
+        if (values.some((value) => !Number.isFinite(value))) return NaN;
+        const sorted = [...values].sort((a, b) => a - b);
+        const mean = () =>
+          values.length
+            ? values.reduce((sum, value) => sum + value, 0) / values.length
+            : NaN;
+        const median = (list = sorted) => {
+          if (!list.length) return NaN;
+          const middle = Math.floor(list.length / 2);
+          return list.length % 2
+            ? list[middle]
+            : (list[middle - 1] + list[middle]) / 2;
+        };
+        const variance = (population: boolean) => {
+          if (!values.length || (!population && values.length < 2)) return NaN;
+          const center = mean();
+          return (
+            values.reduce((sum, value) => sum + (value - center) ** 2, 0) /
+            (population ? values.length : values.length - 1)
+          );
+        };
+        const quartile = (q: number) => {
+          if (!Number.isInteger(q) || q < 0 || q > 4 || !sorted.length)
+            return NaN;
+          if (q === 0) return sorted[0];
+          if (q === 4) return sorted.at(-1)!;
+          if (q === 2) return median();
+          const middle = Math.floor(sorted.length / 2);
+          return median(
+            q === 1
+              ? sorted.slice(0, middle)
+              : sorted.slice(Math.ceil(sorted.length / 2)),
+          );
+        };
+        const quantile = (q: number) => {
+          if (q < 0 || q > 1 || !Number.isFinite(q) || !sorted.length)
+            return NaN;
+          const position = (sorted.length - 1) * q;
+          const lower = Math.floor(position),
+            upper = Math.ceil(position);
+          return (
+            sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower)
+          );
+        };
+        if (name === "min") return sorted[0] ?? NaN;
+        if (name === "max") return sorted.at(-1) ?? NaN;
+        if (name === "mean") return mean();
+        if (name === "median") return median();
+        if (name === "quartile") return quartile(args[1] as number);
+        if (name === "quantile") return quantile(args[1] as number);
+        if (name === "count") return values.length;
+        if (name === "total")
+          return values.reduce((sum, value) => sum + value, 0);
+        if (name === "mad") {
+          const center = mean();
+          return values.length
+            ? values.reduce((sum, value) => sum + Math.abs(value - center), 0) /
+                values.length
+            : NaN;
+        }
+        if (name === "var" || name === "variance") return variance(false);
+        if (name === "varp") return variance(true);
+        if (name === "stdev") return Math.sqrt(variance(false));
+        if (name === "stdevp") return Math.sqrt(variance(true));
+        if (name === "stats")
+          return [
+            quartile(0),
+            quartile(1),
+            quartile(2),
+            quartile(3),
+            quartile(4),
+          ];
+      }
       const arrays = args.filter((arg): arg is number[] => Array.isArray(arg));
       if (!arrays.length) return operation(args as number[]);
       if (arrays.some((array) => array.length !== arrays[0].length))
@@ -314,6 +582,8 @@ export function scalarTex(s: Scalar): string {
     parenthesis: "auto",
     handler: (node: MathNode, options: any) => {
       const n = node as any;
+      if (n.type === "ConditionalNode")
+        return `${n.trueExpr.toTex(options)}\\left\\{${n.condition.toTex(options)}\\right\\}`;
       if (n.type === "ParenthesisNode" && n.content.type === "RangeNode")
         return n.content.toTex(options);
       if (n.type === "RangeNode") {
@@ -333,9 +603,34 @@ export function scalarTex(s: Scalar): string {
         return `\\left[${n.items.map((item: MathNode) => item.toTex(options)).join(",")}\\right]`;
       if (
         n.type === "FunctionNode" &&
-        ["floor", "ceil", "round", "min", "max"].includes(n.fn.name)
+        [
+          "floor",
+          "ceil",
+          "round",
+          "sign",
+          "gcd",
+          "lcm",
+          "mod",
+          "ncr",
+          "npr",
+          "min",
+          "max",
+          "mean",
+          "median",
+          "quartile",
+          "quantile",
+          "stdev",
+          "stdevp",
+          "var",
+          "varp",
+          "variance",
+          "mad",
+          "count",
+          "total",
+          "stats",
+        ].includes(n.fn.name)
       )
-        return `\\operatorname{${n.fn.name}}\\left(${n.args.map((arg: MathNode) => arg.toTex(options)).join(",")}\\right)`;
+        return `\\operatorname{${n.fn.name === "ncr" ? "nCr" : n.fn.name === "npr" ? "nPr" : n.fn.name}}\\left(${n.args.map((arg: MathNode) => arg.toTex(options)).join(",")}\\right)`;
       if (
         n.type === "FunctionNode" &&
         (n.fn.name === "log" || n.fn.name === "ln")
@@ -346,6 +641,8 @@ export function scalarTex(s: Scalar): string {
             : "\\ln";
         return `${base}\\left(${n.args[0].toTex(options)}\\right)`;
       }
+      if (n.type === "FunctionNode" && n.fn.name === "nthroot")
+        return `\\sqrt[${n.args[1].toTex(options)}]{${n.args[0].toTex(options)}}`;
       return undefined;
     },
   });

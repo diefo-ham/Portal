@@ -60,10 +60,10 @@ function matchesAnswerStatus(
 }
 export function filterQuestions(data: StudyData, f: Filters): Question[] {
   return data.questions.filter((q) => {
-    const statuses = f.statuses?.length
-      ? f.statuses
-      : f.status
-        ? [f.status]
+    const statuses = f.status
+      ? [f.status]
+      : f.statuses?.length
+        ? f.statuses
         : [];
     const difficulties = f.difficulties?.length
       ? f.difficulties

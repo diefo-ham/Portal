@@ -1,4 +1,5 @@
 import type { StudyData } from "../core/model";
+import type { BackupPreferences } from "./backup";
 import { assetKeys, readAsset, writeAssets } from "../storage/database";
 
 export async function storeInlineDocuments(
@@ -49,7 +50,10 @@ function asDataUrl(blob: Blob): Promise<string> {
   });
 }
 /** Include image content in backups; references alone cannot make portable backups. */
-export async function portableBackup(data: StudyData) {
+export async function portableBackup(
+  data: StudyData,
+  preferences?: BackupPreferences,
+) {
   const copy = structuredClone(data);
   const urls = new Map<string, string>();
   for (const q of copy.questions)
@@ -72,6 +76,7 @@ export async function portableBackup(data: StudyData) {
   return {
     format: "sat-study-backup-v1",
     exportedAt: new Date().toISOString(),
+    ...(preferences ? { preferences } : {}),
     data: copy,
   };
 }

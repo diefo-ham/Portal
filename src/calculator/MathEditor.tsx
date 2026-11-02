@@ -49,10 +49,11 @@ export function MathEditor({
     host.current!.appendChild(element);
     const field = MathField(element, {
       localize: bundledLocalize,
-      autoCommands: "sqrt pi theta cbrt",
+      autoCommands: "sqrt nthroot pi theta cbrt",
       autoOperatorNames:
-        "sin cos tan sec csc cot asin acos atan arcsin arccos arctan arcsec arccsc arccot log ln exp abs floor ceil round min max table",
+        "sin cos tan sec csc cot asin acos atan arcsin arccos arctan arcsec arccsc arccot log ln exp abs floor ceil round sign gcd lcm mod nCr nPr min max mean median quartile quantile stdev stdevp var varp variance mad count total stats table",
       prefixOperatorNames: "sin cos tan sec csc cot log ln abs",
+      typingPercentWritesPercentOf: true,
       leftRightIntoCmdGoes: "up",
       autoSubscriptNumerals: true,
       charsThatBreakOutOfSupSub: "+-=<>~",

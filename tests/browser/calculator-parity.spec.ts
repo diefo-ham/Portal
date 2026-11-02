@@ -124,7 +124,7 @@ test("floating geometry overlays unchanged Practice, resizes in all directions, 
   ).toBe(false);
 });
 
-test("Desmos stays selectable with no key; Offline never probes or retries the hosted API", async ({
+test("Calculator is canonical and Desmos stays an on-demand alternative", async ({
   page,
 }) => {
   let requests = 0;
@@ -136,16 +136,19 @@ test("Desmos stays selectable with no key; Offline never probes or retries the h
     route.fulfill({ json: { desmosApiKey: "" } }),
   );
   await openCalculator(page);
-  const engines = page.getByRole("group", { name: "Calculator engine" });
+  await expectExpression(page, 1, "");
   await expect(
-    engines.getByRole("button", { name: "Desmos", exact: true }),
-  ).toBeEnabled();
-  await engines.getByRole("button", { name: "Desmos", exact: true }).click();
+    page.getByRole("button", { name: "Offline", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(
     page.getByText("Desmos needs an API key.", { exact: false }),
   ).toBeVisible();
   expect(requests).toBe(0);
-  await engines.getByRole("button", { name: "Offline", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .first()
+    .click();
   await enterExpression(page, 1, "6*7");
   await page
     .getByRole("button", { name: "Close calculator", exact: true })
@@ -163,22 +166,81 @@ test("Desmos stays selectable with no key; Offline never probes or retries the h
   // A bounded observation of inactivity, not a network availability probe.
   await page.waitForTimeout(300);
   expect(requests).toBe(0);
-  await engines.getByRole("button", { name: "Desmos", exact: true }).click();
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(
     page.getByText("Desmos is unavailable.", { exact: false }),
   ).toBeVisible();
   expect(requests).toBe(1);
   await page.waitForTimeout(300);
   expect(requests).toBe(1);
-  await engines.getByRole("button", { name: "Offline", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .first()
+    .click();
   await page.evaluate(() => window.dispatchEvent(new Event("online")));
   await page.waitForTimeout(300);
   expect(requests).toBe(1);
-  await engines.getByRole("button", { name: "Desmos", exact: true }).click();
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(
     page.getByText("Desmos is unavailable.", { exact: false }),
   ).toBeVisible();
   expect(requests).toBe(2);
+});
+
+test("Calculator mode follows its session through close and reopen", async ({
+  page,
+}) => {
+  await configured(page);
+  await page.route(
+    "https://www.desmos.com/api/v1.12/calculator.js?*",
+    (route) => route.fulfill({ contentType: "text/javascript", body: mockApi }),
+  );
+  await openCalculator(page);
+  const desmos = () =>
+    page
+      .frameLocator('iframe[title="Official Desmos graphing calculator"]')
+      .getByRole("textbox", { name: "Mock Desmos expression" });
+
+  await expect(
+    page.getByRole("button", { name: "Use Desmos", exact: true }),
+  ).toBeVisible();
+  await enterExpression(page, 1, "6*7");
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
+  await desmos().fill("y=x^2");
+  await page
+    .getByRole("button", { name: "Close calculator", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Calculator", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Back to Calculator", exact: true }),
+  ).toBeVisible();
+  await expect(desmos()).toHaveValue("y=x^2");
+
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .click();
+  await expectExpression(page, 1, "6*7");
+  await page
+    .getByRole("button", { name: "Close calculator", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Calculator", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Use Desmos", exact: true }),
+  ).toBeVisible();
+  await expectExpression(page, 1, "6*7");
+
+  await page
+    .getByRole("button", { name: "Close calculator", exact: true })
+    .click();
+  await page.getByRole("button", { name: "← Exit", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Start practice →", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Calculator", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Use Desmos", exact: true }),
+  ).toBeVisible();
+  await expectExpression(page, 1, "");
 });
 
 test("Offline curve tracing and parameter dragging label the point on the graph", async ({
@@ -384,30 +446,26 @@ test("Desmos mode keeps separate opaque state through switching, reconnect, comp
     page
       .frameLocator('iframe[title="Official Desmos graphing calculator"]')
       .getByRole("textbox", { name: "Mock Desmos expression" });
+  await enterExpression(page, 1, "6*7");
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await desmos().fill("y=x^2");
   await page
-    .getByRole("group", { name: "Calculator engine" })
-    .getByRole("button", { name: "Offline", exact: true })
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .first()
     .click();
-  await enterExpression(page, 1, "6*7");
-  await page
-    .getByRole("group", { name: "Calculator engine" })
-    .getByRole("button", { name: "Desmos", exact: true })
-    .click();
+  await expectExpression(page, 1, "6*7");
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(desmos()).toHaveValue("y=x^2");
   await context.setOffline(true);
   // A loaded hosted engine remains usable; losing internet does not destroy it.
   await expect(desmos()).toHaveValue("y=x^2");
   await page
-    .getByRole("group", { name: "Calculator engine" })
-    .getByRole("button", { name: "Offline", exact: true })
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .first()
     .click();
   await expectExpression(page, 1, "6*7");
   await context.setOffline(false);
-  await page
-    .getByRole("group", { name: "Calculator engine" })
-    .getByRole("button", { name: "Desmos", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(desmos()).toHaveValue("y=x^2");
   await page
     .getByRole("button", { name: "Close calculator", exact: true })
@@ -427,9 +485,6 @@ test("Desmos mode keeps separate opaque state through switching, reconnect, comp
   await expect(
     page.getByText("Desmos is unavailable.", { exact: false }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Desmos", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
   await page.unroute("https://www.desmos.com/api/v1.12/calculator.js?*");
   await page.route(
     "https://www.desmos.com/api/v1.12/calculator.js?*",
@@ -452,6 +507,12 @@ test("Desmos mode keeps separate opaque state through switching, reconnect, comp
   await page
     .getByRole("button", { name: "Calculator workspace", exact: true })
     .click();
+  await expect(desmos()).toHaveValue("y=x^2");
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .click();
+  await expectExpression(page, 1, "6*7");
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(desmos()).toHaveValue("y=x^2");
   await page
     .getByRole("button", { name: "Close calculator", exact: true })
@@ -478,9 +539,15 @@ test("Desmos mode keeps separate opaque state through switching, reconnect, comp
     .getByRole("button", { name: "Calculator workspace", exact: true })
     .click();
   await expect(desmos()).toHaveValue("y=x^2");
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .click();
+  await expectExpression(page, 1, "6*7");
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
+  await expect(desmos()).toHaveValue("y=x^2");
 });
 
-test("failed and slow hosted scripts yield usable Offline work and explicit retry", async ({
+test("failed and slow hosted scripts return to preserved Calculator work", async ({
   page,
 }) => {
   await configured(page);
@@ -489,12 +556,16 @@ test("failed and slow hosted scripts yield usable Offline work and explicit retr
     (route) => route.abort(),
   );
   await openCalculator(page);
+  await enterExpression(page, 1, "sqrt(81)");
+  await expect(page.locator(".calc-numeric-result")).toHaveText("= 9");
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(
     page.getByText("Desmos is unavailable.", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Use Offline", exact: true }).click();
-  await enterExpression(page, 1, "sqrt(81)");
-  await expect(page.locator(".calc-numeric-result")).toHaveText("= 9");
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .first()
+    .click();
   await page.unroute("https://www.desmos.com/api/v1.12/calculator.js?*");
   await page.route(
     "https://www.desmos.com/api/v1.12/calculator.js?*",
@@ -503,14 +574,14 @@ test("failed and slow hosted scripts yield usable Offline work and explicit retr
       await route.abort().catch(() => {});
     },
   );
-  await page
-    .getByRole("group", { name: "Calculator engine" })
-    .getByRole("button", { name: "Desmos", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Use Desmos", exact: true }).click();
   await expect(
     page.getByText("Desmos did not respond.", { exact: false }),
   ).toBeVisible({ timeout: 9000 });
-  await page.getByRole("button", { name: "Use Offline", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Back to Calculator", exact: true })
+    .first()
+    .click();
   await expectExpression(page, 1, "sqrt(81)");
   await page
     .getByRole("button", { name: "Close calculator", exact: true })

@@ -5,6 +5,7 @@ import {
   type AttemptPerformance,
   type DomainPerformance,
 } from "../core/review";
+import { PerformanceGauge } from "./PerformanceGauge";
 
 type Scope = { kind: "all" } | { kind: "section"; section: Section };
 
@@ -71,62 +72,28 @@ function Gauge({
 }) {
   const value = metric.accuracy ?? 0;
   return (
-    <div className="performance-gauge" aria-live="polite">
-      <p className="gauge-label">{label}</p>
-      <div
-        className="gauge-visual"
-        role="img"
-        aria-label={
-          metric.accuracy === undefined
-            ? `${label}: not attempted, 0 attempts`
-            : `${label}: ${metric.accuracy}% accuracy across ${attemptsLabel(metric.attempts)}`
-        }
-      >
-        <svg viewBox="0 0 200 108" aria-hidden="true">
-          {metric.accuracy === undefined ? (
-            <path className="gauge-empty" d="M18 100 A82 82 0 0 1 182 100" />
-          ) : (
-            <>
-              {value < 100 && (
-                <path
-                  className="gauge-incorrect"
-                  d="M18 100 A82 82 0 0 1 182 100"
-                  pathLength="100"
-                  strokeDasharray={`${100 - value} ${value}`}
-                  strokeDashoffset={-value}
-                />
-              )}
-              {value > 0 && (
-                <path
-                  className="gauge-correct"
-                  d="M18 100 A82 82 0 0 1 182 100"
-                  pathLength="100"
-                  strokeDasharray={`${value} ${100 - value}`}
-                />
-              )}
-            </>
+    <PerformanceGauge
+      value={metric.accuracy === undefined ? undefined : value}
+      label={label}
+      detail={metric.accuracy === undefined ? undefined : attemptsLabel(metric.attempts)}
+      ariaLabel={
+        metric.accuracy === undefined
+          ? `${label}: not attempted, 0 attempts`
+          : `${label}: ${metric.accuracy}% accuracy across ${attemptsLabel(metric.attempts)}`
+      }
+      footer={
+        <>
+          {metric.attempts > 0 && (
+            <p className="gauge-counts">
+              {metric.correct} correct · {metric.incorrect} incorrect
+            </p>
           )}
-        </svg>
-        <div className="gauge-reading">
-          {metric.accuracy === undefined ? (
-            <strong className="no-attempts">No attempts yet</strong>
-          ) : (
-            <>
-              <strong>{value}%</strong>
-              <span>{attemptsLabel(metric.attempts)}</span>
-            </>
+          {metric.attempts > 0 && metric.attempts < 5 && (
+            <p className="small muted gauge-caution">Limited data so far.</p>
           )}
-        </div>
-      </div>
-      {metric.attempts > 0 && (
-        <p className="gauge-counts">
-          {metric.correct} correct · {metric.incorrect} incorrect
-        </p>
-      )}
-      {metric.attempts > 0 && metric.attempts < 5 && (
-        <p className="small muted gauge-caution">Limited data so far.</p>
-      )}
-    </div>
+        </>
+      }
+    />
   );
 }
 

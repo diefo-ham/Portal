@@ -389,18 +389,14 @@
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
 }
-.calc-provider-bar [role="group"] {
-  display: flex;
-  gap: 3px;
-}
 .calc-provider-bar button {
   font-size: 12px;
   min-height: 30px;
   padding: 5px 9px;
 }
-.calc-provider-bar button[aria-pressed="true"] {
-  background: var(--surface-selected);
-  border-color: var(--accent);
+.calc-provider-bar .calc-provider-switch {
+  color: var(--muted);
+  font-weight: 400;
 }
 .calc-provider-status {
   margin: 0;

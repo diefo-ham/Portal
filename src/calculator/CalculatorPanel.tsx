@@ -30,16 +30,12 @@ export function CalculatorPanel({
   state,
   onChange,
   onClose,
-  temporarilyHidden = false,
   autoFocus = true,
-  shortcutHint = "Hold \\ to temporarily hide",
 }: {
   state: CalculatorState;
   onChange: (state: CalculatorState) => void;
   onClose: () => void;
-  temporarilyHidden?: boolean;
   autoFocus?: boolean;
-  shortcutHint?: string;
 }) {
   const [geometry, setGeometry] = useState(() => readGeometry(viewport()));
   const [narrow, setNarrow] = useState(() => innerWidth < 620);
@@ -139,11 +135,10 @@ export function CalculatorPanel({
   };
   return createPortal(
     <aside
-      className={`calculator-sheet ${moving ? "window-moving" : ""} ${temporarilyHidden ? "shortcut-hidden" : ""}`}
+      className={`calculator-sheet ${moving ? "window-moving" : ""}`}
       aria-label="Calculator panel"
       role="dialog"
       aria-modal="false"
-      aria-hidden={temporarilyHidden || undefined}
       style={
         narrow
           ? undefined
@@ -177,7 +172,7 @@ export function CalculatorPanel({
           onKeyDown={(e) => keyboardGeometry(e, "move")}
         >
           <h2>Calculator</h2>
-          <span className="calc-shortcut-note">{shortcutHint}</span>
+          <span className="calc-shortcut-note">{"\\  Toggle calculator"}</span>
         </div>
         <button
           className="text-button"

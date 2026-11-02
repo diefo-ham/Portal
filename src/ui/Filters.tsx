@@ -32,10 +32,12 @@ export function Filters({
     { value: "unanswered", label: "Unanswered" },
     { value: "completed", label: "Completed" },
   ];
-  const answerStatuses = value.statuses?.length
-    ? value.statuses
-    : answerStatusOptions.some((option) => option.value === value.status)
-      ? [value.status as AnswerStatus]
+  const answerStatuses = answerStatusOptions.some(
+    (option) => option.value === value.status,
+  )
+    ? [value.status as AnswerStatus]
+    : value.statuses?.length
+      ? value.statuses
       : [];
   const difficultyOrder: Difficulty[] = ["easy", "medium", "hard"];
   const difficultyOptions = difficultyOrder

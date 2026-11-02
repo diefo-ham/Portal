@@ -1,10 +1,60 @@
 import { type StudyData } from "../core/model";
 import { parseQuestions } from "./json";
 import { validateCalculator } from "../calculator/model";
+import { validatePracticeTest } from "./practiceTestBackup";
 import {
   normalizeSessionName,
   SESSION_NAME_MAX_LENGTH,
 } from "../core/sessions";
+
+export interface BackupPreferences {
+  theme?: "auto" | "light" | "dark";
+  originalPdf?: boolean;
+  timerDefault?: boolean;
+  showCorrectExplanations?: boolean;
+  protectTests?: boolean;
+}
+
+export interface ParsedBackup {
+  data: StudyData;
+  preferences?: BackupPreferences;
+}
+
+function parsePreferences(raw: unknown): BackupPreferences | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw))
+    throw new Error("Invalid backup preferences.");
+  const value = raw as Record<string, unknown>;
+  if (
+    (value.theme !== undefined &&
+      !["auto", "light", "dark"].includes(String(value.theme))) ||
+    [
+      value.originalPdf,
+      value.timerDefault,
+      value.showCorrectExplanations,
+      value.protectTests,
+    ].some((setting) => setting !== undefined && typeof setting !== "boolean")
+  )
+    throw new Error("Invalid backup preferences.");
+  return {
+    ...(value.theme !== undefined ? { theme: value.theme as BackupPreferences["theme"] } : {}),
+    ...(value.originalPdf !== undefined ? { originalPdf: value.originalPdf as boolean } : {}),
+    ...(value.timerDefault !== undefined ? { timerDefault: value.timerDefault as boolean } : {}),
+    ...(value.showCorrectExplanations !== undefined
+      ? { showCorrectExplanations: value.showCorrectExplanations as boolean }
+      : {}),
+    ...(value.protectTests !== undefined ? { protectTests: value.protectTests as boolean } : {}),
+  };
+}
+
+export function parseBackupPayload(raw: unknown): ParsedBackup {
+  const envelope = raw as { preferences?: unknown } | undefined;
+  return {
+    data: parseBackup(raw),
+    preferences: parsePreferences(envelope?.preferences),
+  };
+}
+
 export function parseBackup(raw: unknown): StudyData {
   if (!raw || typeof raw !== "object") throw new Error("Invalid backup.");
   const envelope = raw as { format?: string; data?: StudyData };
@@ -16,6 +66,15 @@ export function parseBackup(raw: unknown): StudyData {
     questions: d.questions,
   });
   const ids = new Set(questions.map((q) => q.id));
+  if (
+    d.practiceTestUsedIds !== undefined &&
+    (!Array.isArray(d.practiceTestUsedIds) ||
+      d.practiceTestUsedIds.some(
+        (id) => typeof id !== "string" || !ids.has(id),
+      ) ||
+      new Set(d.practiceTestUsedIds).size !== d.practiceTestUsedIds.length)
+  )
+    throw new Error("Invalid Practice Test exposure history.");
   const safe = (s: unknown): s is string =>
     typeof s === "string" &&
     !["__proto__", "constructor", "prototype"].includes(s);
@@ -49,6 +108,7 @@ export function parseBackup(raw: unknown): StudyData {
       s.index >= s.questionIds.length ||
       typeof s.paused !== "boolean" ||
       !object(s.drafts) ||
+      (s.eliminated !== undefined && !object(s.eliminated)) ||
       !object(s.elapsed) ||
       !object(s.filters)
     )
@@ -87,6 +147,21 @@ export function parseBackup(raw: unknown): StudyData {
       Object.entries(s.drafts).some(
         ([id, v]) => !s.questionIds.includes(id) || typeof v !== "string",
       ) ||
+      (s.eliminated !== undefined &&
+        Object.entries(s.eliminated).some(
+          ([id, choices]) =>
+            !s.questionIds.includes(id) ||
+            !Array.isArray(choices) ||
+            choices.length > 4 ||
+            new Set(choices).size !== choices.length ||
+            choices.some(
+              (choice) =>
+                !safe(choice) ||
+                !questions
+                  .find((question) => question.id === id)
+                  ?.choices?.some((candidate) => candidate.id === choice),
+            ),
+        )) ||
       Object.entries(s.elapsed).some(
         ([id, v]) => !s.questionIds.includes(id) || !duration(v),
       )
@@ -94,6 +169,9 @@ export function parseBackup(raw: unknown): StudyData {
       throw new Error("Invalid saved session work.");
   }
   const sessionIds = new Set(d.sessions.map((s) => s.id));
+  for (const session of d.sessions)
+    if (session.practiceTest !== undefined)
+      validatePracticeTest(session, questions);
   if (
     sessionIds.size !== d.sessions.length ||
     new Set(d.attempts.map((a) => a?.id)).size !== d.attempts.length
@@ -104,10 +182,12 @@ export function parseBackup(raw: unknown): StudyData {
       !a ||
       !safe(a.id) ||
       !ids.has(a.questionId) ||
-      !sessionIds.has(a.sessionId) ||
-      !d.sessions
-        .find((s) => s.id === a.sessionId)!
-        .questionIds.includes(a.questionId) ||
+      (a.sessionId !== undefined &&
+        (!safe(a.sessionId) ||
+          !sessionIds.has(a.sessionId) ||
+          !d.sessions
+            .find((s) => s.id === a.sessionId)!
+            .questionIds.includes(a.questionId))) ||
       typeof a.answer !== "string" ||
       typeof a.correct !== "boolean" ||
       !duration(a.durationMs) ||
@@ -140,7 +220,33 @@ export function parseBackup(raw: unknown): StudyData {
       ...q,
       importMetadata: d.questions[i].importMetadata,
     })),
-    sessions: d.sessions.map((s) => ({ ...s, paused: true })),
+    practiceTestUsedIds: [
+      ...new Set([
+        ...(d.practiceTestUsedIds || []),
+        ...d.sessions
+          .filter((s) => s.practiceTest)
+          .flatMap((s) => s.questionIds),
+      ]),
+    ],
+    sessions: d.sessions.map((s) => {
+      if (!s.practiceTest) return { ...s, paused: true };
+      const currentIds = new Set(
+        s.practiceTest.modules[s.practiceTest.currentModule]?.questionIds || [],
+      );
+      const live = s.practiceTest.phase === "module";
+      return {
+        ...s,
+        practiceTest: {
+          ...s.practiceTest,
+          markedForReview: live
+            ? (s.practiceTest.markedForReview || []).filter((id) =>
+                currentIds.has(id),
+              )
+            : [],
+          reviewingModule: live && !!s.practiceTest.reviewingModule,
+        },
+      };
+    }),
   };
 }
 export function downloadJson(value: unknown, filename: string) {

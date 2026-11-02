@@ -12,6 +12,7 @@ export function normalizeSessionName(value: string): string | undefined {
 }
 
 export function sessionDefaultName(data: StudyData, session: Session): string {
+  if (session.practiceTest) return "Practice Test";
   const questions = session.questionIds
     .map((id) => data.questions.find((question) => question.id === id))
     .filter((question) => question !== undefined);
@@ -24,10 +25,10 @@ export function sessionDefaultName(data: StudyData, session: Session): string {
   const domains = [
     ...new Set(questions.map((question) => question.domain).filter(Boolean)),
   ];
-  const statuses = session.filters.statuses?.length
-    ? session.filters.statuses
-    : session.filters.status
-      ? [session.filters.status]
+  const statuses = session.filters.status
+    ? [session.filters.status]
+    : session.filters.statuses?.length
+      ? session.filters.statuses
       : [];
   const source = session.filters.bookmark
     ? "Bookmarks"

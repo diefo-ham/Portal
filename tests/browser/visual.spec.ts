@@ -178,6 +178,19 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+async function showAllBrowseQuestions(page: Page) {
+  await page
+    .locator(".filter-panel")
+    .getByRole("button", { name: "Reset filters" })
+    .click();
+  // Layout fixtures intentionally include answered and unanswered items.
+  await page.getByRole("button", { name: /^Answer status:/ }).click();
+  await page
+    .getByRole("button", { name: "Clear answer status", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Done", exact: true }).click();
+}
+
 test("long reading and dense PDF tables stay readable in both themes; reduced motion and original appearance work", async ({
   page,
 }) => {
@@ -265,7 +278,7 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
   for (const theme of ["light", "dark"]) {
     await page.getByLabel("Theme", { exact: true }).selectOption(theme);
     await page.getByRole("button", { name: "Browse", exact: true }).click();
-    await page.getByRole("button", { name: "Reset filters" }).click();
+    await showAllBrowseQuestions(page);
     await page.locator(".question-row-main").first().click();
     await page.setViewportSize({ width: 1024, height: 768 });
     await expect(page.locator(".passage")).toBeVisible();
@@ -301,7 +314,7 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
   }
   await page.getByLabel("Keep original PDF colors", { exact: true }).check();
   await page.getByRole("button", { name: "Browse", exact: true }).click();
-  await page.getByRole("button", { name: "Reset filters" }).click();
+  await showAllBrowseQuestions(page);
   await page.locator(".question-row-main").nth(1).click();
   await expect(
     page.getByLabel("Original PDF question").locator("img"),

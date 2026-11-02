@@ -60,7 +60,7 @@ export function rangeValues(
     throw new Error("Range step must move toward the endpoint.");
   const count = Math.round(intervals) + 1;
   if (count > 200 || !Number.isSafeInteger(count))
-    throw new Error("Lists support at most 200 values Offline.");
+    throw new Error("Calculator lists support at most 200 values.");
   const values = Array.from({ length: count }, (_, i) => start + i * step);
   if (values.some((value) => !Number.isFinite(value)))
     throw new Error("This list exceeds the supported numeric range.");

@@ -54,11 +54,13 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   await expect(page.locator("dialog.practice-dialog")).not.toBeVisible();
   await expect(
     page.getByRole("dialog", { name: "Calculator panel", exact: true }),
-  ).toBeVisible();
+  ).not.toBeVisible(); // Pausing intentionally closes the utility.
   await expect(
     page.getByRole("button", { name: "Practice tools" }),
   ).toBeFocused();
   await expect(page.getByLabel("Time on this question")).toBeVisible();
+  await page.getByRole("button", { name: "Calculator", exact: true }).click();
+  await expect(page.locator(".calc-numeric-result")).toHaveText("= 42");
   await page.getByRole("button", { name: "Close calculator" }).click();
   await page.getByRole("article").focus();
   await page.keyboard.press("Enter");
@@ -100,13 +102,19 @@ test("practice-test protection persists and active overrides require a session c
   await expect(
     page.getByLabel("Protect practice-test questions", { exact: true }),
   ).not.toBeChecked();
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "Start practice" }).click();
+  const warning = page.getByRole("dialog", {
+    name: "Practice these questions again?",
+  });
+  await expect(warning).toContainText("active practice-test questions");
+  await warning.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Start practice" }),
   ).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Start practice" }).click();
+  await warning
+    .getByRole("button", { name: "Begin anyway", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "Practice tools" }),
   ).toBeVisible();

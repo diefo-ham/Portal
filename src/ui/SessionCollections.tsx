@@ -6,6 +6,7 @@ import { SessionRow } from "./SessionRow";
 export interface SessionActions {
   onOpen: (id: string) => void;
   onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   onToggleStar: (id: string) => void;
   onRepractice: (session: Session) => void;
 }
@@ -19,13 +20,15 @@ export function SessionCollections({
 }) {
   const [search, setSearch] = useState("");
   const completed = data.sessions
-    .filter((session) => !!session.finishedAt)
+    .filter((session) => !!session.finishedAt && !session.practiceTest)
     .toReversed();
   const starred = completed.filter((session) => session.starred);
   const recent = completed.filter((session) => !session.starred).slice(0, 3);
   const all = useMemo(() => {
     const ordered = [
-      ...data.sessions.filter((session) => !session.finishedAt).toReversed(),
+      ...data.sessions
+        .filter((session) => !session.finishedAt && !session.practiceTest)
+        .toReversed(),
       ...completed.filter((session) => session.starred),
       ...completed.filter((session) => !session.starred),
     ];
@@ -68,7 +71,10 @@ export function SessionCollections({
         </section>
       )}
       <details className="session-history">
-        <summary>View all sessions ({data.sessions.length})</summary>
+        <summary>
+          View all sessions (
+          {data.sessions.filter((s) => !s.practiceTest).length})
+        </summary>
         <label className="session-search">
           <span className="sr-only">Search sessions</span>
           <input

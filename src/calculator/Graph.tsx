@@ -18,6 +18,7 @@ import {
 } from "./numerics";
 import type { GraphObject } from "./workspace";
 import { coordinateForm } from "./exact";
+import { clipAffineInequality } from "./affine";
 
 function ticks(min: number, max: number, minor = false) {
   const rough = (max - min) / 8,
@@ -124,6 +125,8 @@ export function Graph({
   const geometry = useMemo(
     () =>
       graphs.map((g) => {
+        if (g.kind !== "points" && g.affine)
+          return { graph: g, region: clipAffineInequality(g.affine, view) };
         if (g.kind === "function")
           return {
             graph: g,
@@ -135,7 +138,10 @@ export function Graph({
             xs:
               g.boundary !== undefined
                 ? [g.boundary]
-                : roots(g.fn, view.xMin, view.xMax),
+                : (g.rootsInWindow ?? ((min, max) => roots(g.fn, min, max)))(
+                    view.xMin,
+                    view.xMax,
+                  ),
           };
         if (g.kind === "implicit")
           return { graph: g, segments: implicitSegments(g.fn, view) };
@@ -562,12 +568,31 @@ export function Graph({
           </text>
         </g>
         <g clipPath={`url(#${id})`}>
-          {geometry.map(({ graph: g, paths, xs, segments }) => (
+          {geometry.map(({ graph: g, paths, xs, segments, region }) => (
             <g
               key={g.id}
               className={`graph-color-${g.color % 8}`}
               data-graph-id={g.id}
             >
+              {region && g.affine && (
+                <>
+                  {region.shade.length > 2 && (
+                    <path
+                      d={`${path(region.shade)}Z`}
+                      className="graph-shade"
+                    />
+                  )}
+                  {region.boundary.length > 1 && (
+                    <path
+                      d={path(region.boundary)}
+                      className="graph-curve"
+                      strokeDasharray={
+                        g.affine.op.length === 1 ? "7 5" : undefined
+                      }
+                    />
+                  )}
+                </>
+              )}
               {paths?.map((p, i) => (
                 <g key={i}>
                   {g.kind === "function" && g.relation && (

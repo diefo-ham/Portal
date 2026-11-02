@@ -4,7 +4,10 @@ import { parseBackup } from "../importing/backup";
 export interface ResetArchive {
   format: "sat-study-reset-v1";
   createdAt: string;
-  study: Pick<StudyData, "attempts" | "sessions" | "annotations">;
+  study: Pick<
+    StudyData,
+    "attempts" | "sessions" | "annotations" | "practiceTestUsedIds"
+  >;
 }
 
 export function createResetArchive(data: StudyData): ResetArchive {
@@ -15,6 +18,7 @@ export function createResetArchive(data: StudyData): ResetArchive {
       attempts: data.attempts,
       sessions: data.sessions,
       annotations: data.annotations,
+      practiceTestUsedIds: data.practiceTestUsedIds,
     }),
   };
 }
@@ -41,6 +45,7 @@ export function validateResetArchive(
       attempts: archive.study.attempts,
       sessions: archive.study.sessions,
       annotations: archive.study.annotations,
+      practiceTestUsedIds: archive.study.practiceTestUsedIds,
     },
   });
   return {
@@ -50,6 +55,7 @@ export function validateResetArchive(
       attempts: validated.attempts,
       sessions: validated.sessions,
       annotations: validated.annotations,
+      practiceTestUsedIds: validated.practiceTestUsedIds,
     },
   };
 }

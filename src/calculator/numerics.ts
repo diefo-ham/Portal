@@ -136,11 +136,21 @@ export function interests(graphs: GraphObject[], view: Viewport): Interest[] {
     } else if (found.length < 120) found.push(p);
   };
   const curves = graphs.filter(
-    (g) => g.kind === "function" && !g.relation,
+    (g) => g.kind === "function" && (!g.relation || g.affine),
   ) as Extract<GraphObject, { kind: "function" }>[];
   const verticals = graphs.filter(
-    (g) => g.kind === "vertical" && !g.relation,
+    (g) => g.kind === "vertical" && (!g.relation || g.affine),
   ) as Extract<GraphObject, { kind: "vertical" }>[];
+  const solvedIntersections = graphs
+    .flatMap((g) => (g.systemIntersections ? [g.systemIntersections] : []))
+    .filter((s) => s.graphIds.every((id) => graphs.some((g) => g.id === id)));
+  const algebraicPair = (a: string, b: string) =>
+    solvedIntersections.some(
+      (s) => s.graphIds.includes(a) && s.graphIds.includes(b),
+    );
+  for (const solved of solvedIntersections)
+    for (const p of solved.points)
+      add({ ...p, label: "intersection", graphIds: solved.graphIds });
   for (const g of curves) {
     const at0 = safeValue(g.fn, 0);
     add({ x: 0, y: at0, label: "y-intercept", graphIds: [g.id] });
@@ -189,6 +199,9 @@ export function interests(graphs: GraphObject[], view: Viewport): Interest[] {
       const a = curves[i],
         b = curves[j],
         difference = (x: number) => a.fn(x) - b.fn(x);
+      // Verified algebraic intersections already include system bounds. A
+      // second viewport search must not reintroduce rejected branches.
+      if (algebraicPair(a.id, b.id)) continue;
       const xs = roots(difference, view.xMin, view.xMax);
       // Tangential intersections may not change sign; inspect stationary differences.
       for (const x of roots(
@@ -211,15 +224,19 @@ export function interests(graphs: GraphObject[], view: Viewport): Interest[] {
         });
     }
   for (const g of verticals)
-    for (const x of roots(g.fn, view.xMin, view.xMax)) {
+    for (const x of (g.rootsInWindow ?? ((min, max) => roots(g.fn, min, max)))(
+      view.xMin,
+      view.xMax,
+    )) {
       add({ x, y: 0, label: "x solution", graphIds: [g.id] });
       for (const c of curves)
-        add({
-          x,
-          y: safeValue(c.fn, x),
-          label: "intersection",
-          graphIds: [g.id, c.id],
-        });
+        if (!algebraicPair(g.id, c.id))
+          add({
+            x,
+            y: safeValue(c.fn, x),
+            label: "intersection",
+            graphIds: [g.id, c.id],
+          });
     }
   for (const g of graphs)
     if (g.kind === "points")
@@ -307,6 +324,10 @@ export function sampleFunction(
     const m = (a + b) / 2,
       fm = sample(m),
       valid = [fa, fm, fb].every(Number.isFinite);
+    // Fully invalid intervals cannot consume the whole adaptive budget. Probe
+    // one extra level for small real-domain islands, then leave a gap. Mixed
+    // finite/invalid intervals still refine to the one-sided domain boundary.
+    if (depth >= 1 && ![fa, fm, fb].some(Number.isFinite)) return;
     const pixelWidth = ((b - a) / (view.xMax - view.xMin)) * width;
     const outsideAbove =
       valid && Math.min(fa, fm, fb) > view.yMax + span * 0.05;
@@ -339,7 +360,23 @@ export function sampleFunction(
     const error = valid
       ? (Math.abs(fm - (fa + fb) / 2) / span) * height
       : Infinity;
-    if ((!valid || error > 0.45) && depth < 20 && pixelWidth > 0.02) {
+    // A very steep visible crossing can be much narrower than a pixel. Keep
+    // refining its raw values so curvature can be checked before drawing;
+    // stopping at a screen-width threshold used to discard the whole crossing.
+    // Same-side offscreen intervals are still pruned above, and the shared
+    // evaluation budget bounds both finite transitions and domain boundaries.
+    const overlapsView =
+      (valid &&
+        Math.min(fa, fm, fb) <= view.yMax &&
+        Math.max(fa, fm, fb) >= view.yMin) ||
+      [fa, fm, fb].some(
+        (y) => Number.isFinite(y) && y >= view.yMin && y <= view.yMax,
+      );
+    if (
+      (!valid || error > 0.45) &&
+      depth < 48 &&
+      (pixelWidth > 0.02 || overlapsView)
+    ) {
       visit(a, fa, m, fm, depth + 1);
       visit(m, fm, b, fb, depth + 1);
       return;
