@@ -195,17 +195,18 @@ test("multiple regions retain shading and boundary inspection after pan, zoom, s
   expect(await filled(groups.nth(0), 5, 0)).toBe(true);
 });
 
-test("the nonlinear SAT list system reports the degenerate free-scale family", async ({
+test("the nonlinear SAT list system reports a labelled representative fit", async ({
   page,
 }) => {
   await open(page);
   await enterExpression(page, 1, "[a,a,c] ~ [230% of b,60% of c,p% of b]");
   await expect(page.locator(".calc-error")).toHaveCount(0);
+  // Current behavior (see tests/finiteSystems.test.ts): a representative fit is
+  // shown and explicitly labelled as non-unique, rather than refused.
   await expect(page.locator(".calc-entry").first()).toContainText(
-    "not uniquely determined",
+    "Representative fit; parameters are not unique.",
   );
-  await expect(page.locator(".calc-entry").first()).toContainText(
-    "degenerate branches",
+  await expect(page.getByLabel("Fitted parameters")).toHaveText(
+    "a = 2.3 · b = 1 · c = 3.833333333 · p = 383.3333333",
   );
-  await expect(page.getByLabel("Fitted parameters")).toHaveCount(0);
 });

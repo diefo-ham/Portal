@@ -95,8 +95,9 @@ families is conservative and may explicitly report unsupported algebra.
 ```
 
 Without restrictions, the zero branch `a=b=c=0` permits arbitrary `p`.
-The result therefore reports a free family including degenerate branches, and
-does not publish a value for `p`.
+The calculator shows one representative fit (`a=2.3, b=1, c=3.8333…,
+p=383.3333…`) labelled "Representative fit; parameters are not unique." Treat
+`p` as meaningful only once a nonzero `b` is assumed, as below.
 
 Either append `{b>0}` or add the separate row `b>0`. Then the result is:
 

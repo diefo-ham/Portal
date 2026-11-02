@@ -26,6 +26,8 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
       # The deployed site must never contain a question library or an API key.
       - name: Verify no private content in dist
         run: |

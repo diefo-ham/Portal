@@ -85,7 +85,7 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
     .click();
   await expect(page.locator(".graph-interest").first()).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /intersection ≈ \(2, 0\)/ }),
+    page.getByRole("button", { name: /intersection \/ zero ≈ \(2, 0\)/ }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Zoom in", exact: true }).click();
   await page.locator(".graph-plane").focus();
@@ -169,7 +169,9 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   await expect(
     page.getByRole("slider", { name: "a slider", exact: true }),
   ).toBeVisible();
-  await page.getByRole("slider", { name: "a slider", exact: true }).focus();
+  const slider = page.getByRole("slider", { name: "a slider", exact: true });
+  await slider.focus();
+  await expect(slider).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expectExpression(page, 2, "a = 1.1");
   await page.getByRole("button", { name: "Add item", exact: true }).click();
@@ -311,9 +313,9 @@ for (const theme of ["light", "dark"])
       animations: "disabled",
     });
     await enterExpression(page, 2, "sqrt(-1)");
-    await expect(page.getByRole("status")).toContainText(
-      "Undefined or outside the supported numeric range",
-    );
+    await expect(
+      page.getByRole("region", { name: "Expression 2" }).getByRole("status"),
+    ).toContainText("Undefined or outside the supported numeric range");
     await page.getByRole("button", { name: "Add item", exact: true }).click();
     await page
       .getByRole("group", { name: "Add calculator item" })
