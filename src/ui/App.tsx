@@ -528,7 +528,8 @@ export function App() {
                   />
                 </label>
                 <p className="small muted">
-                  Use the same browser and http://127.0.0.1:4317 each time.
+                  Use the same browser and the address {location.origin} each
+                  time.
                   Clearing site data or using private browsing can remove your
                   library.
                 </p>

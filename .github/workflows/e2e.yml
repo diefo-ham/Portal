@@ -1,0 +1,27 @@
+name: Browser tests
+
+# Runs the full Playwright suite on every push and pull request. It is kept out
+# of the deploy workflow's critical path while the known calculator spec
+# failures (calculator.spec.ts, calculator-affine.spec.ts) are being fixed.
+# Move `npm run test:e2e` into deploy.yml once this passes consistently.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

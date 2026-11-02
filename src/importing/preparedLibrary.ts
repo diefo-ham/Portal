@@ -7,10 +7,13 @@ import {
 } from "../storage/database";
 import type { StudyData } from "../core/model";
 
+/** Resolved against the page, so it works under a GitHub Pages subpath. */
+const library = (path: string) =>
+  `${import.meta.env.BASE_URL}local-library/${path}`;
 let loading: Promise<StudyData> | undefined;
 export function loadPreparedLibrary(progress: (message: string) => void) {
   return (loading ??= (async () => {
-    const response = await fetch("/local-library/manifest.json", {
+    const response = await fetch(library("manifest.json"), {
       cache: "no-store",
     });
     if (response.status === 404) return readData();
@@ -35,7 +38,7 @@ export function loadPreparedLibrary(progress: (message: string) => void) {
     );
     if (data.imports.some((x) => x.id === id) && !missing.length) return data;
     progress("Reading your prepared PDF question library…");
-    const questionResponse = await fetch("/local-library/questions.json");
+    const questionResponse = await fetch(library("questions.json"));
     if (!questionResponse.ok)
       throw new Error("Prepared question data is missing.");
     const raw = await questionResponse.text();
@@ -64,7 +67,7 @@ export function loadPreparedLibrary(progress: (message: string) => void) {
       progress(`Saving PDF images locally: ${i} / ${missing.length}…`);
       const entries = await Promise.all(
         missing.slice(i, i + 12).map(async (key: string) => {
-          const r = await fetch("/local-library/assets/" + key);
+          const r = await fetch(library("assets/" + key));
           if (!r.ok) throw new Error("A prepared PDF image is missing.");
           const blob = await r.blob();
           const digest = Array.from(

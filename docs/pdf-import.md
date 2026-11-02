@@ -23,7 +23,7 @@ The Python utility is a preparation-time tool for this particular College Board 
 On a new installation, install `requirements-pdf.txt` with your Python environment, then run:
 
 ```powershell
-python scripts/import_college_board.py --input-directory C:/Users/Diego/Downloads --active-mode active-only
+python scripts/import_college_board.py --input-directory "C:/Users/<you>/Downloads" --active-mode active-only
 ```
 
 This expects the four original names (`read_write_inactive.pdf`, `read_write_active.pdf`, `math_inactive.pdf`, `math_active.pdf`). It writes:

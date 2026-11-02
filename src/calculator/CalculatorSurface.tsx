@@ -43,7 +43,7 @@ export function CalculatorSurface({
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 1500);
     // Local configuration only; never a connectivity probe.
-    void fetch("/calculator-config.json", {
+    void fetch(`${import.meta.env.BASE_URL}calculator-config.json`, {
       signal: controller.signal,
       cache: "no-store",
     })
@@ -180,7 +180,7 @@ export function CalculatorSurface({
                 ref={frame}
                 className={`desmos-frame ${ready ? "ready" : ""}`}
                 title="Official Desmos graphing calculator"
-                src="/desmos.html"
+                src={`${import.meta.env.BASE_URL}desmos.html`}
                 onLoad={() =>
                   post("init", { key: apiKey, state: latest.current.desmos })
                 }

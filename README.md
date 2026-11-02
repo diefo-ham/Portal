@@ -2,6 +2,17 @@
 
 A private, local-first SAT practice workspace. The application bundles **only original synthetic questions**. It does not scrape College Board, redistribute its question bank, or send study data anywhere.
 
+## Use on GitHub Pages
+
+The repository deploys to GitHub Pages with `.github/workflows/deploy.yml`. The hosted site is a static copy of the app. It contains **only the 12 original synthetic questions** and the import features. It never includes a prepared PDF library: `private-data/` is git-ignored, and the workflow fails if a library, PDF, or env file reaches the build.
+
+- Progress lives in your own browser's IndexedDB for the site's address (`https://<user>.github.io/<repo>/`). It is separate from any `http://127.0.0.1:4317` data and is not uploaded anywhere.
+- To move progress between a local install and the hosted site, use **My data → Export full backup** and **Restore a backup**. Backups can include imported question content, so keep them private.
+- Question material you import yourself stays in your browser. Do not commit it, and do not publish a fork that includes it.
+- The hosted calculator is the bundled Offline calculator. The committed `public/calculator-config.json` holds an empty Desmos key, and the workflow fails if that changes, so the official Desmos mode stays unconfigured there. Never commit an API key; local keys belong in `.env.local`.
+- The build uses relative URLs, so it runs at any subpath. To pin an absolute base, set `VITE_BASE` (for example `VITE_BASE=/sat-portal/ npm run build`).
+- There is no service worker yet. After the first visit the page works only while the browser has it cached.
+
 ## Run on this laptop
 
 The app has been installed and built. Double-click **Start SAT Study.cmd**, or run:
@@ -88,6 +99,6 @@ Unit tests cover numeric equivalence, filtering, duplicate/import safety, backup
 3. **Calculator:** The integrated Calculator uses bundled structural input, graphs, tables/lists, QR polynomial fits (including sparse models through degree three), and original-y exponential fitting. Custom bases linear in their fitted parameters are also supported, and numerical graph searches are approximate. Official Desmos remains available for advanced cases when configured and selected. See [current calculator behavior and limits](docs/calculator-floating.md).
 4. **Analytics:** Accuracy includes all attempts, not predicted SAT scores. Latest-answer status and ever-missed history are distinct. Timing is approximate, untimed practice only. Expand metrics only when the records support them.
 5. **GUI:** Home, practice, and review now share semantic color/spacing/type tokens in `src/ui/tokens.css` and layout rules in `src/ui/styles.css`. Both themes are available; further visual changes should preserve tested study behavior. Source PDF images cannot be re-typeset or reflowed without a separate content-rendering project. The calculator is a nonmodal, freely draggable/resizable floating window that never changes Practice width. At widths below 620 px it uses a viewport-constrained overlay.
-6. **Packaging:** The local server must be running. There is no service worker, PWA installation, executable bundle, or cloud deployment. A desktop wrapper can reuse the same core and swap the persistence adapter later.
+6. **Packaging:** The local server must be running. There is no service worker, PWA installation, or executable bundle; the GitHub Pages deployment is static only. A desktop wrapper can reuse the same core and swap the persistence adapter later.
 
 This project is not affiliated with or endorsed by College Board. SAT and Bluebook are their respective owners' marks.

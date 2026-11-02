@@ -8,7 +8,8 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4318",
     browserName: "chromium",
-    channel: "msedge",
+    // Locally the installed Edge is used; CI installs Playwright's Chromium.
+    channel: process.env.CI ? undefined : "msedge",
   },
   webServer: {
     command: "node scripts/serve.mjs --port 4318 --no-local-library --no-local-config",
