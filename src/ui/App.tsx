@@ -34,7 +34,15 @@ import { Browse } from "./Browse";
 import { normalizeSessionName } from "../core/sessions";
 export function App() {
   const appearance = useAppearance();
-  const { data, archive, mutate, error, setError, loadingMessage } = useStudy();
+  const {
+    data,
+    archive,
+    mutate,
+    importLibrary,
+    error,
+    setError,
+    loadingMessage,
+  } = useStudy();
   const [page, setPage] = useState("home");
   const [protectedTests, setProtectedTests] = useState(
     () => localStorage.getItem("sat-protect-tests") !== "false",
@@ -102,6 +110,15 @@ export function App() {
       throw new Error("Choose a backup smaller than 768 MB.");
     const raw: unknown = JSON.parse(await file.text());
     setRestore(parseBackupPayload(raw));
+  };
+  const importOwnLibrary = async (files: File[]) => {
+    if (!files.length) return;
+    const result = await importLibrary(files, setMessage);
+    setMessage(
+      result.unchanged
+        ? "This library is already imported. Nothing changed."
+        : `Library imported: ${result.questionCount} questions and their original images are saved in this browser.`,
+    );
   };
   const exportBackup = (filename: string) =>
     void run(async () => {
@@ -283,8 +300,8 @@ export function App() {
               Practice these questions again?
             </h2>
             <p>
-              This session includes active practice-test questions and may
-              spoil a future Bluebook test.
+              This session includes active practice-test questions and may spoil
+              a future Bluebook test.
             </p>
             <div className="modal-actions">
               <button onClick={() => setPendingStart(undefined)}>Cancel</button>
@@ -497,6 +514,32 @@ export function App() {
             </p>
             <div className="data-grid">
               <section className="data-card">
+                <h2>Import your own question library</h2>
+                <p>
+                  Choose a prepared library folder: it contains{" "}
+                  <code>manifest.json</code>, <code>questions.json</code>, and
+                  an <code>assets</code> folder. Create one from PDF exports you
+                  hold with the preparation tool described in the README. Files
+                  are checked and saved only in this browser; nothing is
+                  uploaded.
+                </p>
+                <label className="file-button secondary">
+                  Choose library folder
+                  <input
+                    aria-label="Import library folder"
+                    type="file"
+                    multiple
+                    {...{ webkitdirectory: "" }}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      e.target.value = "";
+                      void run(() => importOwnLibrary(files));
+                    }}
+                  />
+                </label>
+              </section>
+              <section className="data-card">
                 <h2>Back up your work</h2>
                 <p>
                   Export questions, answers, bookmarks, sessions, and durable
@@ -529,9 +572,8 @@ export function App() {
                 </label>
                 <p className="small muted">
                   Use the same browser and the address {location.origin} each
-                  time.
-                  Clearing site data or using private browsing can remove your
-                  library.
+                  time. Clearing site data or using private browsing can remove
+                  your library.
                 </p>
               </section>
             </div>
@@ -541,8 +583,8 @@ export function App() {
                 <p>
                   {restore.data.questions.length} questions,{" "}
                   {restore.data.attempts.length} attempts,{" "}
-                  {restore.data.sessions.length}{" "}
-                  sessions. This replaces the current library and history.
+                  {restore.data.sessions.length} sessions. This replaces the
+                  current library and history.
                 </p>
                 <button
                   disabled={busy}
@@ -555,7 +597,9 @@ export function App() {
                   disabled={busy}
                   onClick={() =>
                     void run(async () => {
-                      const normalized = await storeInlineDocuments(restore.data);
+                      const normalized = await storeInlineDocuments(
+                        restore.data,
+                      );
                       await mutate((d) => {
                         Object.assign(d, normalized);
                       }, {});

@@ -16,6 +16,12 @@ Start the application as usual and refresh the page. The local server exposes th
 
 All imported material stays under ignored `private-data/` and in the browser database. It is excluded from Git and the Vite production bundle. Keep `private-data/library/` with this local installation so another browser profile can import it. A full app backup includes the original question and explanation images, making that backup portable independently of this folder. Source PDFs remain in Downloads and are read-only.
 
+## Import a prepared library in the browser (including on GitHub Pages)
+
+Open **Settings → Library & maintenance → Choose library folder** and select the prepared folder (`private-data/library`, containing `manifest.json`, `questions.json`, and `assets/`). This runs the same validation as the local server path: manifest format, the question file's SHA-256 against the manifest revision, the question count, every referenced image, and every image's SHA-256. `import-report.json` and other files in the folder are ignored and never stored. Re-choosing an already imported library reports that nothing changed, and a corrected revision refreshes matched questions while keeping answers, notes, and bookmarks.
+
+This is how the hosted site receives question material: each person prepares and imports their own, and nothing is uploaded or committed. The full 3,770-question library (about 15,000 files, 377 MB on disk) imported in about 10 seconds in testing with all non-loopback requests blocked.
+
 ## Prepare or rebuild the library
 
 The Python utility is a preparation-time tool for this particular College Board export layout. It requires PyMuPDF and Pillow. They were installed for this laptop under ignored `private-data/python-deps/`; they are not runtime dependencies of the portal.

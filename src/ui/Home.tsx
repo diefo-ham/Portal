@@ -74,7 +74,8 @@ export function Home({
           <h2>Your practice space is ready.</h2>
           <p>
             No local question library is available yet. Try the original
-            examples to get started.
+            examples to get started, or import your own prepared library from
+            Settings → Library &amp; maintenance.
           </p>
           <button className="primary" disabled={busy} onClick={onSample}>
             Load synthetic sample

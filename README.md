@@ -11,7 +11,17 @@ The repository deploys to GitHub Pages with `.github/workflows/deploy.yml`. The 
 - Question material you import yourself stays in your browser. Do not commit it, and do not publish a fork that includes it.
 - The hosted calculator is the bundled Offline calculator. The committed `public/calculator-config.json` holds an empty Desmos key, and the workflow fails if that changes, so the official Desmos mode stays unconfigured there. Never commit an API key; local keys belong in `.env.local`.
 - The build uses relative URLs, so it runs at any subpath. To pin an absolute base, set `VITE_BASE` (for example `VITE_BASE=/sat-portal/ npm run build`).
-- There is no service worker yet. After the first visit the page works only while the browser has it cached.
+- **Offline:** after the first visit a service worker keeps the whole app, including the calculator, in the browser, so it opens and works with no network. A new version takes over after every tab of the site is closed, so a session never mixes versions. The page can also be installed from the browser's menu.
+
+### Bring your own questions
+
+The hosted site never supplies third-party question banks. You import material you already hold:
+
+1. Prepare a library folder on your own computer from your PDF exports with the preparation tool: see [PDF import instructions](docs/pdf-import.md). It writes `manifest.json`, `questions.json`, and an `assets` folder of original-layout images.
+2. On the site, open **Settings → Library & maintenance → Choose library folder** and select that folder.
+3. The browser checks the manifest, the question file's checksum, and every image's checksum, then stores everything locally. Nothing is uploaded, and it works offline afterwards. Active questions stay hidden by default.
+
+Importing the full 3,770-question library took about 10 seconds in testing. Each person imports their own copy, and a backup (**Export full backup**) moves it between browsers.
 
 ## Run on this laptop
 
@@ -99,6 +109,6 @@ Unit tests cover numeric equivalence, filtering, duplicate/import safety, backup
 3. **Calculator:** The integrated Calculator uses bundled structural input, graphs, tables/lists, QR polynomial fits (including sparse models through degree three), and original-y exponential fitting. Custom bases linear in their fitted parameters are also supported, and numerical graph searches are approximate. Official Desmos remains available for advanced cases when configured and selected. See [current calculator behavior and limits](docs/calculator-floating.md).
 4. **Analytics:** Accuracy includes all attempts, not predicted SAT scores. Latest-answer status and ever-missed history are distinct. Timing is approximate, untimed practice only. Expand metrics only when the records support them.
 5. **GUI:** Home, practice, and review now share semantic color/spacing/type tokens in `src/ui/tokens.css` and layout rules in `src/ui/styles.css`. Both themes are available; further visual changes should preserve tested study behavior. Source PDF images cannot be re-typeset or reflowed without a separate content-rendering project. The calculator is a nonmodal, freely draggable/resizable floating window that never changes Practice width. At widths below 620 px it uses a viewport-constrained overlay.
-6. **Packaging:** The local server must be running. There is no service worker, PWA installation, or executable bundle; the GitHub Pages deployment is static only. A desktop wrapper can reuse the same core and swap the persistence adapter later.
+6. **Packaging:** Locally the server must be running. The hosted site works offline through its service worker and can be installed as an app. There is no executable bundle. A desktop wrapper can reuse the same core and swap the persistence adapter later.
 
 This project is not affiliated with or endorsed by College Board. SAT and Bluebook are their respective owners' marks.
