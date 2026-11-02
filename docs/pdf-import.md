@@ -22,7 +22,7 @@ All imported material stays under ignored `private-data/` and in the browser dat
 
 - A progress bar shows reading and preparing, and **Cancel** stops cleanly. Images already prepared are kept and reused on a rerun. Images that a re-prepared question no longer uses are removed automatically.
 - The finished report lists how many questions were prepared and any that were left out with the reason. **Download report** saves it (source IDs, file names and hashes, no question text).
-- The optional **Reviewed exceptions** file (under Advanced) is JSON keyed by source ID, for example `{"e3bbf2bf": {"choiceLabelsVerified": true, "warning": "Option D is printed as a bullet."}}`. It is the same idea as `private-data/pdf-overrides.json`; supply it only for questions you have checked by eye.
+- The optional **Reviewed exceptions** file (under Advanced) is JSON keyed by source ID, for example `{"e3bbf2bf": {"choiceLabelsVerified": true, "warning": "Option D is printed as a bullet."}}`. It is the same idea as `private-data/pdf-overrides.json`; supply it only for questions you have checked by eye. The one question in the supported exports that prints an option as a bullet (`e3bbf2bf`) is already built in (`src/importing/pdf/exceptions.ts`), so the full set imports with no file.
 - It needs WebP image saving (Chrome, Edge, or Firefox). The PDF reader is loaded only for this task and is kept for offline use after its first load.
 - Images are drawn by a different renderer than the Python tool, so they match visually but not byte for byte. A library prepared this way is a new revision; it replaces matching questions by source ID and keeps your answers, notes, and bookmarks. Preparing with both tools stores the images twice.
 

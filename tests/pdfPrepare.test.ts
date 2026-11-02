@@ -317,6 +317,40 @@ describe("prepareLibrary", () => {
     });
   });
 
+  it("applies the built-in exception for the one question printed with a bulleted option", async () => {
+    const pdfs = standard();
+    // Same ID as the known exception, but its last option is not labelled D.
+    pdfs.math_active = [{ id: "e3bbf2bf", key: "Correct Answer: A" }];
+    const withId = fixtures(pdfs);
+    const open = withId.deps.open;
+    withId.deps.open = async (data: Uint8Array) => {
+      const reader = await open(data);
+      return {
+        ...reader,
+        layout: async (n: number) => {
+          const layout = await reader.layout(n);
+          if (!layout.text.includes("e3bbf2bf")) return layout;
+          const patch = (text: string) => text.replace("D. four", "four");
+          return {
+            ...layout,
+            text: patch(layout.text),
+            lines: layout.lines.map((l) => ({ ...l, text: patch(l.text) })),
+          };
+        },
+      };
+    };
+    const { questionsJson, report } = await prepareLibrary(
+      withId.files,
+      {},
+      withId.deps,
+    );
+    const q = parseQuestions(JSON.parse(questionsJson)).find(
+      (item) => item.sourceId === "e3bbf2bf",
+    )!;
+    expect(report.quarantined.map((x) => x.reason)).toEqual([]);
+    expect(q.document?.extractionWarnings?.[0]).toMatch(/option D as a bullet/);
+  });
+
   it("applies a reviewed exception for out-of-order options", async () => {
     const pdfs = standard();
     // Option D printed as a bullet: the labels are not A, B, C, D.

@@ -6,6 +6,7 @@
  * without a browser.
  */
 import { planCrops } from "./crops.ts";
+import { KNOWN_EXCEPTIONS } from "./exceptions.ts";
 import {
   classifyExports,
   type ActiveMode,
@@ -190,7 +191,7 @@ export async function prepareLibrary(
   deps: PrepareDeps,
 ): Promise<PreparedLibrary> {
   const { signal, progress } = options;
-  const overrides = options.overrides ?? {};
+  const overrides = { ...KNOWN_EXCEPTIONS, ...options.overrides };
   const report = (update: Progress) => progress?.(update);
   const read = async (name: ExportName) =>
     new Uint8Array(await files[name].arrayBuffer());
