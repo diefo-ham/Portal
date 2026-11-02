@@ -108,7 +108,7 @@ export function PdfPrepare({ prepare }: Props) {
           </span>
         ))}
         . They are read and turned into question images in this browser; nothing
-        is uploaded. The full exports take roughly 10 to 15 minutes, so keep
+        is uploaded. The full exports take about 5 to 10 minutes, so keep
         this tab open.
       </p>
       <label className="file-button secondary">
