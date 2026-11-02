@@ -141,10 +141,7 @@ test("offline graph workspace, inspection, zoom/pan and keyboard isolation", asy
     .click();
   await expect(page.locator(".graph-curve").first()).toBeVisible();
   await enterExpression(page, 1, "x<100");
-  await expect(page.locator("path.graph-shade")).toHaveAttribute(
-    "d",
-    /Z$/,
-  );
+  await expect(page.locator("path.graph-shade")).toHaveAttribute("d", /Z$/);
   await enterExpression(page, 1, "y<100");
   await expect(page.locator("path.graph-shade").first()).toHaveAttribute(
     "d",
@@ -169,6 +166,8 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
   await expect(
     page.getByRole("slider", { name: "a slider", exact: true }),
   ).toBeVisible();
+  // Adding a slider moves focus to the new entry shortly afterwards; let that settle.
+  await expect(expression(page, 4)).toBeFocused();
   const slider = page.getByRole("slider", { name: "a slider", exact: true });
   await slider.focus();
   await expect(slider).toBeFocused();
