@@ -4,6 +4,8 @@ import { join, relative, resolve, sep } from "node:path";
 
 const worker = `// Generated at build time. Precaches the built app so it opens offline.
 const CACHE = "sat-study-__VERSION__";
+// Large, rarely used files (the PDF reader) are kept after their first use.
+const RUNTIME = CACHE + "-runtime";
 const FILES = __FILES__;
 const scope = new URL(self.registration.scope);
 const at = (path) => new URL(path, scope);
@@ -23,7 +25,8 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
       for (const key of await caches.keys())
-        if (key.startsWith("sat-study-") && key !== CACHE) await caches.delete(key);
+        if (key.startsWith("sat-study-") && key !== CACHE && key !== RUNTIME)
+          await caches.delete(key);
       await self.clients.claim();
     })(),
   );
@@ -48,7 +51,12 @@ self.addEventListener("fetch", (event) => {
         const shell = await caches.match(at("index.html"));
         if (shell) return shell;
       }
-      return fetch(request);
+      const response = await fetch(request);
+      if (response.ok && url.pathname.startsWith(at("assets/").pathname)) {
+        const copy = response.clone();
+        event.waitUntil(caches.open(RUNTIME).then((cache) => cache.put(request, copy)));
+      }
+      return response;
     })(),
   );
 });
@@ -88,9 +96,14 @@ export function serviceWorker() {
         hash.update(file);
         hash.update(await readFile(join(outDir, file)));
       }
+      // The PDF reader (its worker and the chunk that loads it) is cached on first use
+      // instead of on every first visit.
+      const lazy = /^assets\/(pdf\.worker\.min|run)-[^/]+\.m?js$/;
       const precache = [
         "./",
-        ...files.filter((file) => file !== "calculator-config.json"),
+        ...files.filter(
+          (file) => file !== "calculator-config.json" && !lazy.test(file),
+        ),
       ];
       await writeFile(
         join(outDir, "sw.js"),

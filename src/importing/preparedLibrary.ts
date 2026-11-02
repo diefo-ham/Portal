@@ -82,6 +82,23 @@ export function fileSource(files: File[]): LibrarySource {
   };
 }
 
+/**
+ * A library prepared in memory. Its images were already stored under their
+ * content hashes, so asking for one here means something went wrong.
+ */
+export function memorySource(
+  manifest: unknown,
+  questionsJson: string,
+): LibrarySource {
+  return {
+    manifest: async () => manifest,
+    questions: async () => questionsJson,
+    asset: async () => {
+      throw new Error("A prepared PDF image is missing.");
+    },
+  };
+}
+
 const sha256 = async (bytes: BufferSource) =>
   Array.from(
     new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),

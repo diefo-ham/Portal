@@ -47,6 +47,8 @@ const server = await createServer({
             target = resolve(synthetic);
           else if (/^\/__pdf\/[a-z_]+\.pdf$/.test(path))
             target = join(pdfs, path.slice(7));
+          else if (path === "/__ref/overrides.json")
+            target = join(library, "..", "pdf-overrides.json");
           else if (path === "/__ref/questions.json")
             target = join(library, "questions.json");
           else if (/^\/__ref\/assets\/[a-f0-9]{64}\.webp$/.test(path))
@@ -121,6 +123,97 @@ if (synthetic) {
   for (const [name, ok] of checks) console.log(ok ? "PASS" : "FAIL", name);
   console.log(JSON.stringify(results));
   process.exit(checks.every(([, ok]) => ok) ? 0 : 1);
+}
+if (process.argv.includes("--prepare")) {
+  await page.waitForFunction(() => window.ready === true, null, {
+    timeout: 120000,
+  });
+  const started = Date.now();
+  const outcome = await page.evaluate((o) => window.runPrepare(o), {
+    mode: argument("mode", "active-only"),
+  });
+  await browser.close();
+  await server.close();
+  const { readFileSync } = await import("node:fs");
+  const reference = JSON.parse(
+    readFileSync(join(library, "questions.json"), "utf8"),
+  );
+  const want = new Map(reference.questions.map((q) => [q.sourceId, q]));
+  const { comparable } = await import("./pdf-compare.mjs");
+  const tally = {
+    same: 0,
+    answer: 0,
+    origin: 0,
+    choices: 0,
+    warnings: 0,
+    status: 0,
+    order: 0,
+    panelCounts: 0,
+    widths: 0,
+    provenance: 0,
+    fields: {},
+  };
+  const examples = [];
+  outcome.questions.forEach((q, index) => {
+    const ref = want.get(q.sourceId);
+    if (!ref) return examples.push("only here: " + q.sourceId);
+    tally.same++;
+    if (reference.questions[index]?.sourceId !== q.sourceId) tally.order++;
+    if (JSON.stringify(q.answer) !== JSON.stringify(ref.answer)) tally.answer++;
+    if (q.document.answerKeyOrigin !== ref.document.answerKeyOrigin)
+      tally.origin++;
+    if (JSON.stringify(q.choices) !== JSON.stringify(ref.choices))
+      tally.choices++;
+    if (
+      JSON.stringify(q.document.extractionWarnings) !==
+      JSON.stringify(ref.document.extractionWarnings)
+    )
+      tally.warnings++;
+    if (q.testStatus !== ref.testStatus) tally.status++;
+    for (const kind of ["question", "rationale"]) {
+      if (q.document[kind].length !== ref.document[kind].length)
+        tally.panelCounts++;
+      else if (q.document[kind].some((p) => p.width !== 1160)) tally.widths++;
+    }
+    if (
+      JSON.stringify(
+        q.document.provenance.map((p) => [p.filename, p.pages]),
+      ) !==
+      JSON.stringify(ref.document.provenance.map((p) => [p.filename, p.pages]))
+    )
+      tally.provenance++;
+    for (const f of [
+      "section",
+      "domain",
+      "skill",
+      "difficulty",
+      "stem",
+      "rationale",
+    ])
+      if (comparable(String(q[f])) !== comparable(String(ref[f])))
+        tally.fields[f] = (tally.fields[f] ?? 0) + 1;
+  });
+  for (const id of want.keys())
+    if (!outcome.questions.some((q) => q.sourceId === id))
+      examples.push("missing here: " + id);
+  console.log(
+    JSON.stringify(
+      {
+        seconds: +((Date.now() - started) / 1000).toFixed(0),
+        prepared: outcome.questions.length,
+        python: want.size,
+        quarantined: outcome.report.quarantined.length,
+        assets: outcome.assets,
+        counts: outcome.report.counts,
+        comparison: outcome.report.comparison,
+        tally,
+        examples: examples.slice(0, 5),
+      },
+      null,
+      1,
+    ),
+  );
+  process.exit(0);
 }
 const dumpId = argument("dump");
 if (dumpId) {

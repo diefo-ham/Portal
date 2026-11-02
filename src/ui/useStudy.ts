@@ -67,11 +67,28 @@ export function useStudy() {
     },
     [],
   );
+  /** Runs a preparation that ends in a library, then shows the stored data. */
+  const adoptLibrary = useCallback(
+    async <T extends { result: { data: StudyData } }>(
+      work: () => Promise<T>,
+    ) => {
+      setWrites((n) => n + 1);
+      try {
+        const outcome = await work();
+        setData(outcome.result.data);
+        return outcome;
+      } finally {
+        setWrites((n) => n - 1);
+      }
+    },
+    [],
+  );
   return {
     data,
     archive,
     mutate,
     importLibrary,
+    adoptLibrary,
     error,
     setError,
     saving: writes > 0,

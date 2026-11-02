@@ -8,7 +8,7 @@ preparation code, including the cases that matter most:
 * the answer-key area (must not leak into the question image),
 * a question that continues onto a second page.
 
-    python scripts/make_synthetic_export.py --output synthetic_math.pdf
+    python scripts/make_synthetic_export.py --output synthetic_math.pdf [--prefix mathin --section Math]
 """
 import argparse
 import sys
@@ -42,12 +42,12 @@ def label(page, text, baseline):
     page.insert_text((18, baseline), text, fontsize=7.89, fontname=FONT)
 
 
-def build(path):
+def build(path, prefix="synth", section="Math"):
     doc = fitz.open()
 
     # Question 1: multiple choice, highlighted correct option, math under the heading.
     p = new_page(doc)
-    header(p, "synth0001", "Linear functions")
+    header(p, f"{prefix}0001", "Linear functions", section=section)
     label(p, "Question", 135.75)
     # A numerator-like bar that starts 2 pt below the heading box.
     p.draw_rect(fitz.Rect(200, 138.9, 250, 141.9), color=None, fill=(0, 0, 0))
@@ -63,7 +63,7 @@ def build(path):
 
     # Question 2: student-produced answer that continues onto a second page.
     p = new_page(doc)
-    header(p, "synth0002", "Percentages", difficulty="Hard")
+    header(p, f"{prefix}0002", "Percentages", section=section, difficulty="Hard")
     label(p, "Question", 135.75)
     p.insert_text((18, 180), "A synthetic stem that continues on the next page.", fontsize=9.3, fontname=FONT)
     label(p, "Answer", 700)
@@ -73,11 +73,18 @@ def build(path):
     label(p, "Rationale", 330)
     p.insert_text((18, 356), "There are twelve.", fontsize=9.3, fontname=FONT)
 
-    doc.save(path)
+    try:
+        doc.subset_fonts()  # keeps the embedded font small when fontTools is available
+    except Exception:
+        pass
+    doc.save(path, garbage=4, deflate=True)
     doc.close()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    build(parser.parse_args().output)
+    parser.add_argument("--prefix", default="synth", help="Question ID prefix: the IDs are <prefix>0001 and <prefix>0002")
+    parser.add_argument("--section", default="Math", choices=["Math", "Reading and Writing"])
+    args = parser.parse_args()
+    build(args.output, args.prefix, args.section)

@@ -254,4 +254,34 @@ window.runSynthetic = async () => {
   await doc.close();
   return out;
 };
+/** The whole preparation (the same code the Settings page runs) on the real exports, with images discarded. */
+window.runPrepare = async ({ mode }) => {
+  const { prepareLibrary, EXPORT_NAMES } =
+    await import("/src/importing/pdf/prepare.ts");
+  const overridesResponse = await fetch("/__ref/overrides.json");
+  const overrides = overridesResponse.ok
+    ? await overridesResponse.json()
+    : undefined;
+  const files = {};
+  for (const name of EXPORT_NAMES)
+    files[name] = {
+      name: name + ".pdf",
+      size: 0,
+      arrayBuffer: async () =>
+        (await fetch(`/__pdf/${name}.pdf`)).arrayBuffer(),
+    };
+  const prepared = await prepareLibrary(
+    files,
+    { mode, overrides },
+    {
+      open: openExport,
+      store: { encode: encodeWebp, put: async () => {} },
+    },
+  );
+  return {
+    report: prepared.report,
+    questions: JSON.parse(prepared.questionsJson).questions,
+    assets: prepared.manifest.assets.length,
+  };
+};
 window.ready = true;

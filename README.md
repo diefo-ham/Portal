@@ -15,7 +15,11 @@ The repository deploys to GitHub Pages with `.github/workflows/deploy.yml`. The 
 
 ### Bring your own questions
 
-The hosted site never supplies third-party question banks. You import material you already hold:
+The hosted site never supplies third-party question banks. You bring material you already hold, in one of two ways:
+
+**From the PDF exports directly.** Open **Settings → Library & maintenance → Prepare from your PDF exports**, choose the four exports (`read_write_inactive.pdf`, `read_write_active.pdf`, `math_inactive.pdf`, `math_active.pdf`), say whether the active files contain only active questions, and start. The browser reads the PDFs, cuts each question and explanation into an image, checks everything, and stores it locally. Nothing is uploaded, and it works offline once the PDF reader has been used once. It takes roughly 10 to 15 minutes for the full exports; keep the tab open. The result matches the Python tool described below (see [the scope and parity notes](docs/in-browser-pdf-import-scope.md)). It needs a browser that can save WebP images (current Chrome, Edge, or Firefox).
+
+**From a prepared folder.**
 
 1. Prepare a library folder on your own computer from your PDF exports with the preparation tool: see [PDF import instructions](docs/pdf-import.md). It writes `manifest.json`, `questions.json`, and an `assets` folder of original-layout images.
 2. On the site, open **Settings → Library & maintenance → Choose library folder** and select that folder.
@@ -104,7 +108,7 @@ Unit tests cover numeric equivalence, filtering, duplicate/import safety, backup
 
 ## Current limits and next steps
 
-1. **Real exports:** The supplied PDF exports are prepared locally with metadata, source IDs, answer keys, and original-layout question/explanation images. The parser targets this specific export layout; arbitrary PDFs are not accepted directly by the browser. Search text is approximate and may omit math notation. Semantic math and full screen-reader transcription remain future work.
+1. **Real exports:** The supplied PDF exports are prepared locally with metadata, source IDs, answer keys, and original-layout question/explanation images. The parser targets this specific export layout. The Settings page prepares those four exports directly in the browser; other PDF layouts are not supported and are left out with a reason rather than guessed. Search text is approximate and may omit math notation. Semantic math and full screen-reader transcription remain future work.
 2. **Active comparison:** These exports were confirmed by the user to be separate active-only and inactive sets. The preparation utility also supports inclusive/exclusive comparisons with source IDs and flags inconsistent sets; uncertain matches remain unknown. New export modes must be stated explicitly.
 3. **Calculator:** The integrated Calculator uses bundled structural input, graphs, tables/lists, QR polynomial fits (including sparse models through degree three), and original-y exponential fitting. Custom bases linear in their fitted parameters are also supported, and numerical graph searches are approximate. Official Desmos remains available for advanced cases when configured and selected. See [current calculator behavior and limits](docs/calculator-floating.md).
 4. **Analytics:** Accuracy includes all attempts, not predicted SAT scores. Latest-answer status and ever-missed history are distinct. Timing is approximate, untimed practice only. Expand metrics only when the records support them.

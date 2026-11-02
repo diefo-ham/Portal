@@ -159,3 +159,28 @@ Pixels are not byte-identical to the Python tool's, because the two renderers an
 ### Next
 
 Phase 3 (UI and delivery): the Settings flow, progress and cancel, a report, a browser test on the synthetic export in CI, licenses and offline caching of the PDF engine.
+
+## Phase 3 results (2026-11-02)
+
+Phase 3 is implemented. The Settings page has a "Prepare from your PDF exports" card (`src/ui/PdfPrepare.tsx`): choose the four exports, say what the active files contain (no default, so nothing is marked active without the person saying so), start, watch progress, cancel, and read a report with a downloadable copy. `src/importing/pdf/prepare.ts` runs the preparation with the reader, encoder, and storage injected; `run.ts` connects it to pdf.js and IndexedDB and then imports through the same `ingestLibrary` as a prepared folder, so the library is validated byte for byte (manifest revision, count, image references, every image hash) before it is used.
+
+### Full preparation on the real exports, through the production code
+
+`node scripts/pdf-render-check.mjs --pdfs <folder> --private <private-data> --prepare --mode active-only`, in headless Edge, images discarded after hashing.
+
+| Check | Result |
+| --- | --- |
+| Questions prepared | 3,770 of 3,770, in the Python library's order |
+| Quarantined | 0 |
+| Distinct images | 7,731, the same count as the Python library |
+| Answers, answer origin, choices, status, provenance, reviewed-exception warning | 0 mismatches |
+| Question and explanation image counts, and image width (1160 px) | 0 mismatches |
+| Stem / rationale text | 6 and 7 of 3,770 differ (search text only, as in phase 1) |
+| Time | 291 s for the whole preparation |
+
+### Delivery
+
+- **Lazy loading.** The PDF reader and the preparation code load only when someone starts a preparation (a 452 KB chunk plus the 1.27 MB pdf.js worker). Studying never loads them, and the page's content-security policy is unchanged.
+- **Offline.** The service worker does not precache the reader, so the first visit stays small. It caches the reader the first time it is used (a runtime cache named after the build version, replaced with each build), and a browser test prepares the synthetic exports, goes offline, reloads, and prepares again.
+- **Licence.** pdf.js is now a runtime dependency; its Apache-2.0 notice is in `public/licenses` and listed in the index. The notices script skips optional native add-ons that are not part of the browser build.
+- **Tests.** `tests/pdfPrepare.test.ts` covers file matching, reviewed exceptions, statuses, provenance, merged and conflicting source IDs, quarantine, cancel, and that the importer accepts the result. `tests/browser/pdf-prepare.spec.ts` runs the whole flow in the browser on four small original PDFs (`tests/fixtures/synthetic-exports.json`, regenerated with `scripts/make_synthetic_export.py`): preparation, hidden active questions, a 1160 px image, no highlight pixels, persistence across reload, and that all four files are required.

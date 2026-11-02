@@ -31,6 +31,7 @@ import { ResetProgress } from "./ResetProgress";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { portableBackup, storeInlineDocuments } from "../importing/documents";
 import { Browse } from "./Browse";
+import { PdfPrepare } from "./PdfPrepare";
 import { normalizeSessionName } from "../core/sessions";
 export function App() {
   const appearance = useAppearance();
@@ -39,6 +40,7 @@ export function App() {
     archive,
     mutate,
     importLibrary,
+    adoptLibrary,
     error,
     setError,
     loadingMessage,
@@ -119,6 +121,16 @@ export function App() {
         ? "This library is already imported. Nothing changed."
         : `Library imported: ${result.questionCount} questions and their original images are saved in this browser.`,
     );
+  };
+  // The PDF reader is loaded only when someone prepares a library from PDFs.
+  const preparePdfs = async (
+    files: File[],
+    options: Parameters<
+      (typeof import("../importing/pdf/run"))["prepareFromPdfs"]
+    >[1],
+  ) => {
+    const { prepareFromPdfs } = await import("../importing/pdf/run");
+    return adoptLibrary(() => prepareFromPdfs(files, options));
   };
   const exportBackup = (filename: string) =>
     void run(async () => {
@@ -539,6 +551,7 @@ export function App() {
                   />
                 </label>
               </section>
+              <PdfPrepare prepare={preparePdfs} />
               <section className="data-card">
                 <h2>Back up your work</h2>
                 <p>

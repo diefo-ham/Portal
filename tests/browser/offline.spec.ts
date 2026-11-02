@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Unlike the other specs, this one lets the service worker run.
 test.use({ serviceWorkers: "allow" });
@@ -50,4 +53,50 @@ test("the manifest and icons are reachable", async ({ request }) => {
   expect(manifest.name).toBe("SAT Study");
   for (const icon of manifest.icons)
     expect((await request.get("/" + icon.src)).ok()).toBe(true);
+});
+
+test("preparing PDF exports keeps working offline once the reader has been used", async ({
+  page,
+  context,
+}) => {
+  const fixtures: Record<string, string> = JSON.parse(
+    readFileSync("tests/fixtures/synthetic-exports.json", "utf8"),
+  );
+  const dir = mkdtempSync(join(tmpdir(), "sat-study-offline-pdf-"));
+  const paths = Object.keys(fixtures).map((name) => {
+    const path = join(dir, name);
+    writeFileSync(path, Buffer.from(fixtures[name], "base64"));
+    return path;
+  });
+  const prepare = async () => {
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByText("Library & maintenance", { exact: true }).click();
+    await page.getByLabel("PDF export files").setInputFiles(paths);
+    await page.getByRole("radio", { name: /I am not sure/ }).check();
+    await page.getByRole("button", { name: "Prepare library" }).click();
+    await expect(page.getByText("Prepared 8 of 8 questions.")).toBeVisible({
+      timeout: 90_000,
+    });
+  };
+
+  await page.goto("/");
+  await expect
+    .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
+    .toBe(true);
+  await prepare();
+  // The reader is cached the first time it is loaded.
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        for (const key of await caches.keys())
+          if (key.endsWith("-runtime"))
+            return (await (await caches.open(key)).keys()).length;
+        return 0;
+      }),
+    )
+    .toBeGreaterThanOrEqual(2);
+
+  await context.setOffline(true);
+  await page.reload();
+  await prepare();
 });

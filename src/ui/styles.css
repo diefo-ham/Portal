@@ -2051,6 +2051,40 @@ figcaption {
 .data-card.spaced {
   margin-top: 0;
 }
+.pdf-prepare fieldset {
+  border: 0;
+  padding: 0;
+  margin: 16px 0 0;
+}
+.pdf-prepare legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 0;
+}
+.pdf-prepare .radio-row {
+  display: block;
+  font-size: 13px;
+  margin: 6px 0;
+  max-width: 58ch;
+}
+.pdf-prepare-files {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  font-size: 13px;
+}
+.pdf-prepare-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 18px;
+}
+.pdf-prepare-progress progress {
+  width: min(100%, 420px);
+}
+.pdf-prepare-report {
+  margin-top: 18px;
+}
 .file-button {
   display: inline-flex;
   align-items: center;

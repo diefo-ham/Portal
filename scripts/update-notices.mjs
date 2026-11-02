@@ -20,7 +20,9 @@ const index = [
   "",
 ];
 for (const [path, entry] of Object.entries(lock.packages)) {
-  if (!path.startsWith("node_modules/") || entry.dev) continue;
+  // Optional native add-ons (for example pdf.js's Node canvas) are not in the browser build.
+  if (!path.startsWith("node_modules/") || entry.dev || entry.optional)
+    continue;
   const folder = join(root, path);
   const pkg = JSON.parse(await readFile(join(folder, "package.json"), "utf8"));
   const label = pkg.name.replaceAll("/", "-").replaceAll("@", "");

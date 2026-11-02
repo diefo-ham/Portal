@@ -36,6 +36,8 @@ ml-array-rescale 2.0.0 — MIT
   ml-array-rescale-LICENSE.txt
 ml-matrix 6.15.1 — MIT
   ml-matrix-LICENSE.txt
+pdfjs-dist 6.5.438 — Apache-2.0
+  pdfjs-dist-LICENSE.txt
 react 19.3.1 — MIT
   react-LICENSE.txt
 react-dom 19.3.1 — MIT
