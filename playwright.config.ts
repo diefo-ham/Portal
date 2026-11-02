@@ -8,6 +8,8 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:4318",
     browserName: "chromium",
+    // Specs intercept network requests; offline.spec.ts opts back in.
+    serviceWorkers: "block",
     // Locally the installed Edge is used; CI installs Playwright's Chromium.
     channel: process.env.CI ? undefined : "msedge",
   },
