@@ -121,3 +121,41 @@ Fourteen pages differ in search text only: pdf.js sometimes puts a space inside 
 ### Next
 
 Phase 2 (crops and rendering): crop rectangles from these boxes, rendering with annotations hidden, pixel trim, lossless WebP, hashing, asset writing, and image-level parity.
+
+## Phase 2 results (2026-11-02)
+
+Phase 2 is implemented: `crops.ts` (where to cut each question's pages), `raster.ts` (trim and rounding), `panels.ts` (render, trim, encode, hash, store; the renderer and store are injected), and `pdfjsAdapter.ts` (the only file that touches pdf.js). Unit tests are in `tests/pdfPanels.test.ts`.
+
+### Image parity with the Python library, all 3,770 questions
+
+Run locally with `node scripts/pdf-render-check.mjs --pdfs <folder> --private <private-data> --step 1 --limit 4000`. It serves the PDFs and the Python library on 127.0.0.1 for the run, renders in headless Edge through the production code path, and compares each image with the Python image. It writes nothing and never runs in CI.
+
+| Check | Result |
+| --- | --- |
+| Questions processed with no error | 3,770 of 3,770 |
+| Questions where the number of question and explanation images differs from Python | 0 |
+| Images compared | 7,777 |
+| Image width | 1160 px, identical |
+| Height identical | 2,680 (34%) |
+| Height within 2 px | 7,608 (98%) |
+| Height differs by 3 px or more | 169 |
+| Mean absolute pixel difference | 2.0 of 255 |
+| Time to render, trim, encode and hash | 33.6 ms per image; 709 s for the whole run including comparison |
+
+The 169 larger differences are of two kinds. Thirty-five are blank strips (a continuation page's top margin) where both images are white and only Python's strip is taller, because Python's answer-key box on that page is the odd one noted in phase 1. About 130 are question images that are 3 to 6 px shorter than Python's: a sliver of faint edge pixels that MuPDF draws and pdf.js does not. One question has about 16 pt of extra white space above its graph in the Python image. I checked it, and a chart-and-choices question side by side, by eye: the content is identical and only sub-pixel edge differences remain. No missing glyphs or figures were found.
+
+Pixels are not byte-identical to the Python tool's, because the two renderers anti-alias differently, so image hashes differ. A library prepared in the browser is therefore a new revision, not a repeat of the Python one; it replaces matching questions by source ID and keeps answers, notes, and bookmarks. Running both would store the images twice.
+
+### Synthetic export checks
+
+`scripts/make_synthetic_export.py` writes an original PDF in the export's layout, and `node scripts/pdf-render-check.mjs --synthetic <file>` runs the whole pipeline on it in the browser. Ten checks pass: both questions found, choice and numeric answers read from their keys, a yellow highlight annotation over the correct option is not drawn (a control run with annotations on fails this check, so it does detect the highlight), math starting right under the heading is not clipped, the answer-key area stays out of the question image, every image is full width, a question that continues onto a second page gets two question images, images are WebP, and WebP encoding is lossless (decoded pixels equal rendered pixels).
+
+### Findings worth keeping
+
+- An opaque canvas turns on LCD text smoothing, which tints glyph edges with colour and made harmless text look like a highlight. The renderer therefore uses a canvas with alpha and paints the page white.
+- pdf.js 6 has no `isEvalSupported` option and needs no `unsafe-eval`, so the page's content-security policy is unchanged.
+- The real exports embed their glyphs, so no font data files are needed for them. A PDF that does not embed its fonts needs pdf.js's standard font files; the synthetic export embeds its font for that reason.
+
+### Next
+
+Phase 3 (UI and delivery): the Settings flow, progress and cancel, a report, a browser test on the synthetic export in CI, licenses and offline caching of the PDF engine.

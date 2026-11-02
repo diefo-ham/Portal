@@ -41,6 +41,7 @@ export interface Line {
 }
 
 export interface PageLayout {
+  width: number;
   height: number;
   lines: Line[];
   words: Word[];
@@ -187,6 +188,7 @@ function lineFrom(fragments: TextFragment[]): Line | undefined {
 export function layoutPage(
   fragments: readonly TextFragment[],
   height: number,
+  width = 612,
 ): PageLayout {
   const lines: Line[] = [];
   let group: TextFragment[] = [];
@@ -211,6 +213,7 @@ export function layoutPage(
   }
   close();
   return {
+    width,
     height,
     lines,
     words: lines.flatMap((line) => line.words),
