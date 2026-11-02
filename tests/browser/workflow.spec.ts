@@ -101,6 +101,8 @@ test("offline local workflow, history, reload persistence and backup restore", a
   expect(remote).toEqual([]);
 });
 test("progress survives closing and reopening the browser process", async ({}, testInfo) => {
+  // Starts a browser twice; a busy runner can need longer than the default 30 s.
+  test.setTimeout(120_000);
   const profile = testInfo.outputPath("browser-profile");
   mkdirSync(profile, { recursive: true });
   let context = await chromium.launchPersistentContext(profile, {

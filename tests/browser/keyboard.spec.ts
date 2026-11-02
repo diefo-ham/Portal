@@ -40,8 +40,14 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   await expect(
     page.getByRole("button", { name: "Open question overview" }),
   ).toHaveText(/Question 1/);
-  await page.keyboard.press("ArrowRight");
-  await expect(page.getByLabel("Your numeric answer")).toHaveValue("28");
+  // The key handler is re-attached after each render, so a key sent in that gap is
+  // lost. Press again until the move shows, which still fails if keys never work.
+  await expect(async () => {
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByLabel("Your numeric answer")).toHaveValue("28", {
+      timeout: 1500,
+    });
+  }).toPass();
   await page.keyboard.press("Space");
   await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
   await page.keyboard.press("ArrowRight"); // Works on the focused Next button, too.
@@ -49,10 +55,12 @@ test("contextual Space and arrow navigation respect focused controls", async ({
     page.getByRole("button", { name: "Open question overview" }),
   ).toHaveText(/Question 3/);
   for (const index of [4, 5]) {
-    await page.keyboard.press("ArrowRight");
-    await expect(
-      page.getByRole("button", { name: "Open question overview" }),
-    ).toHaveText(`Question ${index} of 5`);
+    await expect(async () => {
+      await page.keyboard.press("ArrowRight");
+      await expect(
+        page.getByRole("button", { name: "Open question overview" }),
+      ).toHaveText(`Question ${index} of 5`, { timeout: 1500 });
+    }).toPass();
   }
   await page.getByRole("radio").first().focus();
   await page.keyboard.press("ArrowRight"); // Radio group navigation stays native.

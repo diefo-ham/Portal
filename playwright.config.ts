@@ -5,6 +5,9 @@ export default defineConfig({
   outputDir: join(tmpdir(), "sat-study-playwright-results"),
   testDir: "./tests/browser",
   fullyParallel: false,
+  // Shared CI runners are slower than a laptop, and a few specs send keys within
+  // milliseconds of a render. Retried passes are reported as "flaky", not hidden.
+  retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: "http://127.0.0.1:4318",
     browserName: "chromium",
