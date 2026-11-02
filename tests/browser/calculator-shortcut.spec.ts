@@ -1,6 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import { enterExpression, expectExpression } from "./math-input";
 
+/** Shift+Backslash. Naming the produced "|" key keeps text entry identical on Linux and Windows. */
+async function typePipe(page: Page) {
+  await page.keyboard.down("Shift");
+  await page.keyboard.press("|");
+  await page.keyboard.up("Shift");
+}
+
 async function startMathPractice(page: Page) {
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
@@ -71,7 +78,7 @@ test("Backslash preserves editable focus while Shift+Backslash and modifiers rem
   await answer.evaluate((input: HTMLInputElement) =>
     input.setSelectionRange(1, 1),
   );
-  await page.keyboard.press("Shift+Backslash");
+  await typePipe(page);
   await expect(answer).toHaveValue("1|2");
   await expect(panel).toHaveCount(0);
 
@@ -98,7 +105,7 @@ test("Backslash preserves editable focus while Shift+Backslash and modifiers rem
     exact: true,
   });
   await expect(absoluteExpression).toBeFocused();
-  await page.keyboard.press("Shift+Backslash");
+  await typePipe(page);
   await expect
     .poll(() =>
       absoluteExpression
@@ -118,7 +125,7 @@ test("Backslash preserves editable focus while Shift+Backslash and modifiers rem
         .getAttribute("data-source"),
     )
     .toContain("x");
-  await page.keyboard.press("Shift+Backslash");
+  await typePipe(page);
   await expect(panel).toBeVisible();
   await expectExpression(page, 2, "|x|");
 

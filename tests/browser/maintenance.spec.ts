@@ -44,6 +44,10 @@ test("new sessions sample the filtered pool, avoid repeats, and resume the exact
   await page
     .getByRole("button", { name: "Go to question 3", exact: true })
     .click();
+  // The position is saved asynchronously; reload only once it is committed.
+  await expect
+    .poll(async () => (await state(page)).sessions.at(-1)!.index)
+    .toBe(2);
   await page.reload();
   await page.getByRole("button", { name: "Resume practice" }).click();
   const resumed = (await state(page)).sessions.at(-1)!;
