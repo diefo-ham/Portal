@@ -75,6 +75,9 @@ test("Backslash preserves editable focus while Shift+Backslash and modifiers rem
   }
   await expect(answer).toBeVisible();
   await answer.fill("12");
+  // Keys go to whatever has focus, so make sure it is the answer before typing.
+  await answer.focus();
+  await expect(answer).toBeFocused();
   await answer.evaluate((input: HTMLInputElement) =>
     input.setSelectionRange(1, 1),
   );

@@ -122,14 +122,20 @@ test("affine comparisons shade the correct half-plane and use strict/inclusive b
     await enterExpression(page, 1, sample.source);
     await expect(page.locator(".calc-error")).toHaveCount(0);
     await expect(group.locator(".graph-shade")).toHaveCount(1);
-    expect(await filled(group, sample.inside[0], sample.inside[1])).toBe(true);
-    expect(await filled(group, sample.outside[0], sample.outside[1])).toBe(
-      false,
-    );
-    expect(
-      await group.locator(".graph-curve").getAttribute("stroke-dasharray"),
-    ).toBe(sample.strict ? "7 5" : null);
-    await boundary(group, sample.a, sample.b, sample.c);
+    // The previous sample's shading is still in the page until the graph redraws,
+    // so wait for each property to settle instead of reading it once.
+    await expect
+      .poll(() => filled(group, sample.inside[0], sample.inside[1]))
+      .toBe(true);
+    await expect
+      .poll(() => filled(group, sample.outside[0], sample.outside[1]))
+      .toBe(false);
+    await expect
+      .poll(() =>
+        group.locator(".graph-curve").getAttribute("stroke-dasharray"),
+      )
+      .toBe(sample.strict ? "7 5" : null);
+    await expect(() => boundary(group, sample.a, sample.b, sample.c)).toPass();
   }
   await enterExpression(page, 1, "x^2+y^2<9");
   await expect(page.locator(".calc-error")).toContainText(
