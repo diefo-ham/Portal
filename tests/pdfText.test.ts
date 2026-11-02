@@ -342,6 +342,34 @@ describe("classify", () => {
     },
   ];
 
+  it("reads each subject's files from their contents by default", () => {
+    const { statuses, interpretation, conflicts } = classifyExports(pairs);
+    expect(interpretation).toEqual({
+      math: "active-only",
+      read_write: "inclusive",
+    });
+    expect(statuses.get("m3")).toBe("active");
+    expect(statuses.get("r1")).toBe("inactive");
+    expect(statuses.get("r2")).toBe("active");
+    expect(conflicts).toEqual([]);
+  });
+
+  it("leaves what the files cannot prove unknown when they overlap unevenly", () => {
+    const uneven: ExportPair[] = [
+      {
+        group: "math",
+        inactive: [rec("a"), rec("b")],
+        active: [rec("b"), rec("c")],
+      },
+    ];
+    const { statuses, interpretation, conflicts } = classifyExports(uneven);
+    expect(interpretation.math).toBe("inclusive");
+    expect(statuses.get("a")).toBe("inactive");
+    expect(statuses.get("b")).toBe("inactive");
+    expect(statuses.get("c")).toBe("unknown");
+    expect(conflicts).toHaveLength(1);
+  });
+
   it("treats active-only exports as active unless an ID is in both", () => {
     const { statuses, comparison } = classifyExports(pairs, "active-only");
     expect(statuses.get("m1")).toBe("inactive");

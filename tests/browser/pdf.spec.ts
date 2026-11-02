@@ -48,7 +48,7 @@ test("version-one study data survives the image-store migration", async ({
   await expect(page.getByRole("button", { name: /note/i })).toHaveCount(0);
 });
 
-test("PDF image storage, spoiler separation, portable backup and restore", async ({
+test("PDF image storage, spoiler separation and progress reset", async ({
   page,
 }) => {
   const bytes = Buffer.from(
@@ -130,29 +130,9 @@ test("PDF image storage, spoiler separation, portable backup and restore", async
   expect(assetRequests).toBe(1);
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByText("Library & maintenance", { exact: true }).click();
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export full backup" }).click();
-  const path = await (await download).path();
-  const backup = JSON.parse(await readFile(path!, "utf8"));
-  expect(backup.data.questions[0].document.question[0].src).toMatch(
-    /^data:image\/png;base64,/,
-  );
-  await page.getByLabel("Restore backup JSON").setInputFiles(path!);
-  await page
-    .getByRole("button", { name: "Replace with backup", exact: true })
-    .click();
   await expect(
-    page.getByText("Backup restored. Saved session timers are paused."),
+    page.getByRole("heading", { name: "Your questions" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Practice", exact: true }).click();
-  await page.getByRole("button", { name: "Resume practice" }).click();
-  await expect(
-    page.getByLabel("Original PDF question").locator("img"),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "← Exit", exact: true }).click();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByText("Library & maintenance", { exact: true }).click();
   await page
     .getByRole("button", { name: "Reset study progress", exact: true })
     .click();

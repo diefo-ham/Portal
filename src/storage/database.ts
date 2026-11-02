@@ -59,6 +59,30 @@ export async function writeAssets(entries: { key: string; blob: Blob }[]) {
     tx.onabort = () => reject(tx.error);
   });
 }
+/** Removes stored images that are not in `keep`; returns how many were removed. */
+export async function deleteAssetsExcept(
+  keep: ReadonlySet<string>,
+): Promise<number> {
+  const db = await database();
+  return new Promise<number>((resolve, reject) => {
+    const tx = db.transaction("assets", "readwrite");
+    const store = tx.objectStore("assets");
+    let removed = 0;
+    const request = store.openKeyCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      if (!keep.has(String(cursor.key))) {
+        store.delete(cursor.primaryKey);
+        removed++;
+      }
+      cursor.continue();
+    };
+    tx.oncomplete = () => resolve(removed);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
 export async function readData(): Promise<StudyData> {
   const db = await database();
   return new Promise((resolve, reject) => {

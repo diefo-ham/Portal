@@ -94,7 +94,7 @@ test("practice-test protection persists and active overrides require a session c
     page.getByLabel("Protect unused practice-test questions"),
   ).toBeChecked();
   await expect(
-    page.getByRole("button", { name: "Export full backup" }),
+    page.getByRole("heading", { name: "Add your question PDFs" }),
   ).toBeVisible();
   await page.getByLabel("Protect unused practice-test questions").uncheck();
   await page.reload();

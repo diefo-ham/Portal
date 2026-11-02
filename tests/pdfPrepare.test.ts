@@ -230,6 +230,21 @@ describe("prepareLibrary", () => {
     expect(report.files.map((f) => f.questions)).toEqual([1, 1, 1, 1]);
   });
 
+  it("tells the active files from the inactive ones without being asked", async () => {
+    const { files, deps } = fixtures(standard());
+    const { report, questionsJson } = await prepareLibrary(files, {}, deps);
+    expect(report.activeMode).toBe("auto");
+    expect(report.interpretation).toEqual({
+      read_write: "active-only",
+      math: "active-only",
+    });
+    expect(report.counts.testStatus).toEqual({ inactive: 2, active: 2 });
+    const statuses = parseQuestions(JSON.parse(questionsJson)).map(
+      (q) => q.testStatus,
+    );
+    expect(statuses).toEqual(["inactive", "active", "inactive", "active"]);
+  });
+
   it("quarantines a question it cannot read and keeps the rest", async () => {
     const pdfs = standard();
     pdfs.math_active = [

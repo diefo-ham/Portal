@@ -21,7 +21,6 @@ function writeExports(names = Object.keys(fixtures)) {
 async function openPreparation(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByText("Library & maintenance", { exact: true }).click();
 }
 
 test("PDF exports are prepared in the browser, practised offline, and hide the answer highlight", async ({
@@ -45,19 +44,15 @@ test("PDF exports are prepared in the browser, practised offline, and hide the a
   await expect(page.getByLabel("Chosen exports")).toContainText(
     "✓ math_active.pdf",
   );
-  const prepare = page.getByRole("button", { name: "Prepare library" });
-  // The person must say what the active files contain before anything starts.
-  await expect(prepare).toBeDisabled();
-  await page
-    .getByRole("radio", {
-      name: "The active files contain only active questions.",
-    })
-    .check();
+  const prepare = page.getByRole("button", { name: "Add questions" });
+  // Nothing needs to be decided: the active and inactive files are told apart
+  // from their contents.
+  await expect(prepare).toBeEnabled();
   await prepare.click();
-  await expect(page.getByText("Prepared 8 of 8 questions.")).toBeVisible({
+  await expect(page.getByText("Added 8 questions.")).toBeVisible({
     timeout: 90_000,
   });
-  await expect(page.getByText("4 inactive, 4 active.")).toBeVisible();
+  await expect(page.getByText(/4 are marked active and stay hidden/)).toBeVisible();
   expect(remote).toEqual([]);
 
   // Active questions stay hidden by default; the inactive ones are practised.
@@ -100,8 +95,7 @@ test("preparation needs all four exports", async ({ page }) => {
   await expect(page.getByLabel("Chosen exports")).toContainText(
     "read_write_inactive.pdf (not chosen)",
   );
-  await page.getByRole("radio", { name: /I am not sure/ }).check();
   await expect(
-    page.getByRole("button", { name: "Prepare library" }),
+    page.getByRole("button", { name: "Add questions" }),
   ).toBeDisabled();
 });

@@ -108,6 +108,3 @@ Each panel requires a safe asset reference or embedded PNG/JPEG/WebP data URL, a
 
 For document-backed multiple-choice questions, choices retain IDs and generic labels; the original choices are visible in the question image. Structured `stem` and `rationale` remain available for search and future conversion, but visual practice uses the preserved layout. Only the rationale panel group appears after submission.
 
-## Backups
-
-Full backups are a different envelope: `{ "format": "sat-study-backup-v1", "exportedAt": "ISO timestamp", "data": StudyData }`. They contain the full normalized library, import log, annotations, attempts, and sessions. PDF asset references are materialized as embedded image data URLs on export. Restore validates the data, saves images into the separate IndexedDB assets store, replaces state in one transaction, and pauses restored timers. Existing study state remains intact if image saving fails. Question JSON imports are limited to 50 MB; full backup restoration allows up to 768 MB. Use **Restore a backup**, not the question importer. Future schema changes must supply explicit migrations; unsupported versions are rejected.

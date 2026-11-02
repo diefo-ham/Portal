@@ -15,11 +15,6 @@ import {
 } from "../core/model";
 import { filterQuestions, selectSessionQuestions } from "../core/practice";
 import { parseQuestions, mergeQuestions } from "../importing/json";
-import {
-  parseBackupPayload,
-  downloadJson,
-  type ParsedBackup,
-} from "../importing/backup";
 import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
 import { Practice } from "./Practice";
@@ -29,7 +24,7 @@ import { Review } from "./Review";
 import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
-import { portableBackup, storeInlineDocuments } from "../importing/documents";
+import { storeInlineDocuments } from "../importing/documents";
 import { Browse } from "./Browse";
 import { PdfPrepare } from "./PdfPrepare";
 import { normalizeSessionName } from "../core/sessions";
@@ -39,7 +34,6 @@ export function App() {
     data,
     archive,
     mutate,
-    importLibrary,
     adoptLibrary,
     error,
     setError,
@@ -67,7 +61,6 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [limit, setLimit] = useState("10");
   const [visible, setVisible] = useState(40);
-  const [restore, setRestore] = useState<ParsedBackup>();
   const [pendingStart, setPendingStart] = useState<{
     ids: string[];
     filters: FilterValues;
@@ -106,22 +99,6 @@ export function App() {
     });
     setMessage(report);
   };
-  const readFile = async (file: File | undefined) => {
-    if (!file) return;
-    if (file.size > 768 * 1024 * 1024)
-      throw new Error("Choose a backup smaller than 768 MB.");
-    const raw: unknown = JSON.parse(await file.text());
-    setRestore(parseBackupPayload(raw));
-  };
-  const importOwnLibrary = async (files: File[]) => {
-    if (!files.length) return;
-    const result = await importLibrary(files, setMessage);
-    setMessage(
-      result.unchanged
-        ? "This library is already imported. Nothing changed."
-        : `Library imported: ${result.questionCount} questions and their original images are saved in this browser.`,
-    );
-  };
   // The PDF reader is loaded only when someone prepares a library from PDFs.
   const preparePdfs = async (
     files: File[],
@@ -132,23 +109,6 @@ export function App() {
     const { prepareFromPdfs } = await import("../importing/pdf/run");
     return adoptLibrary(() => prepareFromPdfs(files, options));
   };
-  const exportBackup = (filename: string) =>
-    void run(async () => {
-      setMessage("Preparing a portable backup, including original PDF images…");
-      downloadJson(
-        await portableBackup(data!, {
-          theme: appearance.theme,
-          originalPdf: appearance.originalPdf,
-          timerDefault,
-          showCorrectExplanations,
-          protectTests: protectedTests,
-        }),
-        filename,
-      );
-      setMessage(
-        "Portable backup exported, including PDF question and explanation images.",
-      );
-    });
   const beginSelectedSession = async ({
     ids,
     filters: sessionFilters,
@@ -519,166 +479,16 @@ export function App() {
             className="maintenance"
             aria-labelledby="maintenance-heading"
           >
-            <h2 id="maintenance-heading">Library & maintenance</h2>
+            <h2 id="maintenance-heading">Your questions</h2>
             <p className="muted">
-              Question content and study history stay in this browser. No
-              account, uploads, or cloud sync.
+              {data.questions.length
+                ? `${data.questions.length.toLocaleString()} questions are stored in this browser, with your answers and notes.`
+                : "No questions yet. Add your PDFs below, or try the sample questions from the Practice page."}{" "}
+              Nothing is uploaded, and no account is needed.
             </p>
             <div className="data-grid">
-              <section className="data-card">
-                <h2>Import your own question library</h2>
-                <p>
-                  Choose a prepared library folder: it contains{" "}
-                  <code>manifest.json</code>, <code>questions.json</code>, and
-                  an <code>assets</code> folder. Create one from PDF exports you
-                  hold with the preparation tool described in the README. Files
-                  are checked and saved only in this browser; nothing is
-                  uploaded.
-                </p>
-                <label className="file-button secondary">
-                  Choose library folder
-                  <input
-                    aria-label="Import library folder"
-                    type="file"
-                    multiple
-                    {...{ webkitdirectory: "" }}
-                    disabled={busy}
-                    onChange={(e) => {
-                      const files = Array.from(e.target.files ?? []);
-                      e.target.value = "";
-                      void run(() => importOwnLibrary(files));
-                    }}
-                  />
-                </label>
-              </section>
               <PdfPrepare prepare={preparePdfs} />
-              <section className="data-card">
-                <h2>Back up your work</h2>
-                <p>
-                  Export questions, answers, bookmarks, sessions, and durable
-                  study settings together. Keep backups somewhere you control.
-                </p>
-                <button
-                  className="primary"
-                  disabled={busy}
-                  onClick={() =>
-                    exportBackup(
-                      `sat-study-${new Date().toISOString().slice(0, 10)}.backup.json`,
-                    )
-                  }
-                >
-                  Export full backup
-                </button>
-                <label className="file-button secondary">
-                  Restore a backup
-                  <input
-                    aria-label="Restore backup JSON"
-                    type="file"
-                    accept=".json,application/json"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      e.target.value = "";
-                      void run(() => readFile(file));
-                    }}
-                  />
-                </label>
-                <p className="small muted">
-                  Use the same browser and the address {location.origin} each
-                  time. Clearing site data or using private browsing can remove
-                  your library.
-                </p>
-              </section>
             </div>
-            {restore && (
-              <section className="restore-confirm" role="alert">
-                <h2>Replace local data with this backup?</h2>
-                <p>
-                  {restore.data.questions.length} questions,{" "}
-                  {restore.data.attempts.length} attempts,{" "}
-                  {restore.data.sessions.length} sessions. This replaces the
-                  current library and history.
-                </p>
-                <button
-                  disabled={busy}
-                  onClick={() => exportBackup("before-restore.backup.json")}
-                >
-                  Back up current data first
-                </button>
-                <button
-                  className="danger"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      const normalized = await storeInlineDocuments(
-                        restore.data,
-                      );
-                      await mutate((d) => {
-                        Object.assign(d, normalized);
-                      }, {});
-                      const preferences = restore.preferences;
-                      if (preferences?.theme !== undefined)
-                        appearance.setTheme(preferences.theme);
-                      if (preferences?.originalPdf !== undefined)
-                        appearance.setOriginalPdf(preferences.originalPdf);
-                      if (preferences?.timerDefault !== undefined) {
-                        setTimerDefault(preferences.timerDefault);
-                        localStorage.setItem(
-                          "sat-timer-default",
-                          String(preferences.timerDefault),
-                        );
-                      }
-                      if (preferences?.showCorrectExplanations !== undefined) {
-                        setShowCorrectExplanations(
-                          preferences.showCorrectExplanations,
-                        );
-                        localStorage.setItem(
-                          "sat-show-correct-explanations",
-                          String(preferences.showCorrectExplanations),
-                        );
-                      }
-                      if (preferences?.protectTests !== undefined) {
-                        setProtectedTests(preferences.protectTests);
-                        localStorage.setItem(
-                          "sat-protect-tests",
-                          String(preferences.protectTests),
-                        );
-                        changeFilters({
-                          ...filters,
-                          active: preferences.protectTests ? "hide" : "include",
-                        });
-                      }
-                      setRestore(undefined);
-                      setSessionId("");
-                      setMessage(
-                        normalized.sessions.some((s) => s.practiceTest)
-                          ? "Backup restored. Ordinary session timers are paused; Practice Test pause state and active module time are preserved."
-                          : "Backup restored. Saved session timers are paused.",
-                      );
-                    })
-                  }
-                >
-                  Replace with backup
-                </button>
-                <button onClick={() => setRestore(undefined)}>Cancel</button>
-              </section>
-            )}
-            <section className="local-storage-note">
-              <h3>Stored on this device</h3>
-              <p>
-                {data.questions.length} questions · {data.attempts.length}{" "}
-                attempts ·{" "}
-                {
-                  Object.values(data.annotations).filter((a) => a.bookmarked)
-                    .length
-                }{" "}
-                bookmarks
-              </p>
-              <p className="small muted">
-                IndexedDB database: sat-study-local. A running local server is
-                required; an internet connection is not.
-              </p>
-            </section>
             <ResetProgress
               busy={busy}
               archiveDate={archive?.createdAt}
@@ -686,7 +496,6 @@ export function App() {
                 run(async () => {
                   await mutate(() => {}, { resetArchive: "restore" });
                   setSessionId("");
-                  setRestore(undefined);
                   changeFilters({
                     ...filters,
                     status: "",
@@ -704,7 +513,6 @@ export function App() {
                     resetArchive: "save",
                   });
                   setSessionId("");
-                  setRestore(undefined);
                   changeFilters({
                     ...filters,
                     status: "",
@@ -717,6 +525,22 @@ export function App() {
                 })
               }
             />
+            <section className="local-storage-note">
+              <h3>Stored on this device</h3>
+              <p>
+                {data.questions.length} questions · {data.attempts.length}{" "}
+                attempts ·{" "}
+                {
+                  Object.values(data.annotations).filter((a) => a.bookmarked)
+                    .length
+                }{" "}
+                bookmarks
+              </p>
+              <p className="small muted">
+                Everything lives in this browser, so clearing its site data for{" "}
+                {location.origin} removes it.
+              </p>
+            </section>
           </section>
         </main>
       )}

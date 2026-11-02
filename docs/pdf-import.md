@@ -14,25 +14,19 @@ Difficulty totals: 1,296 easy, 1,254 medium, 1,220 hard. Active questions remain
 
 Start the application as usual and refresh the page. The local server exposes the prepared library to the application. On the first visit in each browser profile, a progress message appears while question images are verified and saved into IndexedDB. Subsequent launches reuse the stored content. Questions, images, notes, bookmarks, and answers then work without internet access.
 
-All imported material stays under ignored `private-data/` and in the browser database. It is excluded from Git and the Vite production bundle. Keep `private-data/library/` with this local installation so another browser profile can import it. A full app backup includes the original question and explanation images, making that backup portable independently of this folder. Source PDFs remain in Downloads and are read-only.
+All imported material stays under ignored `private-data/` and in the browser database. It is excluded from Git and the Vite production bundle. Keep `private-data/library/` with this local installation so another browser profile can load it. The same questions can also be prepared directly in the browser from the PDFs. Source PDFs remain in Downloads and are read-only.
 
 ## Prepare directly in the browser
 
-**Settings → Library & maintenance → Prepare from your PDF exports** does the same job as the Python tool without installing anything. Choose the four exports (the names are matched; browser copies such as `math_active (1).pdf` are accepted), pick what the active files contain, and start. There is no default for that choice: the library marks questions active only when you have said what the files are, and "I am not sure" leaves everything outside the inactive files as unknown.
+**Settings → Your questions → Add your question PDFs** does the same job as the Python tool without installing anything. Choose the four exports (the names are matched; browser copies such as `math_active (1).pdf` are accepted) and press **Add questions**. There is nothing to decide: the active and inactive files of each subject are told apart from their contents. Files with no question in common are an inactive set and an active set; an active file that contains every inactive question is an inclusive set; if the overlap is uneven the questions that cannot be proven are marked unknown. A note under the result explains which reading applied.
 
-- A progress bar shows reading and preparing, and **Cancel** stops cleanly. Images already prepared are kept and reused on a rerun.
+- A progress bar shows reading and preparing, and **Cancel** stops cleanly. Images already prepared are kept and reused on a rerun. Images that a re-prepared question no longer uses are removed automatically.
 - The finished report lists how many questions were prepared and any that were left out with the reason. **Download report** saves it (source IDs, file names and hashes, no question text).
-- The optional **Reviewed exceptions** file is JSON keyed by source ID, for example `{"e3bbf2bf": {"choiceLabelsVerified": true, "warning": "Option D is printed as a bullet."}}`. It is the same idea as `private-data/pdf-overrides.json`; supply it only for questions you have checked by eye.
+- The optional **Reviewed exceptions** file (under Advanced) is JSON keyed by source ID, for example `{"e3bbf2bf": {"choiceLabelsVerified": true, "warning": "Option D is printed as a bullet."}}`. It is the same idea as `private-data/pdf-overrides.json`; supply it only for questions you have checked by eye.
 - It needs WebP image saving (Chrome, Edge, or Firefox). The PDF reader is loaded only for this task and is kept for offline use after its first load.
 - Images are drawn by a different renderer than the Python tool, so they match visually but not byte for byte. A library prepared this way is a new revision; it replaces matching questions by source ID and keeps your answers, notes, and bookmarks. Preparing with both tools stores the images twice.
 
 Parity with the Python tool and the design are recorded in [the scope document](in-browser-pdf-import-scope.md).
-
-## Import a prepared library in the browser (including on GitHub Pages)
-
-Open **Settings → Library & maintenance → Choose library folder** and select the prepared folder (`private-data/library`, containing `manifest.json`, `questions.json`, and `assets/`). This runs the same validation as the local server path: manifest format, the question file's SHA-256 against the manifest revision, the question count, every referenced image, and every image's SHA-256. `import-report.json` and other files in the folder are ignored and never stored. Re-choosing an already imported library reports that nothing changed, and a corrected revision refreshes matched questions while keeping answers, notes, and bookmarks.
-
-This is how the hosted site receives question material: each person prepares and imports their own, and nothing is uploaded or committed. The full 3,770-question library (about 15,000 files, 377 MB on disk) imported in about 10 seconds in testing with all non-loopback requests blocked.
 
 ## Prepare or rebuild the library
 
@@ -73,4 +67,4 @@ Question images currently provide the most faithful display. The search transcri
 
 The preparation utility supports this observed PDF layout rather than arbitrary PDFs. Recheck the import report and representative pages when the export format changes. Cached assets from previous revisions are retained; no bulk deletion is performed during preparation.
 
-Synthetic tests cover hidden annotations, answer-key separation, explicit rationale fallback, accepted rounding variants, schema/source validation, image storage, and portable backups. A separate private-corpus check imports the complete bank into a disposable browser context, blocks all non-loopback requests, practices representative numeric/choice/reading questions, and verifies reload persistence. Browser-test profiles and output now use the Windows temporary directory, outside OneDrive.
+Synthetic tests cover hidden annotations, answer-key separation, explicit rationale fallback, accepted rounding variants, schema/source validation, and image storage. A separate private-corpus check imports the complete bank into a disposable browser context, blocks all non-loopback requests, practices representative numeric/choice/reading questions, and verifies reload persistence. Browser-test profiles and output now use the Windows temporary directory, outside OneDrive.

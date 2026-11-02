@@ -70,11 +70,9 @@ test("preparing PDF exports keeps working offline once the reader has been used"
   });
   const prepare = async () => {
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-    await page.getByText("Library & maintenance", { exact: true }).click();
-    await page.getByLabel("PDF export files").setInputFiles(paths);
-    await page.getByRole("radio", { name: /I am not sure/ }).check();
-    await page.getByRole("button", { name: "Prepare library" }).click();
-    await expect(page.getByText("Prepared 8 of 8 questions.")).toBeVisible({
+        await page.getByLabel("PDF export files").setInputFiles(paths);
+    await page.getByRole("button", { name: "Add questions" }).click();
+    await expect(page.getByText("Added 8 questions.")).toBeVisible({
       timeout: 90_000,
     });
   };

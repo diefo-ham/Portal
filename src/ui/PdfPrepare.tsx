@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import type { ActiveMode } from "../importing/pdf/classify";
 import {
   assignExports,
   EXPORT_NAMES,
@@ -12,7 +11,6 @@ interface Props {
   prepare: (
     files: File[],
     options: {
-      mode: ActiveMode;
       overridesFile?: File;
       signal: AbortSignal;
       progress: (progress: Progress) => void;
@@ -20,22 +18,27 @@ interface Props {
   ) => Promise<{ report: PrepareReport }>;
 }
 
-const MODES: { value: ActiveMode; label: string }[] = [
-  {
-    value: "active-only",
-    label: "The active files contain only active questions.",
-  },
-  {
-    value: "inclusive",
-    label:
-      "The active files contain every question, and the inactive files only the inactive ones.",
-  },
-  {
-    value: "unknown",
-    label:
-      "I am not sure. Mark everything outside the inactive files as unknown.",
-  },
-];
+const SUBJECTS: Record<string, string> = {
+  read_write: "Reading & Writing",
+  math: "Math",
+};
+
+/** Plain-language account of how the active and inactive files were read. */
+export function explainClassification(report: PrepareReport): string[] {
+  const lines = Object.entries(report.interpretation).map(([group, mode]) => {
+    const subject = SUBJECTS[group] ?? group;
+    if (mode === "active-only")
+      return `The two ${subject} files share no questions, so the questions in the active file were marked active.`;
+    if (mode === "inclusive")
+      return `The active ${subject} file also contains the inactive questions, so only the questions found nowhere else were marked active.`;
+    return `Every ${subject} question outside the inactive file was marked unknown.`;
+  });
+  for (const conflict of report.conflicts)
+    lines.push(
+      `The ${SUBJECTS[conflict.section] ?? conflict.section} files overlap unevenly, so the questions that could not be classified were marked unknown.`,
+    );
+  return lines;
+}
 
 const download = (report: PrepareReport) => {
   const url = URL.createObjectURL(
@@ -51,7 +54,6 @@ const download = (report: PrepareReport) => {
 export function PdfPrepare({ prepare }: Props) {
   const [files, setFiles] = useState<File[]>([]);
   const [overrides, setOverrides] = useState<File>();
-  const [mode, setMode] = useState<ActiveMode>();
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<Progress>();
   const [error, setError] = useState("");
@@ -67,9 +69,8 @@ export function PdfPrepare({ prepare }: Props) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [running]);
 
-  const ready = !assigned.missing.length && mode !== undefined && !running;
+  const ready = files.length > 0 && !assigned.missing.length && !running;
   const start = async () => {
-    if (!mode) return;
     controller.current = new AbortController();
     setRunning(true);
     setError("");
@@ -77,7 +78,6 @@ export function PdfPrepare({ prepare }: Props) {
     setProgress({ phase: "index", done: 0, total: 1, message: "Starting…" });
     try {
       const result = await prepare(files, {
-        mode,
         overridesFile: overrides,
         signal: controller.current.signal,
         progress: setProgress,
@@ -86,7 +86,7 @@ export function PdfPrepare({ prepare }: Props) {
     } catch (e) {
       setError(
         controller.current.signal.aborted
-          ? "Cancelled. Images already prepared are kept and are reused if you run it again."
+          ? "Cancelled. What was already prepared is kept and is reused if you start again."
           : e instanceof Error
             ? e.message
             : String(e),
@@ -98,21 +98,14 @@ export function PdfPrepare({ prepare }: Props) {
 
   return (
     <section className="data-card pdf-prepare" aria-labelledby="pdf-prepare-h">
-      <h2 id="pdf-prepare-h">Prepare from your PDF exports</h2>
+      <h2 id="pdf-prepare-h">Add your question PDFs</h2>
       <p>
-        Choose all four exports:{" "}
-        {EXPORT_NAMES.map((name, i) => (
-          <span key={name}>
-            {i ? ", " : ""}
-            <code>{name}.pdf</code>
-          </span>
-        ))}
-        . They are read and turned into question images in this browser; nothing
-        is uploaded. The full exports take about 5 to 10 minutes, so keep
-        this tab open.
+        Choose the four PDF exports from your question bank. They are read in
+        this browser and never uploaded, and the whole set takes about 5 to 10
+        minutes. Keep this tab open while it works.
       </p>
       <label className="file-button secondary">
-        Choose the four PDFs
+        Choose the PDFs
         <input
           aria-label="PDF export files"
           type="file"
@@ -142,41 +135,26 @@ export function PdfPrepare({ prepare }: Props) {
           ))}
         </ul>
       )}
-      <fieldset disabled={running}>
-        <legend>What do the active files contain?</legend>
-        {MODES.map((option) => (
-          <label key={option.value} className="radio-row">
-            <input
-              type="radio"
-              name="active-mode"
-              checked={mode === option.value}
-              onChange={() => setMode(option.value)}
-            />{" "}
-            {option.label}
-          </label>
-        ))}
-      </fieldset>
-      <p className="small muted">
-        Active questions stay hidden by default. Unknown is not a guarantee that
-        a question is safe from spoilers.
-      </p>
-      <label className="small">
-        Reviewed exceptions (optional JSON){" "}
-        <input
-          aria-label="Reviewed exceptions"
-          type="file"
-          accept=".json,application/json"
-          disabled={running}
-          onChange={(e) => setOverrides(e.target.files?.[0])}
-        />
-      </label>
+      <details className="pdf-prepare-advanced">
+        <summary>Advanced</summary>
+        <label className="small">
+          Reviewed exceptions (optional JSON file){" "}
+          <input
+            aria-label="Reviewed exceptions"
+            type="file"
+            accept=".json,application/json"
+            disabled={running}
+            onChange={(e) => setOverrides(e.target.files?.[0])}
+          />
+        </label>
+      </details>
       <div className="pdf-prepare-actions">
         <button
           className="primary"
           disabled={!ready}
           onClick={() => void start()}
         >
-          Prepare library
+          Add questions
         </button>
         {running && (
           <button onClick={() => controller.current?.abort()}>Cancel</button>
@@ -185,7 +163,7 @@ export function PdfPrepare({ prepare }: Props) {
       {running && progress && (
         <div className="pdf-prepare-progress">
           <progress
-            aria-label="Preparation progress"
+            aria-label="Progress"
             max={progress.total}
             value={progress.done}
           />
@@ -196,29 +174,37 @@ export function PdfPrepare({ prepare }: Props) {
       {report && (
         <div className="pdf-prepare-report" role="status">
           <p>
-            <strong>
-              Prepared {report.importedQuestions} of {report.uniqueSourceIds}{" "}
-              questions.
-            </strong>{" "}
+            <strong>Added {report.importedQuestions} questions.</strong>{" "}
             {report.quarantined.length
               ? `${report.quarantined.length} could not be read safely and were left out.`
-              : "None were left out."}
+              : ""}
           </p>
           <p className="small muted">
-            {Object.entries(report.counts.testStatus)
-              .map(([status, count]) => `${count} ${status}`)
-              .join(", ")}
+            {report.counts.testStatus.active ?? 0} are marked active and stay
+            hidden until you choose to include them;{" "}
+            {report.counts.testStatus.inactive ?? 0} are inactive
+            {report.counts.testStatus.unknown
+              ? `; ${report.counts.testStatus.unknown} are unknown`
+              : ""}
             .
           </p>
-          {report.quarantined.slice(0, 5).map((item) => (
-            <p key={item.sourceId} className="small">
-              {item.sourceId} ({item.file}, pages {item.pages.join(", ")}):{" "}
-              {item.reason}
-            </p>
-          ))}
-          <button className="secondary" onClick={() => download(report)}>
-            Download report
-          </button>
+          <details>
+            <summary>How this was worked out</summary>
+            {explainClassification(report).map((line) => (
+              <p key={line} className="small">
+                {line}
+              </p>
+            ))}
+            {report.quarantined.slice(0, 5).map((item) => (
+              <p key={item.sourceId} className="small">
+                Left out: {item.sourceId} ({item.file}, pages{" "}
+                {item.pages.join(", ")}): {item.reason}
+              </p>
+            ))}
+            <button className="secondary" onClick={() => download(report)}>
+              Download report
+            </button>
+          </details>
         </div>
       )}
     </section>

@@ -2074,6 +2074,16 @@ figcaption {
   margin: 12px 0 0;
   font-size: 13px;
 }
+.pdf-prepare-advanced,
+.pdf-prepare-report details {
+  margin-top: 14px;
+  font-size: 13px;
+}
+.pdf-prepare-advanced summary,
+.pdf-prepare-report summary {
+  cursor: pointer;
+  color: var(--muted);
+}
 .pdf-prepare-actions {
   display: flex;
   gap: 12px;

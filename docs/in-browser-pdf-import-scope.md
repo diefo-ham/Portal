@@ -184,3 +184,13 @@ Phase 3 is implemented. The Settings page has a "Prepare from your PDF exports" 
 - **Offline.** The service worker does not precache the reader, so the first visit stays small. It caches the reader the first time it is used (a runtime cache named after the build version, replaced with each build), and a browser test prepares the synthetic exports, goes offline, reloads, and prepares again.
 - **Licence.** pdf.js is now a runtime dependency; its Apache-2.0 notice is in `public/licenses` and listed in the index. The notices script skips optional native add-ons that are not part of the browser build.
 - **Tests.** `tests/pdfPrepare.test.ts` covers file matching, reviewed exceptions, statuses, provenance, merged and conflicting source IDs, quarantine, cancel, and that the importer accepts the result. `tests/browser/pdf-prepare.spec.ts` runs the whole flow in the browser on four small original PDFs (`tests/fixtures/synthetic-exports.json`, regenerated with `scripts/make_synthetic_export.py`): preparation, hidden active questions, a 1160 px image, no highlight pixels, persistence across reload, and that all four files are required.
+
+## Update: a simpler Settings page (2026-11-02)
+
+Settings now has one section, **Your questions**, with the PDF card (renamed **Add your question PDFs**) and Reset study progress with undo. Three things changed from the phase 3 design:
+
+- **No question about active files.** Each subject's two files are read from their contents (`classify.ts`, `inferMode`): no question in common means an inactive set and an active set; an active file that contains every inactive question is an inclusive set; an uneven overlap marks the questions that cannot be proven as unknown. A short note under the result says which reading applied, and the Python-style modes remain available to code and tests. The real exports are disjoint, so they read as active-only, as the Python run used.
+- **Export, restore and folder import removed.** Browser data is a study aid, so the backup/restore pair and the prepared-folder importer were taken out; the PDF card is the one way to add questions on the hosted site. The snapshot validators stay because Reset's undo uses them. The Python tool and the local server still produce and load a prepared folder for local use.
+- **Unused images are removed automatically** after a preparation, so replacing questions never leaves a second copy behind.
+
+The reviewed-exceptions file moved under an **Advanced** disclosure, and Help gained a short note on adding questions.

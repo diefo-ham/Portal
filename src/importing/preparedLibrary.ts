@@ -9,7 +9,7 @@ import type { StudyData } from "../core/model";
 
 /**
  * Where a prepared library (manifest.json, questions.json, assets/*.webp) is
- * read from: the local server, or files the person chose in the browser.
+ * read from: the local server, or one prepared in memory from PDF exports.
  */
 export interface LibrarySource {
   /** Undefined means that no library is available from this source. */
@@ -43,44 +43,6 @@ const serverSource: LibrarySource = {
     return response.blob();
   },
 };
-
-/** Reads a folder or a multi-file selection; only the three known file kinds are used. */
-export function fileSource(files: File[]): LibrarySource {
-  const named = (name: string) => files.filter((file) => file.name === name);
-  const only = (name: string) => {
-    const matches = named(name);
-    if (matches.length > 1)
-      throw new Error(
-        `Found more than one ${name}. Choose a single library folder.`,
-      );
-    return matches[0];
-  };
-  const assets = new Map<string, File>();
-  for (const file of files)
-    if (/^[a-f0-9]{64}\.webp$/.test(file.name)) assets.set(file.name, file);
-  return {
-    async manifest() {
-      const file = only("manifest.json");
-      if (!file)
-        throw new Error(
-          "That folder has no manifest.json. Choose the prepared library folder (it contains manifest.json, questions.json, and an assets folder).",
-        );
-      if (file.size > 16 * 1024 * 1024)
-        throw new Error("The library manifest is unexpectedly large.");
-      return JSON.parse(await file.text());
-    },
-    async questions() {
-      const file = only("questions.json");
-      if (!file) throw new Error("That folder has no questions.json.");
-      return file.text();
-    },
-    async asset(key) {
-      const file = assets.get(key);
-      if (!file) throw new Error("A prepared PDF image is missing.");
-      return file;
-    },
-  };
-}
 
 /**
  * A library prepared in memory. Its images were already stored under their
@@ -219,12 +181,4 @@ export function loadPreparedLibrary(progress: (message: string) => void) {
     .finally(() => {
       loading = undefined;
     }));
-}
-
-/** Imports a library the person chose in the browser (their own prepared folder). */
-export function importLibraryFiles(
-  files: File[],
-  progress: (message: string) => void,
-) {
-  return ingestLibrary(fileSource(files), progress);
 }

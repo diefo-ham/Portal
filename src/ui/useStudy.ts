@@ -7,10 +7,7 @@ import {
   type UpdateOptions,
 } from "../storage/database";
 import type { ResetArchive } from "../storage/resetArchive";
-import {
-  importLibraryFiles,
-  loadPreparedLibrary,
-} from "../importing/preparedLibrary";
+import { loadPreparedLibrary } from "../importing/preparedLibrary";
 export function useStudy() {
   const [data, setData] = useState<StudyData>();
   const [archive, setArchive] = useState<ResetArchive>();
@@ -51,22 +48,6 @@ export function useStudy() {
     },
     [],
   );
-  const importLibrary = useCallback(
-    async (files: File[], progress: (message: string) => void) => {
-      setWrites((n) => n + 1);
-      try {
-        const result = await importLibraryFiles(files, progress);
-        setData(result.data);
-        return result;
-      } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
-        throw e;
-      } finally {
-        setWrites((n) => n - 1);
-      }
-    },
-    [],
-  );
   /** Runs a preparation that ends in a library, then shows the stored data. */
   const adoptLibrary = useCallback(
     async <T extends { result: { data: StudyData } }>(
@@ -87,7 +68,6 @@ export function useStudy() {
     data,
     archive,
     mutate,
-    importLibrary,
     adoptLibrary,
     error,
     setError,

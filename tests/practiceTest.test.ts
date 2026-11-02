@@ -35,7 +35,6 @@ import {
   parseBackup,
   parseBackupPayload,
 } from "../src/importing/backup";
-import { portableBackup } from "../src/importing/documents";
 import {
   createResetArchive,
   validateResetArchive,
@@ -609,13 +608,18 @@ describe("exposure, reset and backup compatibility", () => {
     const exposed = [...d.practiceTestUsedIds!];
     const modules = structuredClone(test.practiceTest!.modules);
 
-    const payload = await portableBackup(d, {
-      theme: "dark",
-      originalPdf: true,
-      timerDefault: false,
-      showCorrectExplanations: true,
-      protectTests: false,
-    });
+    // The snapshot shape the validators accept (also what Reset's undo relies on).
+    const payload = {
+      format: "sat-study-backup-v1",
+      preferences: {
+        theme: "dark",
+        originalPdf: true,
+        timerDefault: false,
+        showCorrectExplanations: true,
+        protectTests: false,
+      },
+      data: d,
+    };
     const restored = parseBackupPayload(payload);
     expect(restored.preferences).toEqual({
       theme: "dark",

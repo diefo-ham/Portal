@@ -2,10 +2,17 @@
  * Active / inactive classification across the four exports, ported from the
  * Python preparation tool. Source IDs establish identity; there is no fuzzy
  * matching. Anything the files cannot prove stays "unknown".
+ *
+ * By default the relationship between each subject's two files is read from
+ * their contents: files with no question in common are an inactive set and an
+ * active set; an active file that contains every inactive question is an
+ * inclusive set. A person never has to say which.
  */
 import type { SourceRecord } from "./segment.ts";
 
 export type ActiveMode = "inclusive" | "active-only" | "unknown";
+/** "auto" reads the relationship from the files; the others force one reading. */
+export type ActiveSetting = ActiveMode | "auto";
 export type TestStatus = "active" | "inactive" | "unknown";
 
 export interface PairComparison {
@@ -17,6 +24,8 @@ export interface PairComparison {
 export interface Classification {
   statuses: Map<string, TestStatus>;
   comparison: Record<string, PairComparison>;
+  /** How each subject's files were read. */
+  interpretation: Record<string, ActiveMode>;
   conflicts: { section: string; reason: string }[];
 }
 
@@ -27,12 +36,22 @@ export interface ExportPair {
   active: readonly SourceRecord[];
 }
 
+/**
+ * No shared questions means the two files are separate sets. Any overlap means
+ * the active file is meant to include the inactive questions; if it does not
+ * include all of them, the inclusive reading reports a conflict and leaves the
+ * unprovable questions unknown.
+ */
+export const inferMode = (comparison: PairComparison): ActiveMode =>
+  comparison.both === 0 ? "active-only" : "inclusive";
+
 export function classifyExports(
   pairs: readonly ExportPair[],
-  mode: ActiveMode,
+  setting: ActiveSetting = "auto",
 ): Classification {
   const statuses = new Map<string, TestStatus>();
   const comparison: Record<string, PairComparison> = {};
+  const interpretation: Record<string, ActiveMode> = {};
   const conflicts: Classification["conflicts"] = [];
   for (const {
     group,
@@ -49,6 +68,8 @@ export function classifyExports(
       inactiveFileOnly: inactiveOnly.length,
       activeFileOnly: activeOnly.length,
     };
+    const mode = setting === "auto" ? inferMode(comparison[group]) : setting;
+    interpretation[group] = mode;
     for (const id of new Set([...inactive, ...active]))
       statuses.set(
         id,
@@ -70,5 +91,5 @@ export function classifyExports(
     if (mode === "active-only")
       for (const id of both) statuses.set(id, "unknown");
   }
-  return { statuses, comparison, conflicts };
+  return { statuses, comparison, interpretation, conflicts };
 }

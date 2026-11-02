@@ -4,8 +4,9 @@
  * prepared library. Loaded lazily, because it brings the PDF reader with it.
  */
 import { ingestLibrary, memorySource } from "../preparedLibrary.ts";
-import { writeAssets } from "../../storage/database.ts";
-import type { ActiveMode } from "./classify.ts";
+import { deleteAssetsExcept, writeAssets } from "../../storage/database.ts";
+import { referencedAssetKeys } from "../documents.ts";
+import type { ActiveSetting } from "./classify.ts";
 import { encodeWebp, openExport } from "./pdfjsAdapter.ts";
 import {
   assignExports,
@@ -17,7 +18,8 @@ import {
 } from "./prepare.ts";
 
 export interface RunOptions {
-  mode: ActiveMode;
+  /** Defaults to reading the relationship from the files themselves. */
+  mode?: ActiveSetting;
   /** Optional JSON file of reviewed exceptions. */
   overridesFile?: File;
   signal?: AbortSignal;
@@ -61,5 +63,7 @@ export async function prepareFromPdfs(files: File[], options: RunOptions) {
     (message) =>
       options.progress?.({ phase: "finish", done: 0, total: 1, message }),
   );
+  // Questions this replaced no longer need their old images.
+  await deleteAssetsExcept(referencedAssetKeys(result.data));
   return { result, report: prepared.report as PrepareReport };
 }

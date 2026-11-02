@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
     Math.random = () => 0.999999;
   });
 });
-test("offline local workflow, history, reload persistence and backup restore", async ({
+test("offline local workflow, history and reload persistence", async ({
   page,
   context,
 }) => {
@@ -78,24 +78,10 @@ test("offline local workflow, history, reload persistence and backup restore", a
   ).toHaveText(/Question 1 of 1/);
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByText("Library & maintenance", { exact: true }).click();
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export full backup" }).click();
-  const file = await download;
-  const path = await file.path();
-  expect(path).toBeTruthy();
-  await page.getByLabel("Theme").selectOption("light");
-  await page.getByLabel("Timer on by default").uncheck();
-  await page.getByLabel("Restore backup JSON").setInputFiles(path!);
   await expect(
-    page.getByText("Replace local data with this backup?"),
+    page.getByRole("heading", { name: "Your questions" }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Replace with backup", exact: true })
-    .click();
-  await expect(
-    page.getByText("Backup restored. Saved session timers are paused."),
-  ).toBeVisible();
+  await expect(page.getByText("Stored on this device")).toBeVisible();
   await expect(page.getByLabel("Theme")).toHaveValue("auto");
   await expect(page.getByLabel("Timer on by default")).toBeChecked();
   expect(remote).toEqual([]);

@@ -255,10 +255,10 @@ test("saved active sessions preserve order, while Practice Again and result revi
   ).not.toBe("false");
 });
 
-test("progress reset, archive recovery and backup restore keep protected ordinary selection", async ({
+test("progress reset and archive recovery keep protected ordinary selection", async ({
   page,
 }) => {
-  const original = await seed(page);
+  await seed(page);
   await nav(page, "Settings");
   const protection = page.getByLabel("Protect unused practice-test questions");
   await expect(protection).toBeChecked();
@@ -275,23 +275,4 @@ test("progress reset, archive recovery and backup restore keep protected ordinar
   await nav(page, "Practice");
   await nav(page, "Start practice");
   await assertNewProtected(page);
-  await nav(page, "Settings");
-  for (const preferences of [{ protectTests: true }, undefined]) {
-    const backup = {
-      format: "sat-study-backup-v1",
-      data: original,
-      ...(preferences ? { preferences } : {}),
-    };
-    await page.getByLabel("Restore backup JSON").setInputFiles({
-      name: "synthetic-protection.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(backup)),
-    });
-    await nav(page, "Replace with backup");
-    await expect(protection).toBeChecked();
-    await nav(page, "Practice");
-    await nav(page, "Start practice");
-    await assertNewProtected(page);
-    await nav(page, "Settings");
-  }
 });

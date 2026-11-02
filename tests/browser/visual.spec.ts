@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { seedStudyData } from "./seed";
 import { enterExpression } from "./math-input";
 import sample from "../../src/data/synthetic.json" with { type: "json" };
 
@@ -254,27 +255,8 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
       ],
     },
   };
-  await page.getByLabel("Restore backup JSON").setInputFiles({
-    name: "visual-fixtures.backup.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(
-      JSON.stringify({
-        format: "sat-study-backup-v1",
-        data: {
-          version: 1,
-          questions: [long, dense],
-          attempts: [],
-          sessions: [],
-          annotations: {},
-          imports: [],
-        },
-      }),
-    ),
-  });
-  await page
-    .getByRole("button", { name: "Replace with backup", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Backup restored");
+  await seedStudyData(page, { questions: [long, dense] });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
   for (const theme of ["light", "dark"]) {
     await page.getByLabel("Theme", { exact: true }).selectOption(theme);
     await page.getByRole("button", { name: "Browse", exact: true }).click();

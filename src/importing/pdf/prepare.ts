@@ -6,7 +6,11 @@
  * without a browser.
  */
 import { planCrops } from "./crops.ts";
-import { classifyExports, type ActiveMode } from "./classify.ts";
+import {
+  classifyExports,
+  type ActiveMode,
+  type ActiveSetting,
+} from "./classify.ts";
 import type { PageLayout } from "./layout.ts";
 import {
   buildPanels,
@@ -61,7 +65,8 @@ export interface Progress {
 }
 
 export interface PrepareOptions {
-  mode: ActiveMode;
+  /** How to read the active and inactive files; by default from their contents. */
+  mode?: ActiveSetting;
   overrides?: Record<string, ReviewedOverride>;
   signal?: AbortSignal;
   progress?: (progress: Progress) => void;
@@ -77,7 +82,9 @@ export interface QuarantinedQuestion {
 export interface PrepareReport {
   parser: string;
   createdAt: string;
-  activeMode: ActiveMode;
+  activeMode: ActiveSetting;
+  /** How each subject's active and inactive files were read. */
+  interpretation: Record<string, ActiveMode>;
   files: {
     filename: string;
     sha256: string;
@@ -232,7 +239,7 @@ export async function prepareLibrary(
         active: indexed.math_active.records,
       },
     ],
-    options.mode,
+    options.mode ?? "auto",
   );
 
   // Source IDs, not page numbers or fuzzy text, establish identity.
@@ -340,7 +347,8 @@ export async function prepareLibrary(
     report: {
       parser: PARSER,
       createdAt: new Date().toISOString(),
-      activeMode: options.mode,
+      activeMode: options.mode ?? "auto",
+      interpretation: classification.interpretation,
       files: EXPORT_NAMES.map((name) => ({
         filename: indexed[name].filename,
         sha256: indexed[name].sha256,

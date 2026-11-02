@@ -33,7 +33,7 @@ const original = {
 };
 
 describe("PDF-backed question data", () => {
-  it("rejects missing image references before committing a restore", async () => {
+  it("rejects missing image references before committing an import", async () => {
     const q = parseQuestions({
       schemaVersion: 1,
       questions: [
@@ -48,7 +48,7 @@ describe("PDF-backed question data", () => {
     });
     await expect(
       storeInlineDocuments({ ...emptyData(), questions: q }),
-    ).rejects.toThrow("unavailable PDF images");
+    ).rejects.toThrow("PDF images this browser does not have");
   });
   it("retains document and provenance data and rejects network or traversal image sources", () => {
     const q = parseQuestions({ schemaVersion: 1, questions: [original] })[0];

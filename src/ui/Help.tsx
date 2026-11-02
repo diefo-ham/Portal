@@ -216,13 +216,16 @@ export function Help() {
               saves with the session too.
             </p>
           </details>
-          <details open={openSection === "backup"}>
-            <summary {...detail("backup")}>Backup, restore, and reset</summary>
+          <details open={openSection === "questions"}>
+            <summary {...detail("questions")}>
+              Adding questions and resetting progress
+            </summary>
             <p>
-              A full backup carries the question library, answers, bookmarks,
-              sessions, Practice Test state and exposure history, calculator
-              work, and durable study settings. Restoring validates the file
-              before replacing local data.
+              Add your questions in Settings under Add your question PDFs.
+              Choose the four PDF exports; they are read in this browser,
+              never uploaded, and the whole set takes about 5 to 10 minutes.
+              Active questions are marked automatically from the files and
+              stay hidden by default.
             </p>
             <p>
               Reset study progress clears attempts, sessions, and Practice Test
