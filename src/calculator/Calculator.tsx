@@ -134,7 +134,7 @@ function CalculatorHelp() {
   const topics = [
     [
       "Expressions",
-      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list. 5! is a factorial, sum(n^2,n,1,4) adds up terms, and {x<0:-x,x} gives a piecewise value.",
+      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list. 5! is a factorial, sum(n^2,n,1,4) adds up terms, {x<0:-x,x} gives a piecewise value, and L[2] picks an item from a list.",
     ],
     [
       "Tables & regressions",

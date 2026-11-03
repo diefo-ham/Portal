@@ -49,7 +49,34 @@ points, slider curve, fitted data, exponential decay) draw the same curves in th
 Differences are cosmetic: the Offline graph uses equal axis scales and a warm theme, and its `y` axis title can
 overlap the top tick number.
 
+## Second pass: lists, interaction and speed
+
+More features a student might reach for were checked: list items by position (`L[2]`, `L[2...3]`, `L[[3,1]]`,
+one-based, out of range is undefined), `sort`, `join`, `length`, `corr` and the hyperbolic functions. All were added and
+agree with Desmos (80 value cases, 17 function cases, 9 fits, 9 intersection cases and 32 syntax cases: 147 in all).
+
+Four syntax cases still differ, none of them on the SAT: definite integrals and filtering a list by a condition are
+not supported; Desmos refuses `theta=2` and a bare `k` where Offline accepts them (Offline offers an "Add k slider").
+
+`node scripts/calculator-interaction-vs-desmos.mjs` compares how the graphs move and how fast they are:
+
+| Check | Offline | Desmos |
+| --- | --- | --- |
+| Mouse wheel, one notch in | view shrinks to 0.85 | 0.94 |
+| Zoom "+" button | view shrinks to 0.7 | 0.5 (twice as close) |
+| Drag 100 px | graph moves 100 px | 100 px |
+| Six heavy curves (`sin(1/x)`, `tan(x)`, ...) while panning, mean frame | 16.7 ms (60 per second), worst 16.8 ms | 16.7 ms, worst 16.8 ms |
+| Typing six heavy curves | 0.4 s | not comparable |
+
+Points of interest in Offline (inspect mode) listed the right intersections, intercepts, zeros and minimum for
+`y=x^2-4x+1` with `y=x-3`. Labels show more decimals than Desmos, for example `(0.2679491924, 0)`.
+
+Known remaining differences, all small: zoom steps are gentler in Offline; sliders have no editable range or
+animation (the range is -10 to 10 and widens to fit the value); the table editor supports pasting and a fit model
+but was not compared screen by screen; Desmos draws its labels on a canvas and cannot be read through its API, so
+labels were compared by value only.
+
 ## Not covered
 
-Interaction (tracing, dragging, zoom, point-of-interest labels), the table editor, and speed on slow devices.
-Desmos cannot report points of interest through its API, so these were checked against known answers only.
+Touch gestures, Desmos' on-screen keypad (Offline has none), saving and sharing graphs, and anything on the real
+test app (Bluebook) that differs from the public Desmos calculator.

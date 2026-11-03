@@ -67,6 +67,16 @@ const builtin = new Set([
   "max",
   "sum",
   "prod",
+  "sinh",
+  "cosh",
+  "tanh",
+  "asinh",
+  "acosh",
+  "atanh",
+  "sort",
+  "join",
+  "length",
+  "corr",
   "mean",
   "median",
   "quartile",
@@ -82,6 +92,8 @@ const builtin = new Set([
   "stats",
 ]);
 const listAggregates = new Set([
+  "sort",
+  "length",
   "mean",
   "median",
   "quartile",
@@ -287,6 +299,12 @@ export function scalarFromNode(node: MathNode): Scalar {
       case "ParenthesisNode":
         check(a.content, depth + 1);
         break;
+      case "AccessorNode":
+        if (!a.index || a.index.dimensions.length !== 1)
+          throw new Error("Use one index, like L[2].");
+        check(a.object, depth + 1);
+        check(a.index.dimensions[0], depth + 1);
+        break;
       case "RangeNode":
         check(a.start, depth + 1);
         check(a.end, depth + 1);
@@ -334,11 +352,13 @@ export function scalarFromNode(node: MathNode): Scalar {
           a.fn.type !== "SymbolNode" ||
           !/^[a-z][a-z0-9_]{0,15}$/i.test(a.fn.name) ||
           a.args.length < 1 ||
-          a.args.length > 2
+          a.args.length > (a.fn.name === "join" ? 8 : 2)
         )
           throw new Error("Use a supported numeric function.");
         if (!builtin.has(a.fn.name)) calls.add(a.fn.name);
         const acceptsTwo = [
+          "corr",
+          "join",
           "log",
           "min",
           "max",
@@ -356,6 +376,7 @@ export function scalarFromNode(node: MathNode): Scalar {
           throw new Error("This function takes one argument.");
         if (
           [
+            "corr",
             "gcd",
             "lcm",
             "mod",
@@ -399,6 +420,15 @@ export function scalarFromNode(node: MathNode): Scalar {
         return v;
       }
       if (n.type === "ParenthesisNode") return visit(n.content);
+      if (n.type === "AccessorNode") {
+        const list = visit(n.object);
+        if (!Array.isArray(list))
+          throw new Error("Only a list can be indexed.");
+        const index = visit(n.index.dimensions[0]);
+        const pick = (i: number) =>
+          Number.isInteger(i) && i >= 1 && i <= list.length ? list[i - 1] : NaN;
+        return Array.isArray(index) ? index.map(pick) : pick(index);
+      }
       if (n.type === "RangeNode") {
         const first = visit(n.start),
           last = visit(n.end);
@@ -570,6 +600,36 @@ export function scalarFromNode(node: MathNode): Scalar {
       };
       const name: string | undefined =
         n.type === "FunctionNode" ? n.fn.name : undefined;
+      if (name === "join") {
+        const joined = args.flatMap((arg) =>
+          Array.isArray(arg) ? arg : [arg],
+        );
+        if (joined.length > 200)
+          throw new Error("Calculator lists support at most 200 values.");
+        return joined;
+      }
+      if (name === "corr") {
+        const [x, y] = args;
+        if (
+          !Array.isArray(x) ||
+          !Array.isArray(y) ||
+          x.length !== y.length ||
+          x.length < 2 ||
+          [...x, ...y].some((value) => !Number.isFinite(value))
+        )
+          return NaN;
+        const mx = x.reduce((sum, v) => sum + v, 0) / x.length;
+        const my = y.reduce((sum, v) => sum + v, 0) / y.length;
+        let sxy = 0,
+          sxx = 0,
+          syy = 0;
+        x.forEach((v, i) => {
+          sxy += (v - mx) * (y[i] - my);
+          sxx += (v - mx) ** 2;
+          syy += (y[i] - my) ** 2;
+        });
+        return sxx && syy ? sxy / Math.sqrt(sxx * syy) : NaN;
+      }
       if (
         name &&
         (listAggregates.has(name) || ["min", "max"].includes(name)) &&
@@ -628,7 +688,8 @@ export function scalarFromNode(node: MathNode): Scalar {
         if (name === "median") return median();
         if (name === "quartile") return quartile(args[1] as number);
         if (name === "quantile") return quantile(args[1] as number);
-        if (name === "count") return values.length;
+        if (name === "sort") return sorted;
+        if (name === "count" || name === "length") return values.length;
         if (name === "total")
           return values.reduce((sum, value) => sum + value, 0);
         if (name === "mad") {
@@ -765,6 +826,10 @@ export function scalarTex(s: Scalar): string {
           "npr",
           "min",
           "max",
+          "sort",
+          "join",
+          "length",
+          "corr",
           "mean",
           "median",
           "quartile",

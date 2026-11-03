@@ -150,3 +150,27 @@ describe("features checked against Desmos", () => {
     expect(result.parameters?.a).toBeCloseTo(2.0608714, 5);
   });
 });
+describe("list handling checked against Desmos", () => {
+  const list = (text: string) => scalar(text).evaluate({}, {}, "radians");
+
+  it("picks items by position, one-based", () => {
+    expect(list("[4,5,6][2]")).toBe(5);
+    expect(list("[4,5,6,7][2...3]")).toEqual([5, 6]);
+    expect(list("[10,20,30][[3,1]]")).toEqual([30, 10]);
+    expect(list("[1,2][5]")).toBeNaN();
+    expect(list("[1,2][0]")).toBeNaN();
+    expect(list("[1,2][1.5]")).toBeNaN();
+    const w = workspace("L=[4,5,6]", "L[3]+L[1]");
+    expect(w.results["e1"].value).toBe(10);
+  });
+
+  it("sorts, joins, counts and correlates", () => {
+    expect(list("sort([3,1,2])")).toEqual([1, 2, 3]);
+    expect(list("join([1,2],[3],4)")).toEqual([1, 2, 3, 4]);
+    expect(list("length([1,2,3])")).toBe(3);
+    expect(list("corr([1,2,3],[2,4,7])")).toBeCloseTo(0.9933992677987828, 12);
+    expect(list("corr([1,2,3],[5,5,5])")).toBeNaN();
+    expect(list("sinh(1)")).toBeCloseTo(Math.sinh(1), 12);
+    expect(list("atanh(0.5)")).toBeCloseTo(Math.atanh(0.5), 12);
+  });
+});

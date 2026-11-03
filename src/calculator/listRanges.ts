@@ -8,6 +8,8 @@ export function parseListRanges(source: string): string {
         output += text[i];
         continue;
       }
+      // A bracket right after a name, ")" or "]" picks items: L[2], L[2...3].
+      const indexing = i > 0 && /[\w)\]]/.test(text[i - 1]);
       let depth = 1,
         end = i + 1;
       for (; end < text.length && depth; end++) {
@@ -39,7 +41,8 @@ export function parseListRanges(source: string): string {
         const first = read(seeds[0]);
         const step =
           seeds.length === 2 ? `((${read(seeds[1])})-(${first}))` : undefined;
-        output += `((${first}):${step ? step + ":" : ""}(${read(last)}))`;
+        const range = `((${first}):${step ? step + ":" : ""}(${read(last)}))`;
+        output += indexing ? `[${range}]` : range;
       }
       i = end - 1;
     }
