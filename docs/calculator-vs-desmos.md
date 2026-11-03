@@ -6,11 +6,11 @@ Rerun with `node scripts/calculator-vs-desmos.mjs` (needs `DESMOS_API_KEY` in
 `scripts/calculator-corpus.mjs`. Each case is given to both calculators and the
 results are compared: numbers to nine digits, fitted parameters to five.
 
-## Result: 128 cases, 14 differences
+## Result: 125 cases, 11 differences
 
 | Area | Cases | Same result |
 | --- | --- | --- |
-| Values (arithmetic, roots, logs, trig in both angle modes, statistics, lists, edge cases) | 70 | 66 |
+| Values (arithmetic, roots, logs, trig in both angle modes, statistics, lists, edge cases) | 70 | 67 |
 | Functions sampled at several x values (including domain edges and undefined points) | 17 | 15 |
 | Regression parameters (linear, quadratic, cubic, exponential, logarithmic, scalar) | 9 | 7 |
 | Syntax accepted or rejected | 20 | 16 |
