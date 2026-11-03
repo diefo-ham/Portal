@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { enterExpression } from "./math-input";
+import { loadSample } from "./seed";
 // Known question content for these interaction tests, independent of sampling.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -11,9 +12,7 @@ test("contextual practice tools preserve drafts, calculator state and keyboard f
   page,
 }) => {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await expect(page.locator(".question-row")).toHaveCount(0);
   await expect(
     page.getByRole("combobox", { name: "Skill", exact: true }),
@@ -86,9 +85,7 @@ test("practice-test protection persists and active overrides require a session c
   page,
 }) => {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(
     page.getByLabel("Protect unused practice-test questions"),

@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 import { emptyData, type StudyData } from "../../src/core/model";
+import { parseQuestions } from "../../src/importing/json";
+import sample from "../fixtures/synthetic.json" with { type: "json" };
 
 /**
  * Writes study data straight into the app's IndexedDB database and reloads, so a
@@ -14,6 +16,11 @@ export async function seedStudyData(
   await page.evaluate(async (value) => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("sat-study-local", 2);
+      request.onupgradeneeded = () => {
+        for (const name of ["state", "assets"])
+          if (!request.result.objectStoreNames.contains(name))
+            request.result.createObjectStore(name);
+      };
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -26,4 +33,9 @@ export async function seedStudyData(
     db.close();
   }, full);
   await page.reload();
+}
+
+/** Starts from the twelve original example questions the tests share. */
+export async function loadSample(page: Page): Promise<void> {
+  await seedStudyData(page, { questions: parseQuestions(sample) });
 }

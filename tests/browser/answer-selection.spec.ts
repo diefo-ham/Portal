@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { loadSample } from "./seed";
 
 test("choice selection toggles while editable, persists, and locks after submission", async ({
   page,
@@ -7,9 +8,7 @@ test("choice selection toggles while editable, persists, and locks after submiss
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("textbox", { name: "Session size" }).fill("2");
   await page.getByRole("button", { name: "Start practice" }).click();
 

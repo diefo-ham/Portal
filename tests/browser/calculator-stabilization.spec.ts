@@ -1,13 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import { expression, enterExpression, expectExpression } from "./math-input";
+import { loadSample } from "./seed";
 async function start(page: Page) {
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page
     .getByRole("group", { name: "Section", exact: true })
     .getByRole("button", { name: "Math", exact: true })

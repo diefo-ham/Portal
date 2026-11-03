@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { loadSample } from "./seed";
 
 // Unlike the other specs, this one lets the service worker run.
 test.use({ serviceWorkers: "allow" });
@@ -31,9 +32,9 @@ test("the app reopens, practices and opens the calculator with no network", asyn
   page.on("requestfailed", (request) => failures.push(request.url()));
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Load synthetic sample" }),
+    page.getByRole("button", { name: "Add your question PDFs" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Load synthetic sample" }).click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("button", { name: "Start practice" }).click();
   await page.getByRole("button", { name: "Calculator", exact: true }).click();
@@ -70,7 +71,7 @@ test("preparing PDF exports keeps working offline once the reader has been used"
   });
   const prepare = async () => {
     await page.getByRole("button", { name: "Settings", exact: true }).click();
-        await page.getByLabel("PDF export files").setInputFiles(paths);
+    await page.getByLabel("PDF export files").setInputFiles(paths);
     await page.getByRole("button", { name: "Add questions" }).click();
     await expect(page.getByText("Added 8 questions.")).toBeVisible({
       timeout: 90_000,

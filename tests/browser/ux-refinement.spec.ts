@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { loadSample } from "./seed";
 
 async function sessionCount(page: Page) {
   return page.evaluate(async () => {
@@ -24,9 +25,7 @@ async function sessionCount(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
 });
 
 test("session size is numeric, bounded, and adapts to the filtered pool", async ({

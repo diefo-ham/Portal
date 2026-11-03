@@ -1,13 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
+import { loadSample } from "./seed";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
 });
 
 test("Section, Domain, Skill, and Answer Status remain compatible", async ({

@@ -1,5 +1,6 @@
 import { test, expect, chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import { loadSample } from "./seed";
 // Keep content-specific assertions reproducible; random generation is tested separately.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -19,9 +20,7 @@ test("offline local workflow, history and reload persistence", async ({
     } else await route.continue();
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("button", { name: "Browse", exact: true }).click();
   await expect(page.getByRole("button", { name: /01 Math/ })).toBeVisible();
   await expect(page.locator(".question-row")).toHaveCount(10);
@@ -101,9 +100,7 @@ test("progress survives closing and reopening the browser process", async ({}, t
       Math.random = () => 0.999999;
     });
     await page.goto("http://127.0.0.1:4318");
-    await page
-      .getByRole("button", { name: "Load synthetic sample", exact: true })
-      .click();
+    await loadSample(page);
     await page.getByRole("button", { name: "Start practice" }).click();
     await page.getByRole("radio").nth(1).check();
     await page.getByRole("button", { name: "Check answer" }).click();
@@ -126,9 +123,7 @@ test("question import controls are absent and narrow screens remain usable", asy
   page,
 }) => {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByLabel("Import question JSON")).toHaveCount(0);
   await expect(

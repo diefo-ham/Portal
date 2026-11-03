@@ -1,11 +1,10 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { enterExpression } from "./math-input";
+import { loadSample } from "./seed";
 
 async function open(page: Page) {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page
     .getByRole("group", { name: "Section", exact: true })
     .getByRole("button", { name: "Math", exact: true })
@@ -21,6 +20,12 @@ async function open(page: Page) {
   for (const key of ["xMax", "yMax"])
     await page.getByLabel(key, { exact: true }).fill("20");
   await page.getByRole("button", { name: "Apply window", exact: true }).click();
+  // Samples lie outside the default window, so wait until the window is applied
+  // (the x range widens to keep the axes equal, so check the y range).
+  await expect(page.locator("svg[data-x-max]").first()).toHaveAttribute(
+    "data-y-max",
+    "20",
+  );
 }
 
 async function filled(group: Locator, x: number, y: number) {

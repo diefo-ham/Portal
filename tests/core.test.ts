@@ -16,7 +16,7 @@ import {
   readData,
   readResetArchive,
 } from "../src/storage/database";
-import sample from "../src/data/synthetic.json";
+import sample from "./fixtures/synthetic.json";
 import {
   beginSession,
   deleteSession,

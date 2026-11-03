@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { StudyData } from "../../src/core/model";
+import { loadSample } from "./seed";
 
 async function state(page: Page): Promise<StudyData> {
   return page.evaluate(async () => {
@@ -30,9 +31,7 @@ test("sessions can be named, starred, found, repracticed, and reset-restored", a
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("2");
   await page.getByRole("button", { name: "Start practice" }).click();
@@ -173,9 +172,7 @@ test("a selected session can be confirmed and durably deleted without clearing o
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page
     .getByRole("group", { name: "Section" })
     .getByText("Reading & Writing")

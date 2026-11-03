@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import "fake-indexeddb/auto";
 import { emptyData } from "../src/core/model";
-import sample from "../src/data/synthetic.json";
+import sample from "./fixtures/synthetic.json";
 import { parseQuestions } from "../src/importing/json";
 import { parseBackup } from "../src/importing/backup";
 import { storeInlineDocuments } from "../src/importing/documents";
@@ -90,7 +90,7 @@ describe("PDF-backed question data", () => {
         .questions[0].document?.question[0].src,
     ).toBe(pixel);
   });
-  it("loads and verifies a prepared library once, preserving existing notes and attempts", async () => {
+  it("loads and verifies a prepared library once, preserving saved work and dropping unused examples", async () => {
     const incoming = parseQuestions({
       schemaVersion: 1,
       questions: [
@@ -141,8 +141,11 @@ describe("PDF-backed question data", () => {
       await loadPreparedLibrary(() => {});
       await loadPreparedLibrary(() => {});
       const d = await readData();
-      expect(d.questions).toHaveLength(13);
-      expect(d.questions[0].id).toBe("prepared-example");
+      // Example questions go, except the one that already has saved work.
+      expect(d.questions.map((q) => q.id)).toEqual([
+        "prepared-example",
+        "demo-m01",
+      ]);
       expect(d.imports).toHaveLength(1);
       expect(d.annotations["demo-m01"].note).toBe("Existing work");
     } finally {

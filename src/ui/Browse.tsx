@@ -19,8 +19,7 @@ export function Browse({
   onShowMore,
   onChangeFilters,
   protectTests,
-  busy,
-  onSample,
+  onAddQuestions,
   mutate,
 }: {
   data: StudyData;
@@ -30,8 +29,7 @@ export function Browse({
   onShowMore: () => void;
   onChangeFilters: (filters: FilterValues) => void;
   protectTests: boolean;
-  busy: boolean;
-  onSample: () => void;
+  onAddQuestions: () => void;
   mutate: Mutate;
 }) {
   const [selectedId, setSelectedId] = useState("");
@@ -189,11 +187,11 @@ export function Browse({
         <section className="empty-state">
           <h2>Your question library is empty.</h2>
           <p>
-            Question libraries are prepared locally outside the study interface.
-            Load the original examples to explore Browse.
+            Add your own College Board question PDFs in Settings; they are
+            prepared on this device and nothing is uploaded.
           </p>
-          <button className="primary" disabled={busy} onClick={onSample}>
-            Load synthetic sample
+          <button className="primary" onClick={onAddQuestions}>
+            Add your question PDFs
           </button>
         </section>
       ) : (

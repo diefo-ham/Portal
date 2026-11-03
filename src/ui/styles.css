@@ -2131,19 +2131,6 @@ figcaption {
   margin-bottom: 8px;
   color: var(--ink);
 }
-.restore-confirm {
-  padding: 22px;
-  margin-top: 24px;
-  background: var(--warning-surface);
-  border-left: 2px solid var(--warning);
-  border-radius: 0 var(--radius) var(--radius) 0;
-}
-.restore-confirm p {
-  margin-top: 14px;
-}
-.restore-confirm button {
-  margin: 8px 10px 0 0;
-}
 .danger {
   color: var(--incorrect);
   background: transparent;

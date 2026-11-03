@@ -7,6 +7,9 @@ import {
 } from "../storage/database";
 import type { StudyData } from "../core/model";
 
+/** Source label of the original example questions older versions offered. */
+const EXAMPLE_SOURCE = "Original synthetic examples";
+
 /**
  * Where a prepared library (manifest.json, questions.json, assets/*.webp) is
  * read from: the local server, or one prepared in memory from PDF exports.
@@ -158,9 +161,17 @@ export async function ingestLibrary(
     });
     const prepared = (q: StudyData["questions"][number]) =>
       revisions.has(q.source + "\u0000" + q.sourceId);
+    // Example questions from earlier visits are not wanted beside real ones,
+    // unless the person has already worked on them.
+    const worked = new Set([
+      ...d.attempts.map((a) => a.questionId),
+      ...Object.keys(d.annotations),
+    ]);
+    const leftover = (q: StudyData["questions"][number]) =>
+      !prepared(q) && !(q.source === EXAMPLE_SOURCE && !worked.has(q.id));
     d.questions = [
       ...refreshed.filter(prepared),
-      ...refreshed.filter((q) => !prepared(q)),
+      ...refreshed.filter(leftover),
     ];
     d.imports.push({
       id,

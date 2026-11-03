@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { enterExpression, expectExpression } from "./math-input";
+import { loadSample } from "./seed";
 
 test("contextual Space and arrow navigation respect focused controls", async ({
   page,
@@ -12,9 +13,7 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   await expect(
     nav.getByRole("button", { name: "Settings", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
@@ -48,6 +47,8 @@ test("contextual Space and arrow navigation respect focused controls", async ({
       timeout: 1500,
     });
   }).toPass();
+  // Keys are ignored while a move is still being saved; Previous is disabled then.
+  await expect(page.getByRole("button", { name: /Previous/ })).toBeEnabled();
   await page.keyboard.press("Space");
   await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
   await page.keyboard.press("ArrowRight"); // Works on the focused Next button, too.

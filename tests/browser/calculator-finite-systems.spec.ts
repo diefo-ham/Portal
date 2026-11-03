@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { enterExpression } from "./math-input";
+import { loadSample } from "./seed";
 
 test("coupled polynomial branches, rational holes, empty intersections and conic families", async ({
   page,
@@ -68,9 +69,7 @@ test("coordinate systems retain graphs and expose every visible algebraic inters
 async function open(page: Page) {
   await page.setViewportSize({ width: 1366, height: 900 });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page
     .getByRole("group", { name: "Section", exact: true })
     .getByRole("button", { name: "Math", exact: true })

@@ -11,11 +11,8 @@ import {
   type Filters as FilterValues,
   type Session,
   type StudyData,
-  emptyData,
 } from "../core/model";
 import { filterQuestions, selectSessionQuestions } from "../core/practice";
-import { parseQuestions, mergeQuestions } from "../importing/json";
-import synthetic from "../data/synthetic.json";
 import { useStudy } from "./useStudy";
 import { Practice } from "./Practice";
 import { PracticeTestSetup, PracticeTestRun } from "./PracticeTest";
@@ -24,7 +21,6 @@ import { Review } from "./Review";
 import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
-import { storeInlineDocuments } from "../importing/documents";
 import { Browse } from "./Browse";
 import { PdfPrepare } from "./PdfPrepare";
 import { normalizeSessionName } from "../core/sessions";
@@ -76,28 +72,6 @@ export function App() {
     } finally {
       setBusy(false);
     }
-  };
-  const importData = async (raw: unknown, filename: string) => {
-    const incoming = (
-      await storeInlineDocuments({
-        ...emptyData(),
-        questions: parseQuestions(raw),
-      })
-    ).questions;
-    let report = "";
-    await mutate((d) => {
-      const result = mergeQuestions(d.questions, incoming, filename);
-      d.questions = result.questions;
-      d.imports.push({
-        id: crypto.randomUUID(),
-        filename,
-        importedAt: new Date().toISOString(),
-        added: result.added,
-        skipped: result.skipped,
-      });
-      report = `${result.added} questions imported. ${result.skipped} duplicates skipped.`;
-    });
-    setMessage(report);
   };
   // The PDF reader is loaded only when someone prepares a library from PDFs.
   const preparePdfs = async (
@@ -367,9 +341,7 @@ export function App() {
           }}
           onReview={() => setPage("review")}
           onBrowse={() => setPage("library")}
-          onSample={() =>
-            void run(() => importData(synthetic, "synthetic.json"))
-          }
+          onAddQuestions={() => setPage("data")}
         />
       ) : page === "library" ? (
         <Browse
@@ -380,10 +352,7 @@ export function App() {
           onShowMore={() => setVisible(visible + 40)}
           onChangeFilters={changeFilters}
           protectTests={protectedTests}
-          busy={busy}
-          onSample={() =>
-            void run(() => importData(synthetic, "synthetic.json"))
-          }
+          onAddQuestions={() => setPage("data")}
           mutate={mutate}
         />
       ) : page === "review" ? (

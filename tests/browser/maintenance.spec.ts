@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { StudyData } from "../../src/core/model";
+import { loadSample } from "./seed";
 
 async function state(page: Page): Promise<StudyData> {
   return page.evaluate(async () => {
@@ -24,9 +25,7 @@ test("new sessions sample the filtered pool, avoid repeats, and resume the exact
   page,
 }) => {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();
@@ -71,9 +70,7 @@ test("confirmed progress reset preserves the bank and preferences across reload;
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();

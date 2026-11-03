@@ -32,7 +32,7 @@ import { parsePastedData } from "../src/calculator/TableEditor";
 import { emptyData } from "../src/core/model";
 import { parseBackup } from "../src/importing/backup";
 import { createSession } from "../src/core/practice";
-import sample from "../src/data/synthetic.json";
+import sample from "./fixtures/synthetic.json";
 import { parseQuestions } from "../src/importing/json";
 import { latexToText, textToLatex } from "../src/calculator/latex";
 import {

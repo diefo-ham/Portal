@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import sample from "../../src/data/synthetic.json" with { type: "json" };
+import sample from "../fixtures/synthetic.json" with { type: "json" };
 
 test("version-one study data survives the image-store migration", async ({
   page,

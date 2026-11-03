@@ -18,7 +18,7 @@ export function Home({
   sessionActions,
   onReview,
   onBrowse,
-  onSample,
+  onAddQuestions,
 }: {
   data: StudyData;
   value: FilterValues;
@@ -31,7 +31,7 @@ export function Home({
   sessionActions: SessionActions;
   onReview: () => void;
   onBrowse: () => void;
-  onSample: () => void;
+  onAddQuestions: () => void;
 }) {
   const questions = filterQuestions(data, value);
   const maximum = questions.length;
@@ -71,14 +71,14 @@ export function Home({
       <ContinueSessions data={data} actions={sessionActions} />
       {!data.questions.length ? (
         <section className="empty-state">
-          <h2>Your practice space is ready.</h2>
+          <h2>Add your questions to begin.</h2>
           <p>
-            No local question library is available yet. Try the original
-            examples to get started, or import your own prepared library from
-            Settings → Library &amp; maintenance.
+            This portal comes with no questions. Add your own College Board
+            question PDFs in Settings and they are prepared on this device;
+            nothing is uploaded.
           </p>
-          <button className="primary" disabled={busy} onClick={onSample}>
-            Load synthetic sample
+          <button className="primary" onClick={onAddQuestions}>
+            Add your question PDFs
           </button>
         </section>
       ) : (

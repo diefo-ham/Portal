@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { enterExpression, expectExpression } from "./math-input";
+import { loadSample } from "./seed";
 
 /** Shift+Backslash. Naming the produced "|" key keeps text entry identical on Linux and Windows. */
 async function typePipe(page: Page) {
@@ -13,9 +14,7 @@ async function startMathPractice(page: Page) {
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill("5");
   await page.getByRole("button", { name: "Start practice" }).click();

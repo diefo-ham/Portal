@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
-import { seedStudyData } from "./seed";
+import { loadSample, seedStudyData } from "./seed";
 import { enterExpression } from "./math-input";
-import sample from "../../src/data/synthetic.json" with { type: "json" };
+import sample from "../fixtures/synthetic.json" with { type: "json" };
 
 const overflow = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
@@ -70,9 +70,7 @@ for (const theme of ["light", "dark"] as const) {
       } else await route.continue();
     });
     await page.goto("/");
-    await page
-      .getByRole("button", { name: "Load synthetic sample", exact: true })
-      .click();
+    await loadSample(page);
     for (const width of [1024, 1280, 1366, 1920, 390]) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 768 });
       expect(await overflow(page), `Home at ${width}`).toBe(false);

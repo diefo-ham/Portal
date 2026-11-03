@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { StudyData } from "../../src/core/model";
+import { loadSample } from "./seed";
 async function state(page: Page): Promise<StudyData> {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve) => {
@@ -21,9 +22,7 @@ test.beforeEach(async ({ page }) => {
     Math.random = () => 0.999999;
   });
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
 });
 
 test("compact domain and skill combinations persist in a deterministically resumed set", async ({

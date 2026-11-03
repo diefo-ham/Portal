@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import type { StudyData } from "../../src/core/model";
+import { loadSample } from "./seed";
 
 async function state(page: Page): Promise<StudyData> {
   return page.evaluate(async () => {
@@ -18,9 +19,7 @@ async function state(page: Page): Promise<StudyData> {
 
 async function loadMath(page: Page, size = "2") {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Load synthetic sample", exact: true })
-    .click();
+  await loadSample(page);
   await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await page.getByRole("textbox", { name: "Session size" }).fill(size);
 }
