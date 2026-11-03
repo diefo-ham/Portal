@@ -83,6 +83,30 @@ export async function deleteAssetsExcept(
     tx.onabort = () => reject(tx.error);
   });
 }
+/** Removes every stored image. */
+export async function clearAssets(): Promise<void> {
+  const db = await database();
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction("assets", "readwrite");
+    tx.objectStore("assets").clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+/** Deletes the whole database. Open connections in other tabs close themselves. */
+export async function deleteDatabase(): Promise<void> {
+  if (connection) {
+    const open = connection;
+    connection = undefined;
+    (await open.catch(() => undefined))?.close();
+  }
+  await new Promise<void>((resolve, reject) => {
+    const request = indexedDB.deleteDatabase("sat-study-local");
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
 export async function readData(): Promise<StudyData> {
   const db = await database();
   return new Promise((resolve, reject) => {

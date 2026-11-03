@@ -2140,6 +2140,10 @@ figcaption {
   color: var(--incorrect);
   background: var(--incorrect-surface);
 }
+.clear-data .row {
+  gap: 18px;
+  flex-wrap: wrap;
+}
 .reset-maintenance {
   margin-top: 36px;
   padding-top: 24px;

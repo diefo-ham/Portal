@@ -5,7 +5,7 @@
  */
 import type { Box } from "./layout.ts";
 import type { PanelPlan } from "./crops.ts";
-import { trimWhite, type RasterImage } from "./raster.ts";
+import { contentRows, trimWhite, type RasterImage } from "./raster.ts";
 
 /** One image of a question, in the shape the study data already uses. */
 export interface Panel {
@@ -34,12 +34,11 @@ export async function sha256Hex(bytes: BufferSource): Promise<string> {
   ).join("");
 }
 
-export async function buildPanel(
+async function storePanel(
   plan: PanelPlan,
-  renderer: PanelRenderer,
+  image: RasterImage,
   store: PanelStore,
 ): Promise<Panel> {
-  const image = trimWhite(await renderer.render(plan.page, plan.rect));
   const blob = await store.encode(image);
   const key = (await sha256Hex(await blob.arrayBuffer())) + ".webp";
   await store.put(key, blob);
@@ -51,14 +50,44 @@ export async function buildPanel(
   };
 }
 
+export async function buildPanel(
+  plan: PanelPlan,
+  renderer: PanelRenderer,
+  store: PanelStore,
+): Promise<Panel> {
+  return storePanel(
+    plan,
+    trimWhite(await renderer.render(plan.page, plan.rect)),
+    store,
+  );
+}
+
 export async function buildPanels(
   plans: readonly PanelPlan[],
   renderer: PanelRenderer,
   store: PanelStore,
 ): Promise<{ question: Panel[]; rationale: Panel[] }> {
-  const panels = { question: [] as Panel[], rationale: [] as Panel[] };
   // Sequential on purpose: panels share one rendered page at a time.
-  for (const plan of plans)
-    panels[plan.kind].push(await buildPanel(plan, renderer, store));
+  const rendered: { plan: PanelPlan; image: RasterImage; blank: boolean }[] =
+    [];
+  for (const plan of plans) {
+    const raw = await renderer.render(plan.page, plan.rect);
+    rendered.push({
+      plan,
+      image: trimWhite(raw),
+      blank: contentRows(raw) === undefined,
+    });
+  }
+  // A panel with nothing on it (usually an empty last page) only adds white
+  // space. Keep one per kind regardless, so a question is never left without.
+  const panels = { question: [] as Panel[], rationale: [] as Panel[] };
+  for (const [index, item] of rendered.entries()) {
+    const sameKind = rendered.filter(
+      (other) => other.plan.kind === item.plan.kind,
+    );
+    if (item.blank && sameKind.some((other) => !other.blank)) continue;
+    if (item.blank && sameKind.indexOf(rendered[index]) > 0) continue;
+    panels[item.plan.kind].push(await storePanel(item.plan, item.image, store));
+  }
   return panels;
 }

@@ -240,4 +240,31 @@ describe("panels", () => {
     expect(stored.size).toBe(1);
     expect(requests.map((r) => r.page)).toEqual([3, 4, 4]);
   });
+
+  it("drops blank panels but never leaves a kind empty", async () => {
+    const { stored, renderer, store } = fixtures({
+      3: image(6, 100, [40]),
+      4: image(6, 100),
+      5: image(6, 100),
+    });
+    const explanation = { ...plan, kind: "rationale" as const };
+    const panels = await buildPanels(
+      [plan, { ...explanation, page: 3 }, { ...explanation, page: 4 }],
+      renderer,
+      store,
+    );
+    expect(panels.question).toHaveLength(1);
+    expect(panels.rationale).toHaveLength(1);
+    expect(panels.rationale[0].height).toBe(17);
+    const onlyBlank = await buildPanels(
+      [
+        { ...explanation, page: 4 },
+        { ...explanation, page: 5 },
+      ],
+      renderer,
+      store,
+    );
+    expect(onlyBlank.rationale).toHaveLength(1);
+    expect(stored.size).toBe(2);
+  });
 });

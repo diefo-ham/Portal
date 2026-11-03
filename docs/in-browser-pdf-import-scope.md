@@ -194,3 +194,9 @@ Settings now has one section, **Your questions**, with the PDF card (renamed **A
 - **Unused images are removed automatically** after a preparation, so replacing questions never leaves a second copy behind.
 
 The reviewed-exceptions file moved under an **Advanced** disclosure, and Help gained a short note on adding questions.
+
+## Update: no bundled sample, blank panels dropped, clearing data
+
+- **No bundled sample questions.** The twelve original examples are now a test fixture (`tests/fixtures/synthetic.json`) only. The empty Home and Browse screens point to Settings → Your questions. Adding PDFs also removes leftover example questions unless the person already has answers or bookmarks on them.
+- **Blank panels are dropped.** About 1% of explanation panels are an entirely empty second page; they were kept at full page height. They are now left out (one panel per kind is always kept). This deliberately differs from the Python tool, so `scripts/pdf-render-check.mjs` counts fewer panels as `droppedBlankPanels` instead of a mismatch.
+- **Free up space.** Settings has "Remove my questions" (keeps answers and bookmarks, ends saved sessions) and "Erase all data on this device" (database, `sat-` settings, offline copy, service worker), with the current storage use from `navigator.storage.estimate()`.

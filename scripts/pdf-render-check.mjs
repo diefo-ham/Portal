@@ -149,6 +149,7 @@ if (process.argv.includes("--prepare")) {
     status: 0,
     order: 0,
     panelCounts: 0,
+    droppedBlankPanels: 0,
     widths: 0,
     provenance: 0,
     fields: {},
@@ -171,7 +172,10 @@ if (process.argv.includes("--prepare")) {
       tally.warnings++;
     if (q.testStatus !== ref.testStatus) tally.status++;
     for (const kind of ["question", "rationale"]) {
-      if (q.document[kind].length !== ref.document[kind].length)
+      // Fully blank panels are left out on purpose, so fewer panels is expected.
+      if (q.document[kind].length < ref.document[kind].length)
+        tally.droppedBlankPanels++;
+      else if (q.document[kind].length !== ref.document[kind].length)
         tally.panelCounts++;
       else if (q.document[kind].some((p) => p.width !== 1160)) tally.widths++;
     }
@@ -256,7 +260,7 @@ await server.close();
 
 const errors = results.filter((r) => r.error);
 const panelCountMismatch = results.filter(
-  (r) => !r.error && r.panels[0] !== r.panels[1],
+  (r) => !r.error && r.panels[0] > r.panels[1],
 );
 const compared = results
   .filter((r) => !r.error && r.dims.length)

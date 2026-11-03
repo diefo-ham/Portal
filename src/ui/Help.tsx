@@ -234,6 +234,11 @@ export function Help() {
               bookmarks, and keeps one local recovery snapshot of the previous
               study state.
             </p>
+            <p>
+              Free up space in Settings removes your questions (answers and
+              bookmarks stay) or erases everything this site keeps on the
+              device. Your original PDFs are never touched.
+            </p>
           </details>
           <details open={openSection === "shortcuts"}>
             <summary {...detail("shortcuts")}>Keyboard shortcuts</summary>

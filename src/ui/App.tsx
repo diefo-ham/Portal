@@ -20,6 +20,8 @@ import { Home } from "./Home";
 import { Review } from "./Review";
 import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
+import { ClearData } from "./ClearData";
+import { eraseAllLocalData, removeQuestionLibrary } from "../storage/localData";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { Browse } from "./Browse";
 import { PdfPrepare } from "./PdfPrepare";
@@ -451,8 +453,8 @@ export function App() {
             <h2 id="maintenance-heading">Your questions</h2>
             <p className="muted">
               {data.questions.length
-                ? `${data.questions.length.toLocaleString()} questions are stored in this browser, with your answers and notes.`
-                : "No questions yet. Add your PDFs below, or try the sample questions from the Practice page."}{" "}
+                ? `${data.questions.length.toLocaleString()} questions are stored in this browser, with your answers.`
+                : "No questions yet. Add your PDFs below."}{" "}
               Nothing is uploaded, and no account is needed.
             </p>
             <div className="data-grid">
@@ -494,6 +496,27 @@ export function App() {
                 })
               }
             />
+            <ClearData
+              busy={busy}
+              hasQuestions={data.questions.length > 0}
+              onRemoveQuestions={() =>
+                run(async () => {
+                  await adoptLibrary(async () => ({
+                    result: { data: await removeQuestionLibrary() },
+                  }));
+                  setSessionId("");
+                  setMessage(
+                    "Questions removed. Add your PDFs again whenever you like.",
+                  );
+                })
+              }
+              onEraseEverything={() =>
+                run(async () => {
+                  await eraseAllLocalData();
+                  location.reload();
+                })
+              }
+            />
             <section className="local-storage-note">
               <h3>Stored on this device</h3>
               <p>
@@ -507,7 +530,7 @@ export function App() {
               </p>
               <p className="small muted">
                 Everything lives in this browser, so clearing its site data for{" "}
-                {location.origin} removes it.
+                {location.origin} also removes it.
               </p>
             </section>
           </section>
