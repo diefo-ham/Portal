@@ -14,9 +14,16 @@ export interface RasterImage {
 export const TRIM_MARGIN = 8;
 
 /**
- * First and last (exclusive) rows holding any pixel that is not pure white,
- * or undefined for a blank image. Rendering with annotations hidden and a white
- * background makes untouched paper exactly white.
+ * Channel values at or above this count as blank paper. Untouched paper is
+ * white, but real browsers leave faint noise (251 to 254) in "empty" areas of
+ * a rendered page; treating it as content kept hundreds of blank rows. Nothing
+ * a reader can see is this light.
+ */
+export const PAPER_LEVEL = 245;
+
+/**
+ * First and last (exclusive) rows holding any pixel darker than paper, or
+ * undefined for a blank image.
  */
 export function contentRows(
   image: RasterImage,
@@ -29,9 +36,9 @@ export function contentRows(
     let content = false;
     for (let x = 0; x < width * 4; x += 4)
       if (
-        data[row + x] !== 255 ||
-        data[row + x + 1] !== 255 ||
-        data[row + x + 2] !== 255
+        data[row + x] < PAPER_LEVEL ||
+        data[row + x + 1] < PAPER_LEVEL ||
+        data[row + x + 2] < PAPER_LEVEL
       ) {
         content = true;
         break;

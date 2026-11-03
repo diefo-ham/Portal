@@ -136,10 +136,19 @@ describe("raster", () => {
   it("finds content rows and ignores pure white paper", () => {
     expect(contentRows(image(4, 20))).toBeUndefined();
     expect(contentRows(image(4, 20, [5, 9]))).toEqual({ top: 5, bottom: 10 });
-    // Even a nearly white pixel counts as content, as in the Python tool.
-    const faint = image(4, 6);
-    faint.data[(3 * 4 + 1) * 4] = 254;
-    expect(contentRows(faint)).toEqual({ top: 3, bottom: 4 });
+    // Faint noise (251 to 254) is still paper, but a light grey mark is content.
+    const noisy = image(4, 20, [2]);
+    for (const [y, level] of [
+      [8, 254],
+      [12, 251],
+      [19, 252],
+    ])
+      noisy.data.fill(level, (y * 4 + 1) * 4, (y * 4 + 1) * 4 + 3);
+    expect(contentRows(noisy)).toEqual({ top: 2, bottom: 3 });
+    expect(trimmedRows(noisy)).toEqual({ top: 0, bottom: 11 });
+    const grey = image(4, 6);
+    grey.data.fill(200, (3 * 4 + 1) * 4, (3 * 4 + 1) * 4 + 3);
+    expect(contentRows(grey)).toEqual({ top: 3, bottom: 4 });
   });
 
   it("keeps an eight pixel margin around content and never exceeds the image", () => {
