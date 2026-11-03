@@ -84,8 +84,8 @@ export function Help() {
         <div className="help-content">
           <section className="help-overview" aria-label="SAT Study overview">
             <p>
-              SAT Study has four main areas. Start a focused set, return to
-              past work, inspect the library, or take a test.
+              SAT Study has four main areas. Start a focused set, return to past
+              work, inspect the library, or take a test.
             </p>
             <dl>
               <div>
@@ -111,8 +111,8 @@ export function Help() {
             <p>
               Practice creates focused, shuffled study sessions from your
               filters. Answers receive feedback as you work. Exit saves your
-              place, drafts, timing, question order, and calculator workspace
-              so an unfinished session can resume later.
+              place, drafts, timing, question order, and calculator workspace so
+              an unfinished session can resume later.
             </p>
           </details>
           <details open={openSection === "review"}>
@@ -132,9 +132,9 @@ export function Help() {
           <details open={openSection === "browse"}>
             <summary {...detail("browse")}>Browse</summary>
             <p>
-              Browse searches the library and opens individual questions
-              without creating a session or recording an answer. You can add
-              or remove an ordinary bookmark while inspecting a question.
+              Browse searches the library and opens individual questions without
+              creating a session or recording an answer. You can add or remove
+              an ordinary bookmark while inspecting a question.
             </p>
           </details>
           <details open={openSection === "tests"}>
@@ -163,19 +163,19 @@ export function Help() {
             </p>
           </details>
           <details open={openSection === "protection"}>
-            <summary {...detail("protection")}>Protect active questions</summary>
+            <summary {...detail("protection")}>
+              Protect active questions
+            </summary>
             <p>
-              Active questions may belong to current or future official
-              Bluebook practice material. With protection enabled, ordinary
-              Practice hides them by default; Tests intentionally use active
-              questions. Disabling protection can expose them in ordinary
-              Practice.
+              Active questions may belong to current or future official Bluebook
+              practice material. With protection enabled, ordinary Practice
+              hides them by default; Tests intentionally use active questions.
+              Disabling protection can expose them in ordinary Practice.
             </p>
             <p>
-              Inactive questions remain available. Unknown status stays
-              explicit and is not a promise that a question is spoiler-safe.
-              The portal does not know which questions are unscored on the real
-              SAT.
+              Inactive questions remain available. Unknown status stays explicit
+              and is not a promise that a question is spoiler-safe. The portal
+              does not know which questions are unscored on the real SAT.
             </p>
           </details>
           <details open={openSection === "sessions"}>
@@ -185,9 +185,9 @@ export function Help() {
             <p>
               Resuming a session preserves its saved order and place. Session
               names and stars organize sets; they are separate from ordinary
-              question bookmarks. Answer-status filters use the latest
-              submitted answer, while Review keeps earlier attempts in history.
-              An empty status selection means all statuses.
+              question bookmarks. Answer-status filters use the latest submitted
+              answer, while Review keeps earlier attempts in history. An empty
+              status selection means all statuses.
             </p>
             <dl className="help-definitions">
               <dt>Unanswered</dt>
@@ -210,10 +210,8 @@ export function Help() {
             <summary {...detail("calculator")}>Calculator</summary>
             <p>
               The calculator is available during Practice and Tests and can be
-              reopened from completed Math results. The integrated Calculator
-              works without internet. Use Desmos when the optional official
-              hosted tool is configured and reachable; its separate workspace
-              saves with the session too.
+              reopened from completed Math results. It works without internet,
+              and its work saves with the session.
             </p>
           </details>
           <details open={openSection === "questions"}>
@@ -222,15 +220,15 @@ export function Help() {
             </summary>
             <p>
               Add your questions in Settings under Add your question PDFs.
-              Choose the four PDF exports; they are read in this browser,
-              never uploaded, and the whole set takes about 5 to 10 minutes.
-              Active questions are marked automatically from the files and
-              stay hidden by default.
+              Choose the four PDF exports; they are read in this browser, never
+              uploaded, and the whole set takes about 5 to 10 minutes. Active
+              questions are marked automatically from the files and stay hidden
+              by default.
             </p>
             <p>
               Reset study progress clears attempts, sessions, and Practice Test
-              exposure so test questions become eligible again. It preserves
-              the library, settings, and bookmarks unless you explicitly clear
+              exposure so test questions become eligible again. It preserves the
+              library, settings, and bookmarks unless you explicitly clear
               bookmarks, and keeps one local recovery snapshot of the previous
               study state.
             </p>

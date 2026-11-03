@@ -5,7 +5,6 @@ import {
   newExpression,
   defaultView,
   validateCalculator,
-  validateDesmosState,
   type CalculatorState,
 } from "../src/calculator/model";
 import { calculateWorkspace } from "../src/calculator/workspace";
@@ -1454,15 +1453,13 @@ describe("tables and persisted calculator work", () => {
         entries: [{ ...state.entries[0], color: 10 }],
       }),
     ).toThrow();
-    const dual = {
+    // Sessions saved while Desmos was offered still load; its fields are dropped.
+    const withDesmos = {
       ...state,
-      mode: "desmos" as const,
+      mode: "desmos",
       desmos: { version: 11, expressions: { list: [{ latex: "y=x^2" }] } },
     };
-    expect(validateCalculator(dual)).toEqual(dual);
-    expect(() => validateDesmosState({ bad: Infinity })).toThrow();
-    expect(() => validateDesmosState({ bad: () => 1 })).toThrow();
-    expect(() => validateDesmosState(JSON.parse('{"__proto__":{}}'))).toThrow();
+    expect(validateCalculator(withDesmos)).toEqual(state);
     const data = { ...emptyData(), questions: parseQuestions(sample) };
     const session = createSession([data.questions[0].id]);
     session.calculator = state;

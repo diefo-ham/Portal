@@ -17,7 +17,7 @@ export default defineConfig({
     channel: process.env.CI ? undefined : "msedge",
   },
   webServer: {
-    command: "node scripts/serve.mjs --port 4318 --no-local-library --no-local-config",
+    command: "node scripts/serve.mjs --port 4318 --no-local-library",
     url: "http://127.0.0.1:4318",
     reuseExistingServer: !process.env.CI,
   },

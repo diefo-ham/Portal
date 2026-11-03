@@ -16,7 +16,7 @@ await mkdir(output, { recursive: true });
 const index = [
   "Third-party software notices",
   "",
-  "The integrated Calculator libraries are bundled locally. Optional Desmos access loads the official hosted API separately.",
+  "The integrated Calculator libraries are bundled locally.",
   "",
 ];
 for (const [path, entry] of Object.entries(lock.packages)) {

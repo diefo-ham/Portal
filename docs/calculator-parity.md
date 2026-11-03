@@ -1,5 +1,7 @@
 # Manual Desmos comparison — 2026-10-27
 
+> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+
 Reference: current https://www.desmos.com/calculator through its normal UI, using
 original synthetic math. No private question data, account, or proprietary source
 was used. The embedded API was checked against official documentation and mocked

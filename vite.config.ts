@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { serveLocalLibrary } from "./scripts/local-library.mjs";
-import { serveCalculatorConfig } from "./scripts/calculator-config.mjs";
 import { serviceWorker } from "./scripts/service-worker.mjs";
 export default defineConfig({
   // Relative URLs let the same build run at a domain root, a GitHub Pages
@@ -23,9 +22,7 @@ export default defineConfig({
       name: "private-local-library",
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
-          void serveCalculatorConfig(req, res).then((handled) => {
-            if (!handled) void serveLocalLibrary(req, res, next);
-          });
+          void serveLocalLibrary(req, res, next);
         });
       },
     },

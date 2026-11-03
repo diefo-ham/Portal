@@ -35,10 +35,6 @@ jobs:
             echo "Private library, PDF or env file found in dist" >&2
             exit 1
           fi
-          if ! grep -q '"desmosApiKey": *""' dist/calculator-config.json; then
-            echo "dist/calculator-config.json must have an empty Desmos key" >&2
-            exit 1
-          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

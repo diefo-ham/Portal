@@ -1,5 +1,7 @@
 # SAT affine inequalities and protection verification
 
+> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+
 ## Affine inequalities
 
 The custom Calculator accepts `<`, `<=`, `>` and `>=` with affine expressions

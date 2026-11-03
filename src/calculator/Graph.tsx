@@ -35,6 +35,9 @@ function ticks(min: number, max: number, minor = false) {
     values.push(Math.abs(v) < step * 1e-10 ? 0 : v);
   return values;
 }
+/** Zoom steps as in Desmos: the buttons halve or double the view, a wheel notch is gentle. */
+const BUTTON_ZOOM = 0.5;
+const WHEEL_ZOOM = 0.94;
 export function Graph({
   graphs,
   view,
@@ -118,7 +121,7 @@ export function Graph({
       if (document.activeElement !== element) return;
       e.preventDefault();
       const p = locate(e.clientX, e.clientY);
-      zoom(e.deltaY < 0 ? 0.85 : 1 / 0.85, p.x, p.y);
+      zoom(e.deltaY < 0 ? WHEEL_ZOOM : 1 / WHEEL_ZOOM, p.x, p.y);
     };
     element?.addEventListener("wheel", wheel, { passive: false });
     return () => element?.removeEventListener("wheel", wheel);
@@ -335,10 +338,10 @@ export function Graph({
   return (
     <section className="graph-area" aria-label="Graphing plane">
       <div className="graph-controls">
-        <button aria-label="Zoom in" onClick={() => zoom(0.7)}>
+        <button aria-label="Zoom in" onClick={() => zoom(BUTTON_ZOOM)}>
           +
         </button>
-        <button aria-label="Zoom out" onClick={() => zoom(1 / 0.7)}>
+        <button aria-label="Zoom out" onClick={() => zoom(1 / BUTTON_ZOOM)}>
           −
         </button>
         <button onClick={() => changeView(defaultView())}>Reset view</button>
@@ -410,10 +413,10 @@ export function Graph({
             });
           } else if (e.key === "+" || e.key === "=") {
             e.preventDefault();
-            zoom(0.7);
+            zoom(BUTTON_ZOOM);
           } else if (e.key === "-") {
             e.preventDefault();
-            zoom(1 / 0.7);
+            zoom(1 / BUTTON_ZOOM);
           } else if (e.key === "Home") {
             e.preventDefault();
             changeView(defaultView());

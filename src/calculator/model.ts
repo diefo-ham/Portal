@@ -6,10 +6,30 @@ export interface Viewport {
 }
 export type FitModel =
   "none" | "linear" | "quadratic" | "cubic" | "exponential";
+/** Range and step of the slider shown for a defined number such as a=2. */
+export interface SliderSettings {
+  min: number;
+  max: number;
+  step: number;
+}
+export const defaultSlider = (value = 0): SliderSettings => ({
+  min: Math.min(-10, Math.floor(value)),
+  max: Math.max(10, Math.ceil(value)),
+  step: 0.1,
+});
+export const validSlider = (s: SliderSettings) =>
+  [s.min, s.max, s.step].every(Number.isFinite) &&
+  Math.abs(s.min) <= 1e9 &&
+  Math.abs(s.max) <= 1e9 &&
+  s.min < s.max &&
+  s.step >= 1e-6 &&
+  (s.max - s.min) / s.step <= 1e6;
 export interface ExpressionEntry {
   id: string;
   type: "expression";
   text: string;
+  /** Saved slider range and step; absent until the person changes them. */
+  slider?: SliderSettings;
   /** Optional structural source; legacy text-only expressions remain readable. */
   latex?: string;
   hidden: boolean;
@@ -33,9 +53,6 @@ export interface CalculatorState {
   view: Viewport;
   /** Ordinary graph interaction preserves one physical pixel scale per unit. */
   equalAxes?: boolean;
-  mode?: "desmos" | "offline";
-  /** Official getState() JSON, kept opaque and separate from offline entries. */
-  desmos?: Record<string, unknown>;
   /** Last expression/table that legitimately owned focus in Offline mode. */
   activeEntryId?: string;
 }
@@ -79,8 +96,7 @@ export function validateCalculator(raw: unknown): CalculatorState {
     !validView(s.view) ||
     (s.equalAxes !== undefined && typeof s.equalAxes !== "boolean") ||
     !Array.isArray(s.entries) ||
-    s.entries.length > 25 ||
-    (s.mode !== undefined && !["desmos", "offline"].includes(s.mode))
+    s.entries.length > 25
   )
     throw new Error("Invalid calculator workspace.");
   const ids = new Set<string>();
@@ -100,7 +116,11 @@ export function validateCalculator(raw: unknown): CalculatorState {
       e.type === "expression"
         ? !text(e.text) ||
           (e.latex !== undefined &&
-            (typeof e.latex !== "string" || e.latex.length > 1500))
+            (typeof e.latex !== "string" || e.latex.length > 1500)) ||
+          (e.slider !== undefined &&
+            (typeof e.slider !== "object" ||
+              e.slider === null ||
+              !validSlider(e.slider)))
         : e.type !== "table" ||
           !["none", "linear", "quadratic", "cubic", "exponential"].includes(
             e.fit,
@@ -124,44 +144,14 @@ export function validateCalculator(raw: unknown): CalculatorState {
     (typeof s.activeEntryId !== "string" || !ids.has(s.activeEntryId))
   )
     throw new Error("Invalid active calculator entry.");
-  if (s.desmos !== undefined) validateDesmosState(s.desmos);
-  return structuredClone(s);
+  // Sessions saved while Desmos was offered may carry its fields; they are dropped.
+  const {
+    mode: _mode,
+    desmos: _desmos,
+    ...kept
+  } = s as CalculatorState & Record<string, unknown>;
+  return structuredClone(kept as CalculatorState);
 }
-/** Validate transport safety/size only. Never interpret proprietary state fields. */
-export function validateDesmosState(raw: unknown): Record<string, unknown> {
-  let count = 0;
-  const visit = (value: unknown, depth = 0): void => {
-    if (++count > 100000 || depth > 40)
-      throw new Error("Desmos workspace is too large.");
-    if (value === null || typeof value === "boolean") return;
-    if (typeof value === "number" && Number.isFinite(value)) return;
-    if (typeof value === "string" && value.length <= 500000) return;
-    if (Array.isArray(value)) {
-      value.forEach((item) => visit(item, depth + 1));
-      return;
-    }
-    if (
-      value &&
-      typeof value === "object" &&
-      Object.getPrototypeOf(value) === Object.prototype
-    ) {
-      for (const [key, item] of Object.entries(value)) {
-        if (["__proto__", "constructor", "prototype"].includes(key))
-          throw new Error("Invalid Desmos workspace key.");
-        visit(item, depth + 1);
-      }
-      return;
-    }
-    throw new Error("Invalid Desmos workspace.");
-  };
-  if (!raw || Array.isArray(raw) || typeof raw !== "object")
-    throw new Error("Invalid Desmos workspace.");
-  visit(raw);
-  if (JSON.stringify(raw).length > 2000000)
-    throw new Error("Desmos workspace exceeds 2 MB.");
-  return structuredClone(raw) as Record<string, unknown>;
-}
-
 export function withBlankExpression(state: CalculatorState): CalculatorState {
   if (
     state.entries.some(

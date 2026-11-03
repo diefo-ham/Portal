@@ -13,6 +13,7 @@ import { Graph } from "./Graph";
 import { GraphColor } from "./GraphColor";
 import { SplitDivider, useCalculatorSplit } from "./SplitDivider";
 import { TableEditor } from "./TableEditor";
+import { Slider } from "./Slider";
 import { MathEditor, focusMath } from "./MathEditor";
 import { calculateWorkspace } from "./workspace";
 import {
@@ -484,26 +485,19 @@ export function Calculator({
                           </output>
                         )}
                       {result?.parameter && (
-                        <label className="calc-slider">
-                          <span className="sr-only">
-                            {result.parameter.name} slider
-                          </span>
-                          <input
-                            aria-label={`${result.parameter.name} slider`}
-                            type="range"
-                            min={Math.min(-10, result.parameter.value)}
-                            max={Math.max(10, result.parameter.value)}
-                            step="0.1"
-                            value={result.parameter.value}
-                            onChange={(event) =>
-                              change({
-                                ...entry,
-                                text: `${result.parameter!.name} = ${event.target.value}`,
-                                latex: undefined,
-                              })
-                            }
-                          />
-                        </label>
+                        <Slider
+                          name={result.parameter.name}
+                          value={result.parameter.value}
+                          settings={entry.slider}
+                          onValue={(value) =>
+                            change({
+                              ...entry,
+                              text: `${result.parameter!.name} = ${value}`,
+                              latex: undefined,
+                            })
+                          }
+                          onSettings={(slider) => change({ ...entry, slider })}
+                        />
                       )}
                     </>
                   ) : (

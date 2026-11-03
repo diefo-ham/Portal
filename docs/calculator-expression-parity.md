@@ -1,5 +1,7 @@
 # Offline expression and graph refinement
 
+> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+
 ## Lists and dependencies
 
 Ellipsis lists are lowered into mathematical RangeNodes before the safe AST

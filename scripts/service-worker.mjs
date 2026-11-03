@@ -43,12 +43,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== scope.origin) return;
-  // Private library and runtime calculator configuration always come from the server.
-  if (
-    url.pathname.startsWith(at("local-library/").pathname) ||
-    url.pathname === at("calculator-config.json").pathname
-  )
-    return;
+  // The private library always comes from the server.
+  if (url.pathname.startsWith(at("local-library/").pathname)) return;
   event.respondWith(
     (async () => {
       const hit = await caches.match(request, { ignoreSearch: true });
@@ -105,12 +101,7 @@ export function serviceWorker() {
       // The PDF reader (its worker and the chunk that loads it) is cached on first use
       // instead of on every first visit.
       const lazy = /^assets\/(pdf\.worker\.min|run)-[^/]+\.m?js$/;
-      const precache = [
-        "./",
-        ...files.filter(
-          (file) => file !== "calculator-config.json" && !lazy.test(file),
-        ),
-      ];
+      const precache = ["./", ...files.filter((file) => !lazy.test(file))];
       await writeFile(
         join(outDir, "sw.js"),
         worker

@@ -1,5 +1,7 @@
 # Floating calculator follow-up — 2026-10-27
 
+> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+
 Current stabilization changes and live-key verification are documented in [Calculator stabilization](calculator-stabilization.md); those details supersede earlier interaction limits below.
 
 ## Desmos is primary; Offline is local fallback

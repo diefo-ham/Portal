@@ -1,7 +1,7 @@
 # Offline calculator vs official Desmos
 
 Compared on 2026-11-03 with Desmos API v1.12.0 and the Offline engine in this repository.
-Both comparisons are local only (they need `DESMOS_API_KEY` in `.env.local` and internet) and never run in CI.
+The app no longer includes Desmos (retired 2026-11-03, after this comparison). Both comparisons are local only (they need `DESMOS_API_KEY` in `.env.local` and internet) and never run in CI.
 
 - `node scripts/calculator-vs-desmos.mjs` gives 125 cases from `scripts/calculator-corpus.mjs` to both
   calculators and lists every disagreement (numbers to nine digits, fitted parameters to five).
@@ -80,3 +80,9 @@ labels were compared by value only.
 
 Touch gestures, Desmos' on-screen keypad (Offline has none), saving and sharing graphs, and anything on the real
 test app (Bluebook) that differs from the public Desmos calculator.
+
+## After the comparison
+
+Offline gained the zoom steps Desmos uses (the buttons halve or double the view, a wheel notch is 6%), and sliders
+with an editable minimum, maximum and step plus play, pause, speed and animation modes (back and forth, repeat, once).
+The comparison scripts stay in the repository as developer tools and still need a Desmos key in `.env.local`.
