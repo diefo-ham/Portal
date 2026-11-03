@@ -99,3 +99,42 @@ test("playing a slider moves its value within the range, and pausing stops it", 
     page.getByRole("button", { name: "Play a slider" }),
   ).toHaveAttribute("aria-pressed", "false");
 });
+
+test("switching to Repeat while the value is falling stays inside the range", async ({
+  page,
+}) => {
+  await open(page);
+  await enterExpression(page, 1, "a=5");
+  const slider = page.getByRole("slider", { name: "a slider", exact: true });
+  await named(page, "a slider minimum").fill("0");
+  await named(page, "a slider maximum").fill("10");
+  await page.getByRole("button", { name: "a slider settings" }).click();
+  await page.getByLabel("a slider speed").selectOption("4");
+  await page.getByRole("button", { name: "Play a slider" }).click();
+
+  // Wait until it has turned around and is falling, then change the mode.
+  let previous = Number(await slider.inputValue());
+  let falling = 0;
+  for (let i = 0; i < 150 && falling < 3; i++) {
+    await page.waitForTimeout(60);
+    const now = Number(await slider.inputValue());
+    falling = now < previous ? falling + 1 : now > previous ? 0 : falling;
+    previous = now;
+  }
+  expect(falling).toBeGreaterThanOrEqual(3);
+  await page.getByLabel("a slider animation").selectOption("loop");
+
+  const seen: number[] = [];
+  for (let i = 0; i < 40; i++) {
+    seen.push(Number(await slider.inputValue()));
+    await page.waitForTimeout(100);
+  }
+  for (const value of seen) {
+    expect(value).toBeGreaterThanOrEqual(0);
+    expect(value).toBeLessThanOrEqual(10);
+  }
+  // Repeat counts upward from here and jumps back to the minimum at the top,
+  // rather than carrying on downwards.
+  const jumps = seen.filter((value, i) => i > 0 && seen[i - 1] - value > 5);
+  expect(jumps.length).toBeGreaterThan(0);
+});

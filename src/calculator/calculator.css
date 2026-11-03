@@ -583,19 +583,17 @@
 }
 /* Compact notebook controls: only graphable objects have visibility controls. */
 .calc-angle {
-  display: flex;
-  gap: 2px;
   margin-left: auto;
-}
-.calc-angle button {
-  border-color: transparent;
-  background: transparent;
   min-height: 28px;
-  padding: 3px 8px;
-}
-.calc-angle button[aria-pressed="true"] {
-  background: var(--surface-selected);
+  padding: 3px 10px;
   border-color: var(--line);
+  background: var(--surface-selected);
+  font-size: 12px;
+}
+.calc-list-toggle {
+  margin: 0 0 4px 55px;
+  padding: 0;
+  font-size: 11px;
 }
 .calculator-surface .calc-options {
   padding: 4px 12px;

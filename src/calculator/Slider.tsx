@@ -60,17 +60,19 @@ export function Slider({
       if (Math.abs(position.current - shown) > r.step * 1.5)
         position.current = shown;
       const delta = ((r.max - r.min) / SWEEP_SECONDS) * (TICK_MS / 1000) * rate;
+      // Repeat always counts upward and starts over at the minimum, even when
+      // it was switched on while the value was on its way down.
+      if (how === "loop") direction.current = 1;
       let next = position.current + delta * direction.current;
       if (next >= r.max || next <= r.min) {
         if (how === "bounce") {
-          direction.current = -direction.current;
-          next = Math.min(r.max, Math.max(r.min, next));
-        } else if (how === "loop") next = r.min + (next - r.max);
-        else {
-          setPlaying(false);
-          next = Math.min(r.max, Math.max(r.min, next));
-        }
+          direction.current = next >= r.max ? -1 : 1;
+        } else if (how === "loop") {
+          next =
+            next >= r.max ? r.min + ((next - r.min) % (r.max - r.min)) : r.min;
+        } else setPlaying(false);
       }
+      next = Math.min(r.max, Math.max(r.min, next));
       position.current = next;
       const snapped = snap(next, r);
       if (snapped !== shown) send(snapped);

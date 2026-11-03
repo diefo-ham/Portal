@@ -91,7 +91,7 @@ test("scalar roots, restrictions and angle mode have coherent visible results", 
   await expect(
     page.getByText(/Numerical real solutions searched.*radians/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Degrees", exact: true }).click();
+  await page.getByRole("button", { name: /Switch to degrees/ }).click();
   await expect(page.getByLabel("Real parameter solutions")).toContainText(
     "44.079",
   );

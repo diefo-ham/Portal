@@ -48,16 +48,11 @@ test("compact rows, safe shorthand, exact conversion, angle segments and Add men
   await page.getByRole("button", { name: "Toggle fraction" }).click();
   await expect(page.locator(".calc-numeric-result").last()).toHaveText("≈ 1/3");
   await enterExpression(page, 4, "sin(90)");
-  await page
-    .getByRole("group", { name: "Angle mode" })
-    .getByRole("button", { name: "Degrees", exact: true })
-    .click();
+  await page.getByRole("button", { name: /Switch to degrees/ }).click();
   await expect(page.locator(".calc-numeric-result").last()).toHaveText("= 1");
   await expect(
-    page
-      .getByRole("group", { name: "Angle mode" })
-      .getByRole("button", { name: "Radians", exact: true }),
-  ).toHaveAttribute("aria-pressed", "false");
+    page.getByRole("button", { name: /Angle unit: degrees/ }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Add item", exact: true }).click();
   await expect(
     page.getByRole("group", { name: "Add calculator item" }),

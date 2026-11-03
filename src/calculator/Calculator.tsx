@@ -28,6 +28,31 @@ import { displayedCoefficients, fittedExpression } from "./fitDisplay";
 import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
 
+/** Long lists show their ends and can be opened up, so a range like [-10...10] stays readable. */
+function ListResult({ values }: { values: number[] }) {
+  const [open, setOpen] = useState(false);
+  const long = values.length > 12;
+  const shown =
+    !long || open
+      ? values.map(fmt)
+      : [...values.slice(0, 5).map(fmt), "…", ...values.slice(-3).map(fmt)];
+  return (
+    <>
+      <output className="calc-list-result">[{shown.join(", ")}]</output>
+      {long && (
+        <button
+          type="button"
+          className="text-button calc-list-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? "Show fewer" : `Show all ${values.length} values`}
+        </button>
+      )}
+    </>
+  );
+}
+
 function MathDisplay({ tex }: { tex: string }) {
   const html = useMemo(
     () =>
@@ -143,7 +168,7 @@ function CalculatorHelp() {
     ],
     [
       "Graph & angles",
-      "Drag blank space to pan; drag a curve to trace it. Inspect points reveals zeros, intersections and extrema. Click points to keep labels; click again to remove one, or click empty space to clear them. Right click or Shift+Enter on a color dot to recolor. Radians/Degrees changes trig units. Fraction converts recognizable forms.",
+      "Drag blank space to pan; drag a curve to trace it. Inspect points reveals zeros, intersections and extrema. Click points to keep labels; click again to remove one, or click empty space to clear them. Right click or Shift+Enter on a color dot to recolor. The Radians/Degrees button switches trig units. Fraction converts recognizable forms.",
     ],
   ];
   return (
@@ -303,17 +328,20 @@ export function Calculator({
       }}
     >
       <div className="calc-options">
-        <div className="calc-angle" role="group" aria-label="Angle mode">
-          {(["radians", "degrees"] as const).map((angle) => (
-            <button
-              key={angle}
-              aria-pressed={state.angle === angle}
-              onClick={() => update({ ...current.current, angle })}
-            >
-              {angle === "radians" ? "Radians" : "Degrees"}
-            </button>
-          ))}
-        </div>
+        <button
+          className="calc-angle"
+          aria-label={`Angle unit: ${state.angle}. Switch to ${state.angle === "radians" ? "degrees" : "radians"}`}
+          title={`Switch to ${state.angle === "radians" ? "degrees" : "radians"}`}
+          onClick={() =>
+            update({
+              ...current.current,
+              angle:
+                current.current.angle === "radians" ? "degrees" : "radians",
+            })
+          }
+        >
+          {state.angle === "radians" ? "Radians" : "Degrees"} ⇄
+        </button>
       </div>
       <div
         className="calc-body"
@@ -437,11 +465,7 @@ export function Calculator({
                           source={entry.text}
                         />
                       )}
-                      {result?.values && (
-                        <output className="calc-list-result">
-                          [{result.values.map(fmt).join(", ")}]
-                        </output>
-                      )}
+                      {result?.values && <ListResult values={result.values} />}
                       {result?.fit && (
                         <FitResult
                           fit={result.fit}
