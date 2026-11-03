@@ -11,7 +11,8 @@ const scope = new URL(self.registration.scope);
 const at = (path) => new URL(path, scope);
 
 self.addEventListener("install", (event) => {
-  // No skipWaiting: an open tab keeps its own version's files until it closes.
+  // No automatic skipWaiting: an open tab keeps its own version's files until the
+  // person chooses to update (see src/updates.ts) or closes every tab.
   event.waitUntil(
     caches
       .open(CACHE)
@@ -19,6 +20,11 @@ self.addEventListener("install", (event) => {
         cache.addAll(FILES.map((file) => new Request(at(file), { cache: "reload" }))),
       ),
   );
+});
+
+// The page asks for the update after the person agrees to reload.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {

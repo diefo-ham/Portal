@@ -15,7 +15,7 @@ interface Props {
       signal: AbortSignal;
       progress: (progress: Progress) => void;
     },
-  ) => Promise<{ report: PrepareReport }>;
+  ) => Promise<{ report: PrepareReport; result?: { unchanged: boolean } }>;
 }
 
 const SUBJECTS: Record<string, string> = {
@@ -58,6 +58,7 @@ export function PdfPrepare({ prepare }: Props) {
   const [progress, setProgress] = useState<Progress>();
   const [error, setError] = useState("");
   const [report, setReport] = useState<PrepareReport>();
+  const [unchanged, setUnchanged] = useState(false);
   const controller = useRef<AbortController | undefined>(undefined);
   const assigned = assignExports(files);
 
@@ -83,6 +84,7 @@ export function PdfPrepare({ prepare }: Props) {
         progress: setProgress,
       });
       setReport(result.report);
+      setUnchanged(result.result?.unchanged === true);
     } catch (e) {
       setError(
         controller.current.signal.aborted
@@ -174,7 +176,16 @@ export function PdfPrepare({ prepare }: Props) {
       {report && (
         <div className="pdf-prepare-report" role="status">
           <p>
-            <strong>Added {report.importedQuestions} questions.</strong>{" "}
+            {unchanged ? (
+              <>
+                <strong>Nothing changed.</strong> These PDFs give exactly the{" "}
+                {report.importedQuestions} questions and images already stored.
+                If the stored ones look wrong, use Free up space → Remove my
+                questions, then add the PDFs again.{" "}
+              </>
+            ) : (
+              <strong>Added {report.importedQuestions} questions.</strong>
+            )}{" "}
             {report.quarantined.length
               ? `${report.quarantined.length} could not be read safely and were left out.`
               : ""}

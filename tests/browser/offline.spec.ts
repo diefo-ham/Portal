@@ -69,20 +69,18 @@ test("preparing PDF exports keeps working offline once the reader has been used"
     writeFileSync(path, Buffer.from(fixtures[name], "base64"));
     return path;
   });
-  const prepare = async () => {
+  const prepare = async (done: string) => {
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByLabel("PDF export files").setInputFiles(paths);
     await page.getByRole("button", { name: "Add questions" }).click();
-    await expect(page.getByText("Added 8 questions.")).toBeVisible({
-      timeout: 90_000,
-    });
+    await expect(page.getByText(done)).toBeVisible({ timeout: 90_000 });
   };
 
   await page.goto("/");
   await expect
     .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
     .toBe(true);
-  await prepare();
+  await prepare("Added 8 questions.");
   // The reader is cached the first time it is loaded.
   await expect
     .poll(() =>
@@ -97,5 +95,6 @@ test("preparing PDF exports keeps working offline once the reader has been used"
 
   await context.setOffline(true);
   await page.reload();
-  await prepare();
+  // The same PDFs again give the same questions, which is now said plainly.
+  await prepare("Nothing changed.");
 });

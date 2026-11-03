@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   beginSession,
   deleteSession,
@@ -21,6 +21,7 @@ import { Review } from "./Review";
 import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
 import { ClearData } from "./ClearData";
+import { applyUpdate, subscribeToUpdates, updateReady } from "../updates";
 import { eraseAllLocalData, removeQuestionLibrary } from "../storage/localData";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { Browse } from "./Browse";
@@ -55,6 +56,7 @@ export function App() {
         : "hide",
   }));
   const [sessionId, setSessionId] = useState("");
+  const newVersion = useSyncExternalStore(subscribeToUpdates, updateReady);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [limit, setLimit] = useState("10");
@@ -225,6 +227,12 @@ export function App() {
           <button onClick={() => setError("")} aria-label="Dismiss error">
             ×
           </button>
+        </div>
+      )}
+      {newVersion && (
+        <div role="status" className="banner">
+          A new version of the portal is ready.
+          <button onClick={applyUpdate}>Reload to update</button>
         </div>
       )}
       {message && (
