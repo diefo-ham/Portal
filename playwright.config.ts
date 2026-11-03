@@ -10,11 +10,17 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: "http://127.0.0.1:4318",
-    browserName: "chromium",
+    // BROWSER=firefox or BROWSER=webkit (Safari's engine) runs the suite there.
+    browserName:
+      (process.env.BROWSER as "chromium" | "firefox" | "webkit") || "chromium",
     // Specs intercept network requests; offline.spec.ts opts back in.
     serviceWorkers: "block",
     // Locally the installed Edge is used; CI installs Playwright's Chromium.
-    channel: process.env.CI ? undefined : "msedge",
+    channel:
+      process.env.CI ||
+      (process.env.BROWSER && process.env.BROWSER !== "chromium")
+        ? undefined
+        : "msedge",
   },
   webServer: {
     command: "node scripts/serve.mjs --port 4318 --no-local-library",

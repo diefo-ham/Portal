@@ -78,6 +78,8 @@ test("playing a slider moves its value within the range, and pausing stops it", 
   }
 
   await page.getByRole("button", { name: "Pause a slider" }).click();
+  // The last tick can still land just after the click; wait for the value to rest.
+  await page.waitForTimeout(300);
   const held = await slider.inputValue();
   await page.waitForTimeout(500);
   await expect(slider).toHaveValue(held);

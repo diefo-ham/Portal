@@ -40,7 +40,9 @@ async function storePanel(
   store: PanelStore,
 ): Promise<Panel> {
   const blob = await store.encode(image);
-  const key = (await sha256Hex(await blob.arrayBuffer())) + ".webp";
+  // Browsers that cannot encode WebP (Safari) give lossless PNG instead.
+  const extension = blob.type === "image/png" ? ".png" : ".webp";
+  const key = (await sha256Hex(await blob.arrayBuffer())) + extension;
   await store.put(key, blob);
   return {
     src: "asset:" + key,

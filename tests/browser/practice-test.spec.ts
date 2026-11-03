@@ -126,7 +126,10 @@ test("active Practice Tests can be renamed and canceled without recycling expose
   await page.getByRole("button", { name: "Save name" }).click();
   const renamed = (await read(page)).sessions[0];
   expect(renamed.name).toBe("October baseline");
-  expect({ ...renamed, name: before.name }).toEqual(before);
+  // Only the name changes (the running timer may add to elapsed time meanwhile).
+  expect({ ...renamed, name: before.name, elapsed: before.elapsed }).toEqual(
+    before,
+  );
   await resume(page);
 
   await page.getByRole("button", { name: "Practice tools" }).click();
@@ -233,7 +236,10 @@ test("Your Practice Tests keeps View results primary and renames or deletes comp
   await page.getByRole("button", { name: "Save name" }).click();
   const renamed = (await read(page)).sessions[0];
   expect(renamed.name).toBe("Completed benchmark");
-  expect({ ...renamed, name: before.name }).toEqual(before);
+  // Only the name changes (the running timer may add to elapsed time meanwhile).
+  expect({ ...renamed, name: before.name, elapsed: before.elapsed }).toEqual(
+    before,
+  );
   const exposed = [...(await read(page)).practiceTestUsedIds];
   await page
     .getByRole("button", {

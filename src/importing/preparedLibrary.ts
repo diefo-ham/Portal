@@ -96,7 +96,7 @@ export async function ingestLibrary(
     !Array.isArray(manifest.assets) ||
     manifest.assets.some(
       (x: unknown) =>
-        typeof x !== "string" || !/^([a-f0-9]{64})\.webp$/.test(x),
+        typeof x !== "string" || !/^([a-f0-9]{64})\.(webp|png)$/.test(x),
     ) ||
     !Number.isInteger(manifest.questionCount)
   )
@@ -132,7 +132,7 @@ export async function ingestLibrary(
     const entries = await Promise.all(
       missing.slice(i, i + 12).map(async (key: string) => {
         const blob = await source.asset(key);
-        if ((await sha256(await blob.arrayBuffer())) + ".webp" !== key)
+        if ((await sha256(await blob.arrayBuffer())) + key.slice(64) !== key)
           throw new Error("A PDF image failed its integrity check.");
         return { key, blob };
       }),

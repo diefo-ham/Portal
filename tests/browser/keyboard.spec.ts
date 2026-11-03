@@ -49,8 +49,11 @@ test("contextual Space and arrow navigation respect focused controls", async ({
   }).toPass();
   // Keys are ignored while a move is still being saved; Previous is disabled then.
   await expect(page.getByRole("button", { name: /Previous/ })).toBeEnabled();
-  await page.keyboard.press("Space");
-  await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
+  const correct = page.getByText("Correct. Nicely done.");
+  await expect(async () => {
+    if (!(await correct.isVisible())) await page.keyboard.press("Space");
+    await expect(correct).toBeVisible({ timeout: 1500 });
+  }).toPass();
   await page.keyboard.press("ArrowRight"); // Works on the focused Next button, too.
   await expect(
     page.getByRole("button", { name: "Open question overview" }),

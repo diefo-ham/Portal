@@ -48,9 +48,10 @@ export async function prepareFromPdfs(files: File[], options: RunOptions) {
       store: {
         async encode(image) {
           const blob = await encodeWebp(image);
-          if (blob.type !== "image/webp")
+          // WebP where the browser can write it, lossless PNG otherwise (Safari).
+          if (blob.type !== "image/webp" && blob.type !== "image/png")
             throw new Error(
-              "This browser cannot save images as WebP. Use a current Chrome, Edge, or Firefox.",
+              "This browser cannot save the question images. Use a current Chrome, Edge, Firefox or Safari.",
             );
           return blob;
         },

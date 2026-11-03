@@ -320,7 +320,8 @@ export async function prepareLibrary(
   }
   if (!questions.length)
     throw new Error(
-      "No question could be prepared. Check that these are the supported exports; the report lists the reasons.",
+      "No question could be prepared. Check that these are the supported exports." +
+        (quarantined.length ? ` First problem: ${quarantined[0].reason}` : ""),
     );
 
   report({

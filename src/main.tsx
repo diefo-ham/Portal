@@ -4,7 +4,9 @@ import { App } from "./ui/App";
 import "./ui/styles.css";
 import { applyAppearance } from "./ui/appearance";
 import { registerWorker } from "./updates";
+import { focusClickedControls } from "./focusClicks";
 applyAppearance();
+focusClickedControls();
 // Offline support: the worker precaches the built app. A newer version waits
 // until the person reloads from the notice in the app (or closes every tab), so
 // a session never mixes versions.

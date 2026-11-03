@@ -33,11 +33,18 @@ function database() {
   }));
 }
 
+/** An image as stored: a Blob, or its bytes and type where the browser cannot keep Blobs. */
+type StoredAsset = Blob | { type: string; data: ArrayBuffer };
+const asBlob = (value: StoredAsset | undefined) =>
+  value === undefined || value instanceof Blob
+    ? value
+    : new Blob([value.data], { type: value.type });
+
 export async function readAsset(key: string): Promise<Blob | undefined> {
   const db = await database();
   return new Promise((resolve, reject) => {
     const r = db.transaction("assets").objectStore("assets").get(key);
-    r.onsuccess = () => resolve(r.result);
+    r.onsuccess = () => resolve(asBlob(r.result));
     r.onerror = () => reject(r.error);
   });
 }
@@ -50,14 +57,36 @@ export async function assetKeys(): Promise<Set<string>> {
   });
 }
 export async function writeAssets(entries: { key: string; blob: Blob }[]) {
-  const db = await database();
-  return new Promise<void>((resolve, reject) => {
-    const tx = db.transaction("assets", "readwrite");
-    for (const e of entries) tx.objectStore("assets").put(e.blob, e.key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
+  const put = async (values: { key: string; value: StoredAsset }[]) => {
+    const db = await database();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("assets", "readwrite");
+      for (const e of values) tx.objectStore("assets").put(e.value, e.key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () =>
+        reject(
+          tx.error ?? new Error("The browser could not store the images."),
+        );
+      tx.onabort = () =>
+        reject(
+          tx.error ?? new Error("The browser could not store the images."),
+        );
+    });
+  };
+  try {
+    await put(entries.map((e) => ({ key: e.key, value: e.blob })));
+  } catch {
+    // Some browsers (Safari, in private windows) cannot keep Blobs in IndexedDB;
+    // the same bytes stored as an ArrayBuffer work everywhere.
+    await put(
+      await Promise.all(
+        entries.map(async (e) => ({
+          key: e.key,
+          value: { type: e.blob.type, data: await e.blob.arrayBuffer() },
+        })),
+      ),
+    );
+  }
 }
 /** Removes stored images that are not in `keep`; returns how many were removed. */
 export async function deleteAssetsExcept(

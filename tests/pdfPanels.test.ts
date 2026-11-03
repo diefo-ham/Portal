@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
+import sample from "./fixtures/synthetic.json";
+import { parseQuestions } from "../src/importing/json.ts";
 import { layoutPage, type TextFragment } from "../src/importing/pdf/layout.ts";
 import { planCrops } from "../src/importing/pdf/crops.ts";
 import {
@@ -228,6 +230,39 @@ describe("panels", () => {
       height: 17,
     });
     expect([...stored.keys()]).toEqual([`${digest}.webp`]);
+  });
+
+  it("names an image after its format, so a browser that can only write PNG still works", async () => {
+    const { stored, renderer } = fixtures({ 3: image(6, 100, [40]) });
+    const store: PanelStore = {
+      encode: async (img) =>
+        new Blob([new Uint8Array(img.data.buffer, 0, img.data.length)], {
+          type: "image/png",
+        }),
+      put: async (key, blob) => void stored.set(key, blob),
+    };
+    const panel = await buildPanel(plan, renderer, store);
+    expect(panel.src).toMatch(/^asset:[a-f0-9]{64}\.png$/);
+    expect([...stored.keys()]).toEqual([panel.src.slice(6)]);
+    // Study data accepts that reference like any other stored image.
+    expect(() =>
+      parseQuestions({
+        schemaVersion: 1,
+        questions: [
+          {
+            ...sample.questions[0],
+            document: {
+              question: [{ ...panel, alt: "x" }],
+              rationale: [{ ...panel, alt: "y" }],
+              textIsApproximate: true,
+              provenance: [
+                { filename: "a.pdf", sha256: "a".repeat(64), pages: [1] },
+              ],
+            },
+          },
+        ],
+      }),
+    ).not.toThrow();
   });
 
   it("stores identical pictures once and files panels by kind", async () => {

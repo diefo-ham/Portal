@@ -48,11 +48,17 @@ test("restricted curves render only valid domains and retain disconnected paths"
     await enterExpression(page, 1, source);
     await expect(page.locator(".calc-error")).toHaveCount(0);
     await expect(page.locator(".graph-curve")).toHaveCount(1);
-    const [extent] = await domainExtents(page);
-    expect(extent.count).toBeGreaterThan(20);
+    // The graph can still be settling to its final size; judge the settled one.
+    await expect
+      .poll(async () => (await domainExtents(page))[0].count)
+      .toBeGreaterThan(20);
     // SVG coordinates are rounded to hundredths of a pixel.
-    expect(extent.min).toBeGreaterThanOrEqual(min - 0.002);
-    expect(extent.max).toBeLessThanOrEqual(max + 0.002);
+    await expect
+      .poll(async () => (await domainExtents(page))[0].min)
+      .toBeGreaterThanOrEqual(min - 0.002);
+    await expect
+      .poll(async () => (await domainExtents(page))[0].max)
+      .toBeLessThanOrEqual(max + 0.002);
     // Keep the parabola's finite endpoints visible in the visual QA capture.
     if (name === "parabola")
       await page.getByRole("button", { name: "Zoom out", exact: true }).click();

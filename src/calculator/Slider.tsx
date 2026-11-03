@@ -42,6 +42,8 @@ export function Slider({
   const [open, setOpen] = useState(false);
   const latest = useRef({ value, range: track, onValue, speed, mode });
   latest.current = { value, range: track, onValue, speed, mode };
+  const running = useRef(false);
+  running.current = playing;
   const position = useRef(value);
   const direction = useRef(1);
 
@@ -49,6 +51,7 @@ export function Slider({
     if (!playing) return;
     position.current = latest.current.value;
     const timer = setInterval(() => {
+      if (!running.current) return;
       const {
         value: shown,
         range: r,

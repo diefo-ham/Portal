@@ -246,7 +246,7 @@ function contentKey(q: Question) {
 
 export function validDocumentSource(src: string) {
   return (
-    /^asset:[a-f0-9]{64}\.webp$/.test(src) ||
+    /^asset:[a-f0-9]{64}\.(webp|png)$/.test(src) ||
     /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(src)
   );
 }

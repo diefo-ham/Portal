@@ -135,7 +135,19 @@ test("Offline curve tracing and parameter dragging label the point on the graph"
   await openCalculator(page);
   await enterExpression(page, 1, "y=x");
   const graph = page.locator(".graph-plane");
-  const bounds = (await graph.boundingBox())!;
+  // Measure the graph only once it has stopped changing size.
+  let bounds = (await graph.boundingBox())!;
+  await expect
+    .poll(async () => {
+      const now = (await graph.boundingBox())!;
+      const same =
+        now.width === bounds.width &&
+        now.height === bounds.height &&
+        now.x === bounds.x;
+      bounds = now;
+      return same;
+    })
+    .toBe(true);
   const position = (x: number, y: number) => ({
     x: bounds.x + ((x + 10) / 20) * bounds.width,
     y: bounds.y + ((10 - y) / 20) * bounds.height,
