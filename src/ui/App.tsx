@@ -22,7 +22,11 @@ import { Help } from "./Help";
 import { ResetProgress } from "./ResetProgress";
 import { ClearData } from "./ClearData";
 import { applyUpdate, subscribeToUpdates, updateReady } from "../updates";
-import { eraseAllLocalData, removeQuestionLibrary } from "../storage/localData";
+import {
+  eraseAllLocalData,
+  removeQuestionLibrary,
+  storageErrorMessage,
+} from "../storage/localData";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { Browse } from "./Browse";
 import { PdfPrepare } from "./PdfPrepare";
@@ -72,7 +76,7 @@ export function App() {
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(storageErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -538,7 +542,8 @@ export function App() {
               </p>
               <p className="small muted">
                 Everything lives in this browser, so clearing its site data for{" "}
-                {location.origin} also removes it.
+                {location.origin} also removes it. Safari can also clear a
+                site's data after about a week without a visit.
               </p>
             </section>
           </section>

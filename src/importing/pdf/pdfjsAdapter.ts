@@ -43,6 +43,16 @@ async function canvasToBlob(canvas: AnyCanvas, type: string): Promise<Blob> {
   return blob;
 }
 
+/** Real exports are letter-sized; a page this large would exhaust the browser's memory. */
+const MAX_RENDER_PIXELS = 40_000_000;
+
+function checkPageSize(width: number, height: number) {
+  if (width * height * RENDER_SCALE * RENDER_SCALE > MAX_RENDER_PIXELS)
+    throw new Error(
+      "A page in this PDF is far larger than a College Board export, so it was not opened. Choose the exports as downloaded.",
+    );
+}
+
 export interface ExportDocument {
   pageCount: number;
   layout(pageNumber: number): Promise<PageLayout>;
@@ -60,6 +70,10 @@ export async function openExport(data: Uint8Array): Promise<ExportDocument> {
     if (rendered?.page === pageNumber) return rendered.context;
     const page = await doc.getPage(pageNumber);
     const viewport = page.getViewport({ scale: RENDER_SCALE });
+    checkPageSize(
+      viewport.width / RENDER_SCALE,
+      viewport.height / RENDER_SCALE,
+    );
     const canvas = makeCanvas(
       Math.ceil(viewport.width),
       Math.ceil(viewport.height),
@@ -94,6 +108,7 @@ export async function openExport(data: Uint8Array): Promise<ExportDocument> {
     async layout(pageNumber) {
       const page = await doc.getPage(pageNumber);
       const [left, bottom, right, top] = page.view;
+      checkPageSize(right - left, top - bottom);
       const { items } = await page.getTextContent();
       const layout = layoutPage(
         fragmentsFromItems(items, top),

@@ -134,7 +134,7 @@ export function CalculatorPanel({
     );
   };
   return createPortal(
-    <aside
+    <div
       className={`calculator-sheet ${moving ? "window-moving" : ""}`}
       aria-label="Calculator panel"
       role="dialog"
@@ -222,7 +222,7 @@ export function CalculatorPanel({
             onKeyDown={(e) => keyboardGeometry(e, "resize")}
           />
         ))}
-    </aside>,
+    </div>,
     document.body,
   );
 }

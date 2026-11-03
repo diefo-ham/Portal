@@ -7,6 +7,7 @@ import {
   type UpdateOptions,
 } from "../storage/database";
 import type { ResetArchive } from "../storage/resetArchive";
+import { keepStorage, storageErrorMessage } from "../storage/localData";
 import { loadPreparedLibrary } from "../importing/preparedLibrary";
 export function useStudy() {
   const [data, setData] = useState<StudyData>();
@@ -40,7 +41,7 @@ export function useStudy() {
         if (options) setArchive(await readResetArchive());
         return next;
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(storageErrorMessage(e));
         throw e;
       } finally {
         setWrites((n) => n - 1);
@@ -57,6 +58,8 @@ export function useStudy() {
       try {
         const outcome = await work();
         setData(outcome.result.data);
+        // Prepared questions are the one thing that is slow to rebuild.
+        void keepStorage();
         return outcome;
       } finally {
         setWrites((n) => n - 1);

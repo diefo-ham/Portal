@@ -42,3 +42,24 @@ export async function storageUsage(): Promise<number | undefined> {
     return undefined;
   }
 }
+
+/**
+ * Asks the browser not to clear this site's data when it runs short of space.
+ * Best effort: some browsers decide on their own and the answer can be no.
+ */
+export async function keepStorage(): Promise<boolean> {
+  try {
+    if (await navigator.storage?.persisted?.()) return true;
+    return (await navigator.storage?.persist?.()) ?? false;
+  } catch {
+    return false;
+  }
+}
+
+/** Words a person can act on for a failed save, instead of the browser's own. */
+export function storageErrorMessage(error: unknown): string {
+  const name = (error as { name?: unknown } | null)?.name;
+  if (name === "QuotaExceededError")
+    return "This browser has no space left to save. Free up space in Settings (Free up space), or make room on this computer, then try again.";
+  return error instanceof Error ? error.message : String(error);
+}

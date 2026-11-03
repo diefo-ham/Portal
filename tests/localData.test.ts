@@ -11,7 +11,9 @@ import {
 } from "../src/storage/database";
 import {
   eraseAllLocalData,
+  keepStorage,
   removeQuestionLibrary,
+  storageErrorMessage,
 } from "../src/storage/localData";
 
 const seed = async () => {
@@ -58,5 +60,19 @@ describe("clearing local data", () => {
     expect(data.questions).toEqual([]);
     expect(data.attempts).toEqual([]);
     expect((await assetKeys()).size).toBe(0);
+  });
+});
+
+describe("storage failures", () => {
+  it("explains a full disk in plain words and passes other errors through", () => {
+    const full = new DOMException("quota", "QuotaExceededError");
+    expect(storageErrorMessage(full)).toMatch(/no space left/);
+    expect(storageErrorMessage(full)).toMatch(/Free up space/);
+    expect(storageErrorMessage(new Error("Save failed."))).toBe("Save failed.");
+    expect(storageErrorMessage("odd")).toBe("odd");
+  });
+  it("asks for lasting storage without failing where it is unsupported", async () => {
+    // Node has no navigator.storage; the request must simply answer no.
+    await expect(keepStorage()).resolves.toBe(false);
   });
 });
