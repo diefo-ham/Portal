@@ -2141,8 +2141,13 @@ figcaption {
   background: var(--incorrect-surface);
 }
 .clear-data .row {
-  gap: 18px;
+  display: flex;
+  gap: 12px;
   flex-wrap: wrap;
+}
+.clear-data .text-button {
+  padding: 8px 16px;
+  border-color: var(--line);
 }
 .reset-maintenance {
   margin-top: 36px;
