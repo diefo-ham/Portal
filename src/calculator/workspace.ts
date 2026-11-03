@@ -64,6 +64,8 @@ export type GraphObject = {
       color: number;
       fn: (x: number, y: number) => number;
       affine?: AffineInequality;
+      /** Shade where fn(x, y) satisfies this comparison with 0 (curved regions). */
+      region?: Relation;
     }
   | {
       kind: "points";
@@ -125,7 +127,10 @@ function parseEntry(text: string): Parsed {
   }
   // Comparisons inside a postfix domain belong to the expression AST, not to
   // the row's equation/inequality grammar.
-  const body = text.split("{")[0];
+  const brace = text.indexOf("{");
+  // In y={x<0:-x,x} the braces are the right-hand side, not a domain restriction.
+  const body =
+    brace > 0 && /=\s*$/.test(text.slice(0, brace)) ? text : text.split("{")[0];
   const relation = body.match(/^(.+?)(<=|>=|=|<|>)(.+)$/);
   if (relation) {
     const [, left, op] = relation;
@@ -148,6 +153,43 @@ function parseEntry(text: string): Parsed {
       b: scalar(right),
       relation: op,
     };
+  }
+  // [(1,2),(3,4)] is a list of points: lists of x and of y coordinates.
+  if (text.startsWith("[(") && text.endsWith(")]")) {
+    const pairs: [string, string][] = [];
+    let depth = 0,
+      start = 1;
+    const inner = text.slice(0, -1);
+    const split = (piece: string): [string, string] | undefined => {
+      if (!piece.startsWith("(") || !piece.endsWith(")")) return undefined;
+      const body = piece.slice(1, -1);
+      let level = 0;
+      for (let i = 0; i < body.length; i++) {
+        if (body[i] === "(" || body[i] === "[") level++;
+        if (body[i] === ")" || body[i] === "]") level--;
+        if (body[i] === "," && level === 0)
+          return [body.slice(0, i), body.slice(i + 1)];
+      }
+      return undefined;
+    };
+    let ok = true;
+    for (let i = 1; i <= inner.length && ok; i++) {
+      const char = inner[i];
+      if (char === "(" || char === "[") depth++;
+      if (char === ")" || char === "]") depth--;
+      if (depth === 0 && (char === "," || i === inner.length)) {
+        const pair = split(inner.slice(start, i).trim());
+        if (pair) pairs.push(pair);
+        else ok = false;
+        start = i + 1;
+      }
+    }
+    if (ok && pairs.length >= 1 && pairs.length <= 200)
+      return {
+        type: "point",
+        a: scalar(`[${pairs.map((pair) => pair[0]).join(",")}]`),
+        b: scalar(`[${pairs.map((pair) => pair[1]).join(",")}]`),
+      };
   }
   if (text.startsWith("(") && text.endsWith(")")) {
     const body = text.slice(1, -1);
@@ -1214,10 +1256,20 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
           if (
             !(p.left === "y" && !bDeps.has("y")) &&
             !(p.left === "x" && !bDeps.has("x") && !bDeps.has("y"))
-          )
-            throw new Error(
-              "Implicit inequalities must be affine in x and y (Ax + By + C < 0). Nonlinear implicit inequalities are unsupported.",
-            );
+          ) {
+            // Curved regions such as x^2+y^2<=9: shade where left - right
+            // satisfies the comparison, with the boundary drawn on top.
+            add({
+              kind: "implicit",
+              id: entry.id,
+              color,
+              fn: (x, y) => evaluate(p.a, { x, y }) - evaluate(p.b, { x, y }),
+              region: p.relation as Relation,
+            });
+            results[entry.id].message =
+              "Shading is drawn from the graph window and is approximate near the edge.";
+            return;
+          }
         }
         if (p.left === "y" && !bDeps.has("y"))
           add({

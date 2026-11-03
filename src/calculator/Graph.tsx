@@ -7,6 +7,7 @@ import {
   type Viewport,
 } from "./model";
 import {
+  implicitRegion,
   implicitSegments,
   interests,
   equalScaleViewport,
@@ -144,7 +145,11 @@ export function Graph({
                   ),
           };
         if (g.kind === "implicit")
-          return { graph: g, segments: implicitSegments(g.fn, view) };
+          return {
+            graph: g,
+            segments: implicitSegments(g.fn, view),
+            shade: g.region ? implicitRegion(g.fn, g.region, view) : undefined,
+          };
         return { graph: g };
       }),
     [graphs, view, width, height],
@@ -568,7 +573,7 @@ export function Graph({
           </text>
         </g>
         <g clipPath={`url(#${id})`}>
-          {geometry.map(({ graph: g, paths, xs, segments, region }) => (
+          {geometry.map(({ graph: g, paths, xs, segments, region, shade }) => (
             <g
               key={g.id}
               className={`graph-color-${g.color % 8}`}
@@ -645,9 +650,25 @@ export function Graph({
                   />
                 </g>
               ))}
+              {shade && shade.length > 0 && (
+                <path
+                  className="graph-shade"
+                  d={shade
+                    .map(
+                      (r) =>
+                        `M${px(r.x0)},${py(r.y1)}H${px(r.x1)}V${py(r.y0)}H${px(r.x0)}Z`,
+                    )
+                    .join("")}
+                />
+              )}
               {segments && (
                 <path
                   className="graph-curve"
+                  strokeDasharray={
+                    g.kind === "implicit" && g.region?.length === 1
+                      ? "7 5"
+                      : undefined
+                  }
                   d={segments.map(([a, b]) => path([a, b])).join("")}
                 />
               )}

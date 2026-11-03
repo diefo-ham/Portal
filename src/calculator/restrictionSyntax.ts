@@ -11,6 +11,9 @@ export function restrictionSource(
       `Malformed ${kind} restriction. Use comparisons such as {0<x<=5}.`,
     );
   const start = source.indexOf("{");
+  // y={x<0:-x,x}: braces right after "=" are a piecewise value, not a restriction.
+  if (start > 0 && /=\s*$/.test(source.slice(0, start)))
+    return { body: source, comparisons: [] as ComparisonSource[] };
   if (start < 0) {
     if (source.includes("}")) throw malformed();
     return { body: source, comparisons: [] as ComparisonSource[] };

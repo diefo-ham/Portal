@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1 --port 4317 --strictPort",
     "build": "tsc -b && vite build",
     "start": "node scripts/serve.mjs",
-    "test": "vitest run tests/core.test.ts tests/pdf.test.ts tests/pdfText.test.ts tests/pdfPanels.test.ts tests/pdfPrepare.test.ts tests/assets.test.ts tests/localData.test.ts tests/updates.test.ts tests/calculator.test.ts tests/practiceTest.test.ts tests/affine.test.ts tests/finiteSystems.test.ts tests/protection.test.ts",
+    "test": "vitest run tests/core.test.ts tests/pdf.test.ts tests/pdfText.test.ts tests/pdfPanels.test.ts tests/pdfPrepare.test.ts tests/assets.test.ts tests/localData.test.ts tests/updates.test.ts tests/calculatorGaps.test.ts tests/calculator.test.ts tests/practiceTest.test.ts tests/affine.test.ts tests/finiteSystems.test.ts tests/protection.test.ts",
     "test:e2e": "playwright test",
     "prebuild": "node scripts/update-notices.mjs",
     "licenses": "node scripts/update-notices.mjs",

@@ -557,7 +557,8 @@ describe("floating window bounds and parameter points", () => {
       expect(result?.parameters?.a).toBeCloseTo(3, 6);
       expect(result?.parameters?.b).toBeCloseTo(0.5, 6);
     }
-    expect(() =>
+    // Models that are not linear in their parameters are fitted numerically.
+    expect(
       customRegression(
         [
           { x: 1, y: 2 },
@@ -566,8 +567,8 @@ describe("floating window bounds and parameter points", () => {
         "a*sin(b*x)",
         ["a", "b"],
         "radians",
-      ),
-    ).toThrow("nonlinear");
+      ).rmse,
+    ).toBeCloseTo(0, 8);
     expect(() =>
       customRegression([{ x: 1, y: 2 }], "a*x+b", ["a", "b"], "radians"),
     ).toThrow();
@@ -684,12 +685,14 @@ describe("floating window bounds and parameter points", () => {
     expect(result?.parameters?.c).toBeCloseTo(1, 10);
     expect(result?.fit?.r2).toBeCloseTo(1, 10);
     expect(result?.fit?.predict(3)).toBeCloseTo(19, 10);
-    const invalid = workspace("x_1=[1,2,3]", "y_1=[2,4,8]", "y_1~a*sin(b*x_1)");
-    expect(
-      Object.values(invalid.results).some((result) =>
-        result.error?.includes("nonlinear"),
-      ),
-    ).toBe(true);
+    const sinusoid = workspace(
+      "x_1=[1,2,3]",
+      "y_1=[2,4,8]",
+      "y_1~a*sin(b*x_1)",
+    );
+    expect(Object.values(sinusoid.results).some((result) => result.error)).toBe(
+      false,
+    );
   });
 });
 
@@ -867,7 +870,8 @@ describe("Offline relation architecture and domain correctness", () => {
     expect(last("[n,n]~[1,2,3]").error).toContain("same length");
     expect(last("[n]~[[1,2]]").error).toContain("flat list");
     expect(last("[a+b,a+b]~[1,2]").error).toContain("underdetermined");
-    expect(last("[sin(n),sin(n+1)]~[1,2]").error).toContain("nonlinear");
+    // No n makes both true, so this is a least-squares compromise, not an error.
+    expect(last("[sin(n),sin(n+1)]~[1,2]").error).toBeUndefined();
     const polynomial = last(
       "x_1=[1...100]",
       "(1/2 x_1+3/2)(3/2 x_1+1/2)~a x_1^2+b x_1+c",
@@ -1000,7 +1004,7 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(evaluate("lcm(6,8)")).toBe(24);
     expect(evaluate("nCr(6,2)")).toBe(15);
     expect(evaluate("nPr(6,2)")).toBe(30);
-    expect(evaluate("nCr(2,6)")).toBeNaN();
+    expect(evaluate("nCr(2,6)")).toBe(0); // as in Desmos
     expect(scalarTex(scalar("nCr(6,2)"))).toContain("\\operatorname{nCr}");
   });
   it("converts supported structural LaTeX without evaluating commands", () => {
@@ -1168,7 +1172,6 @@ describe("offline calculator arithmetic and syntax", () => {
     "[1,2]",
     'evaluate("2+2")',
     "1:999999",
-    "3!",
     "2;3",
   ])("blocks unsupported or unsafe syntax %s", (s) => {
     expect(() => scalar(s).value({}, {}, "radians")).toThrow();
@@ -1222,9 +1225,10 @@ describe("offline calculator arithmetic and syntax", () => {
       "vertical",
       "implicit",
     ]);
-    expect(Object.values(workspace("x^2+y^2<25").results)[0].error).toContain(
-      "Implicit inequalities",
-    );
+    // Curved regions are shaded from the graph window, not rejected.
+    const disc = workspace("x^2+y^2<25");
+    expect(Object.values(disc.results)[0].error).toBeUndefined();
+    expect(disc.graphs[0].kind).toBe("implicit");
   });
 });
 describe("bounded graph calculations", () => {

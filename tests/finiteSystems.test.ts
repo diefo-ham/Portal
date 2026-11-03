@@ -468,7 +468,10 @@ describe("finite-system regression compatibility", () => {
       "y_1=[2,4,9]",
       "y_1~a*b^x_1+c",
     );
-    expect(nonlinearData.error).toContain("nonlinear");
+    // Not linear in b, so it is fitted numerically; these three points are matched exactly.
+    expect(nonlinearData.error).toBeUndefined();
+    expect(nonlinearData.fit?.rmse).toBeCloseTo(0, 6);
+    expect(nonlinearData.parameters?.b).toBeCloseTo(2.5, 6);
     expect(nonlinearData.systemKind).toBeUndefined();
   });
 });

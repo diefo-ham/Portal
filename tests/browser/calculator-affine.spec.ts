@@ -142,11 +142,17 @@ test("affine comparisons shade the correct half-plane and use strict/inclusive b
       .toBe(sample.strict ? "7 5" : null);
     await expect(() => boundary(group, sample.a, sample.b, sample.c)).toPass();
   }
+  // A curved region is shaded too: inside the circle, not outside it.
   await enterExpression(page, 1, "x^2+y^2<9");
-  await expect(page.locator(".calc-error")).toContainText(
-    "Nonlinear implicit inequalities are unsupported",
-  );
-  await expect(page.locator("[data-graph-id]")).toHaveCount(0);
+  await expect(page.locator(".calc-error")).toHaveCount(0);
+  const disc = page.locator("[data-graph-id]").first();
+  await expect(disc.locator(".graph-shade")).toHaveCount(1);
+  await expect.poll(() => filled(disc, 0, 0)).toBe(true);
+  await expect.poll(() => filled(disc, 2, 2)).toBe(true);
+  await expect.poll(() => filled(disc, 5, 5)).toBe(false);
+  await expect
+    .poll(() => disc.locator(".graph-curve").getAttribute("stroke-dasharray"))
+    .toBe("7 5");
 });
 
 test("multiple regions retain shading and boundary inspection after pan, zoom, scalar edits and reload", async ({

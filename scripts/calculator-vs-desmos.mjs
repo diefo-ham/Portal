@@ -161,7 +161,8 @@ if (wanted("syntax"))
   for (const [label, ours, theirs] of syntax) {
     const w = run([expr("e", ours)]);
     const r = w.results.e ?? {};
-    const mine = w.threw || r.error ? "rejected" : "accepted";
+    // Desmos offers a slider for an undefined variable; so does Offline ("Add t slider").
+    const mine = w.threw || r.error ? (w.missing?.length ? "accepted" : "rejected") : "accepted";
     const d = await desmos({ exprs: [{ id: "e", latex: tex(theirs) }], probes: [] });
     const a = d.analysis.e;
     const other = !a || a.isError ? "rejected" : "accepted";

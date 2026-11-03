@@ -63,7 +63,7 @@ export const values = [
   ["round half up", "round(0.5)", "@operatorname{round}(0.5)", { expect: 1 }],
   ["round half of a negative", "round(-2.5)", "@operatorname{round}(-2.5)", { expect: -2 }],
   ["modulo of a negative", "mod(-7,3)", "@operatorname{mod}(-7,3)", { expect: 2 }],
-  ["zero to the zero", "0^0", "0^{0}", { expect: null }],
+  ["zero to the zero", "0^0", "0^{0}", { expect: 1 }],
   ["odd root of a negative", "(-8)^(1/3)", "(-8)^{@frac{1}{3}}", { expect: -2 }],
   ["cube root of a negative", "cbrt(-8)", "@sqrt[3]{-8}", { expect: -2 }],
   ["combinations too large", "nCr(5,7)", "@operatorname{nCr}(5,7)", { expect: 0 }],
@@ -204,5 +204,5 @@ export const syntax = [
   ["trailing operator", "3+", "3+"],
   ["empty-looking text", "...", "..."],
   ["assignment of an expression", "m=2*3+1", "m=2@cdot 3+1"],
-  ["sum notation", "sum(n,1,4,n^2)", "@sum_{n=1}^{4}n^2"],
+  ["sum notation", "sum(n^2,n,1,4)", "@sum_{n=1}^{4}n^2"],
 ];

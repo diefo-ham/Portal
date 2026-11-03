@@ -3,6 +3,7 @@ import type { FitModel, Point } from "./model";
 import { scalar, type Angle, type Scalar } from "./math";
 import type { MathNode } from "mathjs";
 import type { ParameterBounds } from "./relations";
+import { nonlinearLeastSquares } from "./nonlinearFit";
 
 export interface Fit {
   coefficients: number[]; // increasing powers of x; exponential: a, b in a*b^x
@@ -15,6 +16,19 @@ export interface Fit {
   /** Estimated numerical resolution per coefficient, for presentation only. */
   coefficientTolerance?: number[];
   custom?: { formula: string; names: string[] };
+}
+
+const NONLINEAR = "Calculator nonlinear list fitting is unsupported";
+/** True when the model has parameters inside functions or powers, not just a straight sum. */
+export function isNonlinearInParameters(node: MathNode, names: string[]) {
+  try {
+    assertAffineParameters(node, names);
+    return false;
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith(NONLINEAR))
+      return true;
+    throw error;
+  }
 }
 
 export function assertAffineParameters(node: MathNode, names: string[]): void {
@@ -81,7 +95,7 @@ export function relationRegression(
 ): Fit {
   if (names.length < 1 || names.length > 5)
     throw new Error("Use between one and five free regression parameters.");
-  assertAffineParameters(relation.node, names);
+  const nonlinear = isNonlinearInParameters(relation.node, names);
   const zero = Object.fromEntries(names.map((name) => [name, 0]));
   const vector = (parameters: Record<string, number>) => {
     const value = relation.evaluate(
@@ -91,6 +105,32 @@ export function relationRegression(
     );
     return Array.isArray(value) ? value : [value];
   };
+  if (nonlinear) {
+    const found = nonlinearLeastSquares(
+      names.length,
+      (values) => {
+        const result = vector(
+          Object.fromEntries(names.map((name, i) => [name, values[i]])),
+        );
+        return result.every(Number.isFinite) ? result : undefined;
+      },
+      names.map((name) => bounds[name]),
+    );
+    if (!found)
+      throw new Error(
+        "No fit was found. Try different data or a different model.",
+      );
+    const residuals = vector(
+      Object.fromEntries(names.map((name, i) => [name, found.parameters[i]])),
+    );
+    return {
+      coefficients: found.parameters,
+      predict: () => NaN,
+      residuals,
+      rmse: Math.sqrt(found.sse / residuals.length),
+      logSpace: false,
+    };
+  }
   const offset = vector(zero);
   if (!offset.length || offset.some((value) => !Number.isFinite(value)))
     throw new Error("The regression relation is undefined in its data domain.");
@@ -241,12 +281,40 @@ export function customRegression(
     throw new Error(
       "Use up to five single-letter parameters and built-in functions.",
     );
-  assertAffineParameters(expression.node, names);
+  const nonlinear = isNonlinearInParameters(expression.node, names);
   if (
     points.length < names.length ||
     points.some((p) => ![p.x, p.y].every(Number.isFinite))
   )
     throw new Error(`Use at least ${names.length} complete finite points.`);
+  if (nonlinear) {
+    const model = (x: number, values: number[]) =>
+      expression.value(
+        { ...Object.fromEntries(names.map((name, i) => [name, values[i]])), x },
+        {},
+        angle,
+      );
+    const found = nonlinearLeastSquares(names.length, (values) => {
+      const result = points.map((p) => p.y - model(p.x, values));
+      return result.every(Number.isFinite) ? result : undefined;
+    });
+    if (!found)
+      throw new Error(
+        "No fit was found. Try different data or a different model.",
+      );
+    const residuals = points.map((p) => p.y - model(p.x, found.parameters));
+    const mean = points.reduce((sum, p) => sum + p.y / points.length, 0);
+    const sst = points.reduce((sum, p) => sum + (p.y - mean) ** 2, 0);
+    return {
+      coefficients: found.parameters,
+      predict: (x) => model(x, found.parameters),
+      residuals,
+      rmse: Math.sqrt(found.sse / points.length),
+      r2: sst > 0 ? 1 - found.sse / sst : undefined,
+      logSpace: false,
+      custom: { formula, names },
+    };
+  }
   const zero = Object.fromEntries(names.map((name) => [name, 0]));
   const evaluate = (x: number, parameters: Record<string, number>) =>
     expression.value({ ...parameters, x }, {}, angle);

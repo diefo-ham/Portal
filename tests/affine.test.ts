@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { calculateWorkspace } from "../src/calculator/workspace";
 import { emptyCalculator, newExpression } from "../src/calculator/model";
 import { clipAffineInequality } from "../src/calculator/affine";
-import { interests } from "../src/calculator/numerics";
+import { implicitRegion, interests } from "../src/calculator/numerics";
 
 const workspace = (...sources: string[]) =>
   calculateWorkspace({
@@ -154,18 +154,32 @@ describe("SAT affine inequalities", () => {
       }
   });
 
-  it("rejects nonlinear implicit inequalities clearly and retains existing explicit curves", () => {
-    for (const source of [
-      "x^2+y^2<9",
-      "x*y<=2",
-      "f(t)=t^2\ny+f(x)<9".split("\n"),
-    ]) {
-      const w = workspace(...(typeof source === "string" ? [source] : source));
-      expect(Object.values(w.results).at(-1)?.error).toMatch(
-        /Nonlinear implicit inequalities are unsupported/,
-      );
-      expect(Object.values(w.results).at(-1)?.graphable).not.toBe(true);
+  it("shades curved implicit inequalities and retains existing explicit curves", () => {
+    const view = { xMin: -5, xMax: 5, yMin: -5, yMax: 5 };
+    const covers = (
+      rectangles: { x0: number; x1: number; y0: number; y1: number }[],
+      x: number,
+      y: number,
+    ) =>
+      rectangles.some((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
+    for (const [source, inside, outside, op] of [
+      ["x^2+y^2<9", [0, 0], [4, 4], "<"],
+      ["x*y<=2", [1, 1], [3, 3], "<="],
+      ["x^2+y^2>=16", [4.5, 0], [0, 0], ">="],
+    ] as const) {
+      const w = workspace(source);
+      const graph = w.graphs[0];
+      expect(Object.values(w.results)[0].error).toBeUndefined();
+      expect(graph.kind).toBe("implicit");
+      if (graph.kind !== "implicit") continue;
+      expect(graph.region).toBe(op);
+      const region = implicitRegion(graph.fn, graph.region!, view);
+      expect(covers(region, inside[0], inside[1])).toBe(true);
+      expect(covers(region, outside[0], outside[1])).toBe(false);
     }
+    const sum = workspace("f(t)=t^2", "y+f(x)<9");
+    expect(Object.values(sum.results).at(-1)?.error).toBeUndefined();
+    expect(sum.graphs.at(-1)?.kind).toBe("implicit");
     expect(workspace("y>x^2").graphs[0].kind).toBe("function");
     expect(workspace("y=x^2{-1<x<2}").graphs[0].kind).toBe("function");
     const restricted = workspace("y>x{-1<x<2}").graphs[0];

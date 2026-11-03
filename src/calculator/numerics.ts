@@ -409,6 +409,57 @@ export function sampleFunction(
   return paths;
 }
 
+/**
+ * Rectangles (in graph coordinates) covering the cells of the window where
+ * fn(x, y) satisfies `op` with 0. Cells in a row that touch are merged, so the
+ * result stays small. Cells are judged at their centre; edges are approximate.
+ */
+export function implicitRegion(
+  fn: (x: number, y: number) => number,
+  op: "<" | "<=" | ">" | ">=",
+  view: Viewport,
+  columns = 160,
+  rows = 120,
+): { x0: number; x1: number; y0: number; y1: number }[] {
+  const width = (view.xMax - view.xMin) / columns,
+    height = (view.yMax - view.yMin) / rows;
+  const holds = (value: number) =>
+    op === "<"
+      ? value < 0
+      : op === "<="
+        ? value <= 0
+        : op === ">"
+          ? value > 0
+          : value >= 0;
+  const rectangles: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  for (let j = 0; j < rows; j++) {
+    const y0 = view.yMin + j * height;
+    let start = -1;
+    for (let i = 0; i <= columns; i++) {
+      let inside = false;
+      if (i < columns) {
+        try {
+          const value = fn(view.xMin + (i + 0.5) * width, y0 + height / 2);
+          inside = Number.isFinite(value) && holds(value);
+        } catch {
+          inside = false;
+        }
+      }
+      if (inside && start < 0) start = i;
+      if (!inside && start >= 0) {
+        rectangles.push({
+          x0: view.xMin + start * width,
+          x1: view.xMin + i * width,
+          y0,
+          y1: y0 + height,
+        });
+        start = -1;
+      }
+    }
+  }
+  return rectangles;
+}
+
 export function implicitSegments(
   fn: (x: number, y: number) => number,
   view: Viewport,
