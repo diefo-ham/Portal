@@ -2,6 +2,22 @@ import { test, expect, type Page } from "@playwright/test";
 import type { StudyData } from "../../src/core/model";
 import { testCorpus } from "../practiceTestFixtures";
 import { enterExpression, expectExpression } from "./math-input";
+/**
+ * Opens or closes the calculator with its shortcut. The key handler is attached
+ * a moment after a screen renders, so a key sent in that gap is lost: press again
+ * until the calculator is in the wanted state, and never press once it is.
+ */
+async function calculatorByKey(page: Page, open: boolean) {
+  const close = page.getByRole("button", {
+    name: "Close calculator",
+    exact: true,
+  });
+  await expect(async () => {
+    if ((await close.isVisible()) !== open)
+      await page.keyboard.press("Backslash");
+    await expect(close).toBeVisible({ visible: open, timeout: 1000 });
+  }).toPass();
+}
 async function read(page: Page): Promise<StudyData> {
   return page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve) => {
@@ -312,11 +328,8 @@ test("standalone stopwatch, shared answering, map, calculator, resume and scored
     .getByRole("button", { name: "Mark for review", exact: true })
     .click();
   await expect(a).toBeEnabled();
-  await page.keyboard.press("Backslash");
-  await expect(
-    page.getByRole("button", { name: "Close calculator", exact: true }),
-  ).toBeVisible();
-  await page.keyboard.press("Backslash");
+  await calculatorByKey(page, true);
+  await calculatorByKey(page, false);
   await expect(
     page.getByRole("button", { name: "Close calculator", exact: true }),
   ).toHaveCount(0);
@@ -459,6 +472,8 @@ test("pause freezes both clocks, blocks the test surface, survives reload, and l
   await start(page, "math:first", "untimed");
   const stopwatch = page.getByLabel("Module elapsed time");
   await page.clock.fastForward("00:03");
+  // The display catches up with the clock a moment later; pause only after it has.
+  await expect(stopwatch).not.toHaveText("0:00");
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Your time is frozen." }),
@@ -593,9 +608,9 @@ test("full test routes and locks modules, resumes the break, skips early, and co
   await expect(
     page.getByText("Math · Module 1", { exact: true }),
   ).toBeVisible();
-  await page.keyboard.press("Backslash");
+  await calculatorByKey(page, true);
   await enterExpression(page, 1, "y=x^2-4");
-  await page.keyboard.press("Backslash");
+  await calculatorByKey(page, false);
   await finish(page);
   await expect(
     page.getByText("Math · Module 2", { exact: true }),

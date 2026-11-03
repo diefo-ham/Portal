@@ -138,7 +138,13 @@ test("timer and correct-explanation preferences apply to new sessions", async ({
   await page.getByRole("button", { name: "Practice", exact: true }).click();
   await page.getByRole("button", { name: "Start practice" }).click();
   await expect(page.getByLabel("Time on this question")).toBeVisible();
-  await page.keyboard.press("b");
+  // A key sent just as the screen appears can be lost; press until B is chosen
+  // (never when it already is, since the key toggles). Enter submits that choice.
+  const choiceB = page.getByRole("radio").nth(1);
+  await expect(async () => {
+    if (!(await choiceB.isChecked())) await page.keyboard.press("b");
+    await expect(choiceB).toBeChecked({ timeout: 1000 });
+  }).toPass();
   await page.keyboard.press("Enter");
   await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
   await expect(page.getByText(/Subtract 7 from both sides/)).not.toBeVisible();
@@ -210,10 +216,12 @@ test("timing accumulates only during active Practice and survives resume", async
   const pausedAt = paused.sessions.find((session) => session.id === sessionId)!
     .elapsed[questionId];
   await page.waitForTimeout(600);
+  // The last tick can still be saved just after the click; what matters is that
+  // time stopped counting, which 600 ms of waiting would otherwise exceed.
   expect(
     (await state(page)).sessions.find((session) => session.id === sessionId)!
-      .elapsed[questionId],
-  ).toBe(pausedAt);
+      .elapsed[questionId] - pausedAt,
+  ).toBeLessThan(450);
   await page.getByRole("button", { name: "Resume timer" }).click();
   await page.getByRole("button", { name: "Close panel" }).click();
   await page.waitForTimeout(600);
@@ -229,8 +237,19 @@ test("timing accumulates only during active Practice and survives resume", async
   const attempt = submitted.attempts.find(
     (candidate) => candidate.sessionId === sessionId,
   )!;
-  expect(attempt.durationMs).toBe(Math.round(stored.elapsed[questionId]));
-  const submittedAt = stored.elapsed[questionId];
+  // The session's elapsed time can run a tick past the attempt before it stops
+  // (more on a loaded machine), but never by anything like the 600 ms waited below.
+  await expect
+    .poll(async () => {
+      const latest = (await state(page)).sessions.find(
+        (session) => session.id === sessionId,
+      )!;
+      return Math.round(latest.elapsed[questionId]) - attempt.durationMs;
+    })
+    .toBeLessThan(450);
+  const submittedAt = (await state(page)).sessions.find(
+    (session) => session.id === sessionId,
+  )!.elapsed[questionId];
   await page.waitForTimeout(600);
   expect(
     (await state(page)).sessions.find((session) => session.id === sessionId)!

@@ -61,6 +61,8 @@ test("header order, concise help, and ordinary overlays dismiss outside", async 
   page,
 }) => {
   const nav = page.getByRole("navigation", { name: "Main navigation" });
+  // The header is drawn once the library has loaded; read it only then.
+  await expect(nav.getByRole("button")).toHaveCount(6);
   const labels = await nav
     .getByRole("button")
     .evaluateAll((buttons) =>
