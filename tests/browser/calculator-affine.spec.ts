@@ -28,11 +28,16 @@ async function open(page: Page) {
   );
 }
 
+/** Whether the shading covers a graph point; false while the graph is redrawing. */
 async function filled(group: Locator, x: number, y: number) {
+  return filledNow(group, x, y).catch(() => false);
+}
+async function filledNow(group: Locator, x: number, y: number) {
   return group.locator(".graph-shade").evaluate(
     (element, { x, y }) => {
       const path = element as SVGGeometryElement,
         svg = path.ownerSVGElement!;
+      if (!svg) throw new Error("The shading is being redrawn.");
       const point = svg.createSVGPoint(),
         box = svg.viewBox.baseVal;
       const xMin = Number(svg.dataset.xMin),
