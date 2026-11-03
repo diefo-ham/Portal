@@ -78,11 +78,11 @@ test("typed table-linked regressions clean/export a quadratic and delete natural
       const data = new DataTransfer();
       data.setData("text/plain", "1\t1\n2\t4\n3\t9\n4\t16");
       el.dispatchEvent(
-        new ClipboardEvent("paste", {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: data,
-        }),
+        (() => {
+          const paste = new Event("paste", { bubbles: true, cancelable: true });
+          Object.defineProperty(paste, "clipboardData", { value: data });
+          return paste;
+        })(),
       );
     });
   await expression(page, 2).focus();

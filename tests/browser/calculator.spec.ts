@@ -183,11 +183,11 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
     const clipboardData = new DataTransfer();
     clipboardData.setData("text/plain", "x₁\ty₁\n1\t4\n2\t7\n3\t10");
     el.dispatchEvent(
-      new ClipboardEvent("paste", {
-        bubbles: true,
-        cancelable: true,
-        clipboardData,
-      }),
+      (() => {
+        const paste = new Event("paste", { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, "clipboardData", { value: clipboardData });
+        return paste;
+      })(),
     );
   });
   await table

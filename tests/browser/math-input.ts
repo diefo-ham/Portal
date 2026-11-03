@@ -13,11 +13,11 @@ export async function enterExpression(page: Page, n: number, text: string) {
     const clipboardData = new DataTransfer();
     clipboardData.setData("text/plain", value);
     element.dispatchEvent(
-      new ClipboardEvent("paste", {
-        bubbles: true,
-        cancelable: true,
-        clipboardData,
-      }),
+      (() => {
+        const paste = new Event("paste", { bubbles: true, cancelable: true });
+        Object.defineProperty(paste, "clipboardData", { value: clipboardData });
+        return paste;
+      })(),
     );
   }, text);
 }
