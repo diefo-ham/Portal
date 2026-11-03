@@ -200,3 +200,7 @@ The reviewed-exceptions file moved under an **Advanced** disclosure, and Help ga
 - **No bundled sample questions.** The twelve original examples are now a test fixture (`tests/fixtures/synthetic.json`) only. The empty Home and Browse screens point to Settings → Your questions. Adding PDFs also removes leftover example questions unless the person already has answers or bookmarks on them.
 - **Blank panels are dropped.** About 1% of explanation panels are an entirely empty second page; they were kept at full page height. They are now left out (one panel per kind is always kept). This deliberately differs from the Python tool, so `scripts/pdf-render-check.mjs` counts fewer panels as `droppedBlankPanels` instead of a mismatch.
 - **Free up space.** Settings has "Remove my questions" (keeps answers and bookmarks, ends saved sessions) and "Erase all data on this device" (database, `sat-` settings, offline copy, service worker), with the current storage use from `navigator.storage.estimate()`.
+
+## Decision: questions stay images
+
+A spike checked whether the PDF text layer explains everything drawn in each question image (all 3,770 questions, 7,775 images). Reading & Writing: 1,710 of 1,844 questions (92.7%) were fully text; the rest have tables, charts or no text. Math: 21 of 1,925, because every number, variable and fraction is drawn as shapes, not text. Real text for math would need OCR or a vision model, which cannot run offline or be trusted blindly. The owner chose to keep every question as an image, so the spike script was not kept.
