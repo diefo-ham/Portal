@@ -822,15 +822,18 @@ export function Graph({
       <details className="graph-window">
         <summary>Graph window</summary>
         <p>Bounds expand as needed to keep equal x/y unit scale.</p>
-        <WindowFields
-          key={JSON.stringify(view)}
-          view={view}
-          onView={(next) => changeView(next, true)}
-        />
+        <WindowFields view={view} onView={(next) => changeView(next, true)} />
       </details>
     </section>
   );
 }
+
+const windowKeys = ["xMin", "xMax", "yMin", "yMax"] as const;
+const windowText = (v: Viewport) =>
+  Object.fromEntries(windowKeys.map((key) => [key, String(v[key])])) as Record<
+    (typeof windowKeys)[number],
+    string
+  >;
 
 function WindowFields({
   view,
@@ -839,14 +842,26 @@ function WindowFields({
   view: Viewport;
   onView: (v: Viewport) => void;
 }) {
-  const [draft, setDraft] = useState(view);
+  const [fields, setFields] = useState(() => windowText(view));
+  // Numbers the person is typing are never replaced by a graph that moved or
+  // resized in the meantime; untouched fields follow the graph.
+  const [edited, setEdited] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (!edited) setFields(windowText(view));
+  }, [view, edited]);
   return (
     <form
-      key={JSON.stringify(view)}
       onSubmit={(e) => {
         e.preventDefault();
+        const draft = Object.fromEntries(
+          windowKeys.map((key) => [
+            key,
+            fields[key].trim() === "" ? NaN : Number(fields[key]),
+          ]),
+        ) as unknown as Viewport;
         if (validView(draft)) {
+          setEdited(false);
           onView(draft);
           setError("");
         } else
@@ -855,17 +870,18 @@ function WindowFields({
           );
       }}
     >
-      {(["xMin", "xMax", "yMin", "yMax"] as const).map((key) => (
+      {windowKeys.map((key) => (
         <label key={key}>
           {key}
           <input
             aria-label={key}
             type="number"
             step="any"
-            defaultValue={view[key]}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, [key]: e.target.valueAsNumber }))
-            }
+            value={fields[key]}
+            onChange={(e) => {
+              setEdited(true);
+              setFields((f) => ({ ...f, [key]: e.target.value }));
+            }}
           />
         </label>
       ))}
