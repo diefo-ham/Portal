@@ -20,17 +20,19 @@ import {
 } from "../core/practiceTest";
 import { Practice, time } from "./Practice";
 type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
-export function PracticeTestSetup({
-  data,
-  mutate,
-  onOpen,
-  onSettings,
-}: {
+export type PracticeTestSetupProps = {
   data: StudyData;
   mutate: Mutate;
   onOpen: (id: string) => void;
   onSettings: () => void;
-}) {
+};
+
+export const PracticeTestSetup = ({
+  data,
+  mutate,
+  onOpen,
+  onSettings,
+}: PracticeTestSetupProps) => {
   const [selection, setSelection] = useState<TestSelection>("full");
   const [timing, setTiming] = useState<"timed" | "untimed">("timed");
   const [busy, setBusy] = useState(false);
@@ -343,20 +345,22 @@ export function PracticeTestSetup({
       )}
     </main>
   );
-}
-export function PracticeTestRun({
-  data,
-  session,
-  mutate,
-  onBack,
-  onRetry,
-}: {
+};
+export type PracticeTestRunProps = {
   data: StudyData;
   session: Session;
   mutate: Mutate;
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
-}) {
+};
+
+export const PracticeTestRun = ({
+  data,
+  session,
+  mutate,
+  onBack,
+  onRetry,
+}: PracticeTestRunProps) => {
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -644,4 +648,4 @@ export function PracticeTestRun({
       onCancelTest={cancel}
     />
   );
-}
+};

@@ -56,19 +56,21 @@ const FIRST_THREE: Section[] = ["lectura", "redaccion", "matematicas"];
 const sameParts = (a: readonly Section[], b: readonly Section[]) =>
   a.length === b.length && a.every((part) => b.includes(part));
 
-export function TimedTestSetup({
-  data,
-  mutate,
-  onOpen,
-  removesAnswers = false,
-  onAddQuestions,
-}: {
+export type TimedTestSetupProps = {
   data: StudyData;
   mutate: Mutate;
   onOpen: (id: string) => void;
   removesAnswers?: boolean;
   onAddQuestions?: () => void;
-}) {
+};
+
+export const TimedTestSetup = ({
+  data,
+  mutate,
+  onOpen,
+  removesAnswers = false,
+  onAddQuestions,
+}: TimedTestSetupProps) => {
   const [parts, setParts] = useState<Section[]>(ALL_PARTS);
   const [unusedOnly, setUnusedOnly] = useState(true);
   const [timed, setTimed] = useState(true);
@@ -515,21 +517,23 @@ export function TimedTestSetup({
       )}
     </main>
   );
-}
+};
 
-export function TimedTestRun({
-  data,
-  session,
-  mutate,
-  onBack,
-  onRetry,
-}: {
+export type TimedTestRunProps = {
   data: StudyData;
   session: Session;
   mutate: Mutate;
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
-}) {
+};
+
+export const TimedTestRun = ({
+  data,
+  session,
+  mutate,
+  onBack,
+  onRetry,
+}: TimedTestRunProps) => {
   if (session.finishedAt)
     return (
       <TimedTestResults
@@ -545,7 +549,7 @@ export function TimedTestRun({
   ) : (
     <LiveTest data={data} session={session} mutate={mutate} onBack={onBack} />
   );
-}
+};
 
 /** Between parts: no clock runs until the next part is started. */
 function BreakScreen({

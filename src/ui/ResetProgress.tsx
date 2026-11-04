@@ -1,17 +1,19 @@
 import { useRef, useState } from "react";
 import { useT } from "./i18n";
 
-export function ResetProgress({
-  busy,
-  onConfirm,
-  archiveDate,
-  onRestore,
-}: {
+export type ResetProgressProps = {
   busy: boolean;
   onConfirm: (clearBookmarks: boolean) => Promise<void>;
   archiveDate?: string;
   onRestore: () => Promise<void>;
-}) {
+};
+
+export const ResetProgress = ({
+  busy,
+  onConfirm,
+  archiveDate,
+  onRestore,
+}: ResetProgressProps) => {
   const t = useT();
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -113,4 +115,4 @@ export function ResetProgress({
       </dialog>
     </section>
   );
-}
+};

@@ -10,19 +10,21 @@ import { domainKey, skillKey, taxonomyOptions } from "../core/taxonomy";
 import { useAssessment, useT } from "./i18n";
 import { MultiSelect } from "./MultiSelect";
 export const sectionName = (s: string) => sectionLabel(s);
-export function Filters({
-  data,
-  value,
-  onChange,
-  compact = false,
-  advanced = false,
-}: {
+export type FiltersProps = {
   data: StudyData;
   value: FilterValues;
   onChange: (f: FilterValues) => void;
   compact?: boolean;
   advanced?: boolean;
-}) {
+};
+
+export const Filters = ({
+  data,
+  value,
+  onChange,
+  compact = false,
+  advanced = false,
+}: FiltersProps) => {
   const t = useT();
   const info = assessmentInfo(useAssessment());
   const sections = selectedSections(value);
@@ -215,4 +217,4 @@ export function Filters({
       )}
     </div>
   );
-}
+};

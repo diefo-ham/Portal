@@ -4,16 +4,7 @@ import { sessionOutcomes } from "../core/review";
 import { SESSION_NAME_MAX_LENGTH, sessionDisplayName } from "../core/sessions";
 import { useT } from "./i18n";
 
-export function SessionRow({
-  data,
-  session,
-  onOpen,
-  onRename,
-  onDelete,
-  onToggleStar,
-  onRepractice,
-  removesAnswers = false,
-}: {
+export type SessionRowProps = {
   data: StudyData;
   session: Session;
   onOpen: (id: string) => void;
@@ -22,7 +13,18 @@ export function SessionRow({
   onToggleStar: (id: string) => void;
   onRepractice?: (session: Session) => void;
   removesAnswers?: boolean;
-}) {
+};
+
+export const SessionRow = ({
+  data,
+  session,
+  onOpen,
+  onRename,
+  onDelete,
+  onToggleStar,
+  onRepractice,
+  removesAnswers = false,
+}: SessionRowProps) => {
   const t = useT();
   const label = sessionDisplayName(data, session, t);
   const result = sessionOutcomes(data, session);
@@ -219,4 +221,4 @@ export function SessionRow({
       </dialog>
     </div>
   );
-}
+};

@@ -9,17 +9,19 @@ const size = (bytes: number) =>
     ? `${(bytes / 1e9).toFixed(1)} GB`
     : `${Math.max(1, Math.round(bytes / 1e6))} MB`;
 
-export function ClearData({
-  busy,
-  hasQuestions,
-  onRemoveQuestions,
-  onEraseEverything,
-}: {
+export type ClearDataProps = {
   busy: boolean;
   hasQuestions: boolean;
   onRemoveQuestions: () => Promise<void>;
   onEraseEverything: () => Promise<void>;
-}) {
+};
+
+export const ClearData = ({
+  busy,
+  hasQuestions,
+  onRemoveQuestions,
+  onEraseEverything,
+}: ClearDataProps) => {
   const t = useT();
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -114,4 +116,4 @@ export function ClearData({
       </dialog>
     </section>
   );
-}
+};

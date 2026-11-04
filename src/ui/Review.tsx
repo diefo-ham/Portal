@@ -7,12 +7,7 @@ import { PerformanceOverview } from "./PerformanceOverview";
 import { formatElapsed } from "./formatTime";
 import { useAssessment, useT } from "./i18n";
 
-export function Review({
-  data,
-  protectTests,
-  onStart,
-  onOpen,
-}: {
+export type ReviewProps = {
   data: StudyData;
   protectTests: boolean;
   onStart: (
@@ -20,7 +15,14 @@ export function Review({
     source?: "mistakes" | "unanswered" | "bookmarks",
   ) => void;
   onOpen: (id: string) => void;
-}) {
+};
+
+export const Review = ({
+  data,
+  protectTests,
+  onStart,
+  onOpen,
+}: ReviewProps) => {
   const t = useT();
   const info = assessmentInfo(useAssessment());
   const [visible, setVisible] = useState(5);
@@ -158,4 +160,4 @@ export function Review({
       )}
     </main>
   );
-}
+};

@@ -20,19 +20,7 @@ import { SessionResults, displayAnswer, correctAnswer } from "./SessionResults";
 type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
 export const time = (ms: number) =>
   `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, "0")}`;
-export function Practice({
-  data,
-  session: storedSession,
-  mutate,
-  showCorrectExplanations,
-  onBack,
-  onRetry,
-  testClock,
-  onFinishModule,
-  onPauseTest,
-  onResumeTest,
-  onCancelTest,
-}: {
+export type PracticeProps = {
   testClock?: { label: string; ms: number; warning?: boolean };
   onFinishModule?: () => Promise<unknown>;
   onPauseTest?: () => Promise<unknown>;
@@ -44,7 +32,21 @@ export function Practice({
   showCorrectExplanations: boolean;
   onBack: () => void | Promise<unknown>;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
-}) {
+};
+
+export const Practice = ({
+  data,
+  session: storedSession,
+  mutate,
+  showCorrectExplanations,
+  onBack,
+  onRetry,
+  testClock,
+  onFinishModule,
+  onPauseTest,
+  onResumeTest,
+  onCancelTest,
+}: PracticeProps) => {
   const t = useT();
   const test = storedSession.practiceTest;
   const isTest = !!test && !storedSession.finishedAt;
@@ -1013,4 +1015,4 @@ export function Practice({
       )}
     </main>
   );
-}
+};

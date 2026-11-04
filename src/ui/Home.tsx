@@ -7,20 +7,7 @@ import { Filters } from "./Filters";
 import { SessionCollections, type SessionActions } from "./SessionCollections";
 import { useT } from "./i18n";
 
-export function Home({
-  data,
-  value,
-  onChange,
-  limit,
-  setLimit,
-  busy,
-  protectTests,
-  onStart,
-  sessionActions,
-  onReview,
-  onBrowse,
-  onAddQuestions,
-}: {
+export type HomeProps = {
   data: StudyData;
   value: FilterValues;
   onChange: (value: FilterValues) => void;
@@ -33,7 +20,22 @@ export function Home({
   onReview: () => void;
   onBrowse: () => void;
   onAddQuestions: () => void;
-}) {
+};
+
+export const Home = ({
+  data,
+  value,
+  onChange,
+  limit,
+  setLimit,
+  busy,
+  protectTests,
+  onStart,
+  sessionActions,
+  onReview,
+  onBrowse,
+  onAddQuestions,
+}: HomeProps) => {
   const t = useT();
   const questions = filterQuestions(data, value);
   const maximum = questions.length;
@@ -194,4 +196,4 @@ export function Home({
       )}
     </main>
   );
-}
+};

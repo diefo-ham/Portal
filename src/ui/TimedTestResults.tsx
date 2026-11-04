@@ -19,19 +19,21 @@ import { formatElapsed } from "./formatTime";
  */
 type Scope = "overall" | Section;
 
-export function TimedTestResults({
-  data,
-  session,
-  mutate,
-  onBack,
-  onRetry,
-}: {
+export type TimedTestResultsProps = {
   data: StudyData;
   session: Session;
   mutate: (fn: (data: StudyData) => void) => Promise<StudyData>;
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
-}) {
+};
+
+export const TimedTestResults = ({
+  data,
+  session,
+  mutate,
+  onBack,
+  onRetry,
+}: TimedTestResultsProps) => {
   const test = session.timedTest!;
   const [scope, setScope] = useState<Scope>("overall");
   const [openDomain, setOpenDomain] = useState<
@@ -286,4 +288,4 @@ export function TimedTestResults({
       }
     />
   );
-}
+};

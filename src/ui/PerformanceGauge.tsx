@@ -1,20 +1,22 @@
 import type { ReactNode } from "react";
 
-export function PerformanceGauge({
-  value,
-  displayValue,
-  label,
-  ariaLabel,
-  detail,
-  footer,
-}: {
+export type PerformanceGaugeProps = {
   value?: number;
   displayValue?: string;
   label: string;
   ariaLabel: string;
   detail?: ReactNode;
   footer?: ReactNode;
-}) {
+};
+
+export const PerformanceGauge = ({
+  value,
+  displayValue,
+  label,
+  ariaLabel,
+  detail,
+  footer,
+}: PerformanceGaugeProps) => {
   const clamped = Math.max(0, Math.min(100, value ?? 0));
   return (
     <div className="performance-gauge" aria-live="polite">
@@ -59,4 +61,4 @@ export function PerformanceGauge({
       {footer}
     </div>
   );
-}
+};

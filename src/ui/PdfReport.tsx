@@ -34,16 +34,14 @@ export const downloadReport = (report: PrepareReport, name: string) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-/** What one preparation did: how many questions, what was left out, how it was read. */
-export function PdfReport({
-  kind,
-  report,
-  unchanged,
-}: {
+export type PdfReportProps = {
   kind: "SAT" | "PAA";
   report: PrepareReport;
   unchanged: boolean;
-}) {
+};
+
+/** What one preparation did: how many questions, what was left out, how it was read. */
+export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
   const t = useT();
   const paa = kind === "PAA";
   return (
@@ -124,4 +122,4 @@ export function PdfReport({
       </details>
     </div>
   );
-}
+};

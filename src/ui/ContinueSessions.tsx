@@ -3,13 +3,12 @@ import type { SessionActions } from "./SessionCollections";
 import { useT } from "./i18n";
 import { SessionRow } from "./SessionRow";
 
-export function ContinueSessions({
-  data,
-  actions,
-}: {
+export type ContinueSessionsProps = {
   data: StudyData;
   actions: SessionActions;
-}) {
+};
+
+export const ContinueSessions = ({ data, actions }: ContinueSessionsProps) => {
   const t = useT();
   const sessions = data.sessions
     .filter((s) => !s.finishedAt && !s.practiceTest && !s.timedTest)
@@ -35,4 +34,4 @@ export function ContinueSessions({
       )}
     </section>
   );
-}
+};

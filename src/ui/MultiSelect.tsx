@@ -1,21 +1,23 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { TaxonomyOption } from "../core/taxonomy";
 import { useT } from "./i18n";
-export function MultiSelect({
-  label,
-  options,
-  value,
-  onChange,
-  selectionSummary,
-  emptyLabel,
-}: {
+export type MultiSelectProps = {
   label: string;
   options: Pick<TaxonomyOption, "value" | "label">[];
   value: string[];
   onChange: (values: string[]) => void;
   selectionSummary?: (labels: string[]) => string;
   emptyLabel?: string;
-}) {
+};
+
+export const MultiSelect = ({
+  label,
+  options,
+  value,
+  onChange,
+  selectionSummary,
+  emptyLabel,
+}: MultiSelectProps) => {
   const t = useT();
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -139,4 +141,4 @@ export function MultiSelect({
       )}
     </div>
   );
-}
+};
