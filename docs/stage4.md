@@ -2,7 +2,7 @@
 
 ## System
 
-`src/ui/tokens.css` contains semantic colors, reading/UI font stacks, spacing increments, control height, radii, focus, and motion values. `styles.css` replaces the accumulated styling with one shared set of rules rather than adding another theme override layer. There are no new packages, downloaded fonts, external assets, or design-system framework.
+`src/ui/tokens.scss` contains semantic colors, reading/UI font stacks, spacing increments, control height, radii, focus, and motion values. `styles.scss` replaces the accumulated styling with one shared set of rules rather than adding another theme override layer. There are no new packages, downloaded fonts, external assets, or design-system framework.
 
 Light uses oat paper, ivory reading surfaces, moss controls, olive ink, and terracotta errors. Dark uses peat/umber, walnut surfaces, parchment text, lichen/ochre controls, and muted brick feedback. Surfaces, dropdowns, input controls, dialogs, selected states, warnings, backup/restore controls, results, and source panels all use the same semantic tokens. Tested normal text token pairs meet 4.5:1 contrast in both palettes.
 
