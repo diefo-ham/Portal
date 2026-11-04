@@ -1,20 +1,14 @@
+import { readStorage, writeStorage } from "@/src/utils/storage";
+
 export type Theme = "auto" | "light" | "dark";
 const themeKey = "sat-theme";
 const pdfKey = "sat-pdf-original";
 export function readTheme(): Theme {
-  try {
-    const value = localStorage.getItem(themeKey);
-    return value === "light" || value === "dark" ? value : "auto";
-  } catch {
-    return "auto";
-  }
+  const value = readStorage(themeKey);
+  return value === "light" || value === "dark" ? value : "auto";
 }
 export function readOriginalPdf() {
-  try {
-    return localStorage.getItem(pdfKey) === "true";
-  } catch {
-    return false;
-  }
+  return readStorage(pdfKey) === "true";
 }
 export function applyAppearance(
   theme = readTheme(),
@@ -32,11 +26,8 @@ export function applyAppearance(
     ?.setAttribute("content", dark ? "#241e19" : "#f3f0e6");
 }
 export function saveAppearance(theme: Theme, originalPdf: boolean) {
-  try {
-    localStorage.setItem(themeKey, theme);
-    localStorage.setItem(pdfKey, String(originalPdf));
-  } catch {
-    /* Appearance still works for this tab. */
-  }
+  // If storage is unavailable, appearance still works for this tab.
+  writeStorage(themeKey, theme);
+  writeStorage(pdfKey, String(originalPdf));
   applyAppearance(theme, originalPdf);
 }

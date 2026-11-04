@@ -1,4 +1,5 @@
-import type { Fit } from "./regression";
+import { roundSig } from "@/src/utils/calculator";
+import type { Fit } from "@/src/types/calculator";
 export function displayedCoefficients(fit: Fit): number[] {
   return fit.coefficients.map((value, i) => {
     const tolerance = fit.coefficientTolerance?.[i] ?? 0;
@@ -9,7 +10,7 @@ export function displayedCoefficients(fit: Fit): number[] {
 }
 export function fittedExpression(fit: Fit, displayPrecision?: number): string {
   const c = displayedCoefficients(fit).map((value) =>
-    displayPrecision ? Number(value.toPrecision(displayPrecision)) : value,
+    displayPrecision ? roundSig(value, displayPrecision) : value,
   );
   if (fit.custom)
     return fit.custom.formula.replace(/\b[a-z]\b/g, (name) => {

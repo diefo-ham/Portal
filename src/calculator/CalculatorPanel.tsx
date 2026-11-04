@@ -8,15 +8,16 @@ import {
   type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import type { CalculatorState } from "./model";
+import { clamp } from "@/src/utils/calculator";
+import { writeJson } from "@/src/utils/storage";
 import {
   clampGeometry,
   defaultGeometry,
   geometryKey,
   readGeometry,
-  type WindowGeometry,
 } from "./windowGeometry";
 import "./layout.scss";
+import type { CalculatorState, WindowGeometry } from "@/src/types/calculator";
 const Surface = lazy(() => import("./CalculatorSurface"));
 const viewport = () => ({
   width: Math.min(
@@ -60,11 +61,7 @@ export function CalculatorPanel({
   }, []);
   useEffect(() => {
     if (narrow || moving) return;
-    try {
-      localStorage.setItem(geometryKey, JSON.stringify(geometry));
-    } catch {
-      /* Optional preference. */
-    }
+    writeJson(geometryKey, geometry);
   }, [geometry, narrow, moving]);
   const start = (e: PointerEvent<HTMLElement>, kind: string) => {
     if (narrow || e.button !== 0) return;
@@ -83,16 +80,10 @@ export function CalculatorPanel({
       const v = viewport(),
         g = d.geometry;
       const left = d.kind.includes("w")
-        ? Math.max(
-            8,
-            Math.min(g.x + dx, g.x + g.width - Math.min(440, v.width - 16)),
-          )
+        ? clamp(g.x + dx, 8, g.x + g.width - Math.min(440, v.width - 16))
         : g.x;
       const top = d.kind.includes("n")
-        ? Math.max(
-            8,
-            Math.min(g.y + dy, g.y + g.height - Math.min(360, v.height - 16)),
-          )
+        ? clamp(g.y + dy, 8, g.y + g.height - Math.min(360, v.height - 16))
         : g.y;
       const right = d.kind.includes("e")
         ? Math.min(

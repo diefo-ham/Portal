@@ -4,17 +4,14 @@ import {
   scalarTex,
   normalize,
   isBuiltin,
-  type Scalar,
-  type Numeric,
 } from "./math";
-import { tableColumns, type CalculatorState, type Point } from "./model";
+import { tableColumns } from "./model";
 import {
   regression,
   customRegression,
   relationRegression,
   regressionSpec,
   assertAffineParameters,
-  type Fit,
 } from "./regression";
 import { latexToText } from "./latex";
 import type { MathNode } from "mathjs";
@@ -33,8 +30,15 @@ import {
   parameterBounds,
   solveScalarRelation,
   polynomialRootFinder,
-  type Restriction,
 } from "./relations";
+import type {
+  CalculatorState,
+  Fit,
+  Numeric,
+  Point,
+  Restriction,
+  Scalar,
+} from "@/src/types/calculator";
 
 export type Relation = "<" | "<=" | ">" | ">=";
 export type GraphObject = {

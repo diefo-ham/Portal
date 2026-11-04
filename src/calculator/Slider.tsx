@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { SliderSettings } from "./model";
 import { defaultSlider, validSlider } from "./model";
+import { clamp, roundSig } from "@/src/utils/calculator";
+import type { SliderSettings } from "@/src/types/calculator";
 
 type Mode = "bounce" | "loop" | "once";
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
@@ -10,7 +11,7 @@ const TICK_MS = 50;
 
 /** Rounds to the slider's step and removes floating-point dust (0.30000000000000004). */
 const snap = (value: number, { min, step }: SliderSettings) =>
-  Number((Math.round((value - min) / step) * step + min).toPrecision(12));
+  roundSig(Math.round((value - min) / step) * step + min, 12);
 
 /**
  * A slider for a number the person defined (a=2): drag it, set its range and
@@ -75,7 +76,7 @@ export function Slider({
             next >= r.max ? r.min + ((next - r.min) % (r.max - r.min)) : r.min;
         } else setPlaying(false);
       }
-      next = Math.min(r.max, Math.max(r.min, next));
+      next = clamp(next, r.min, r.max);
       position.current = next;
       const snapped = snap(next, r);
       if (snapped !== shown) send(snapped);

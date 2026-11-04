@@ -1,5 +1,5 @@
 import { Matrix, solve } from "ml-matrix";
-import type { ParameterBounds } from "./relations";
+import type { ParameterBounds } from "@/src/types/calculator";
 
 /**
  * Least squares for models that are not linear in their parameters, such as

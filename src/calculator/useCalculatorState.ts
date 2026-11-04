@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  emptyCalculator,
-  withBlankExpression,
-  tableColumns,
-  type CalculatorState,
-} from "./model";
+import { emptyCalculator, withBlankExpression, tableColumns } from "./model";
 import type { StudyData } from "../core/model";
+import type { CalculatorState } from "@/src/types/calculator";
 
 /** Session-owned state; immediate editing, debounced local writes, explicit
  * flush on close/exit/finish and cleanup. Other questions never clear this work.

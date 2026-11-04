@@ -1,17 +1,11 @@
-export interface Viewport {
-  xMin: number;
-  xMax: number;
-  yMin: number;
-  yMax: number;
-}
-export type FitModel =
-  "none" | "linear" | "quadratic" | "cubic" | "exponential";
-/** Range and step of the slider shown for a defined number such as a=2. */
-export interface SliderSettings {
-  min: number;
-  max: number;
-  step: number;
-}
+import { roundSig } from "@/src/utils/calculator";
+import type {
+  CalculatorState,
+  ExpressionEntry,
+  SliderSettings,
+  TableEntry,
+  Viewport,
+} from "@/src/types/calculator";
 export const defaultSlider = (value = 0): SliderSettings => ({
   min: Math.min(-10, Math.floor(value)),
   max: Math.max(10, Math.ceil(value)),
@@ -24,38 +18,6 @@ export const validSlider = (s: SliderSettings) =>
   s.min < s.max &&
   s.step >= 1e-6 &&
   (s.max - s.min) / s.step <= 1e6;
-export interface ExpressionEntry {
-  id: string;
-  type: "expression";
-  text: string;
-  /** Saved slider range and step; absent until the person changes them. */
-  slider?: SliderSettings;
-  /** Optional structural source; legacy text-only expressions remain readable. */
-  latex?: string;
-  hidden: boolean;
-  color?: number;
-}
-export interface TableEntry {
-  id: string;
-  type: "table";
-  rows: [string, string][];
-  hidden: boolean;
-  color?: number;
-  fit: FitModel;
-  /** Stable session-local list identifiers, e.g. x_1 and y_1. */
-  columns?: [string, string];
-}
-export type Entry = ExpressionEntry | TableEntry;
-export interface CalculatorState {
-  version: 1;
-  entries: Entry[];
-  angle: "radians" | "degrees";
-  view: Viewport;
-  /** Ordinary graph interaction preserves one physical pixel scale per unit. */
-  equalAxes?: boolean;
-  /** Last expression/table that legitimately owned focus in Offline mode. */
-  activeEntryId?: string;
-}
 export const defaultView = (): Viewport => ({
   xMin: -10,
   xMax: 10,
@@ -180,9 +142,5 @@ export function tableColumns(
     ]
   );
 }
-export interface Point {
-  x: number;
-  y: number;
-}
 export const formatNumber = (n: number) =>
-  Number.isFinite(n) ? Number(n.toPrecision(10)).toString() : "Undefined";
+  Number.isFinite(n) ? roundSig(n, 10).toString() : "Undefined";

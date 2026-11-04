@@ -16,17 +16,12 @@ import { TableEditor } from "./TableEditor";
 import { Slider } from "./Slider";
 import { MathEditor, focusMath } from "./MathEditor";
 import { calculateWorkspace } from "./workspace";
-import {
-  formatNumber as fmt,
-  newExpression,
-  tableColumns,
-  type CalculatorState,
-  type Entry,
-} from "./model";
-import type { Fit } from "./regression";
+import { formatNumber as fmt, newExpression, tableColumns } from "./model";
 import { displayedCoefficients, fittedExpression } from "./fitDisplay";
 import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
+import { roundSig } from "@/src/utils/calculator";
+import type { CalculatorState, Entry, Fit } from "@/src/types/calculator";
 
 /** Long lists show their ends and can be opened up, so a range like [-10...10] stays readable. */
 function ListResult({ values }: { values: number[] }) {
@@ -632,7 +627,7 @@ export function Calculator({
             if (entry?.type === "expression" && Number.isFinite(value))
               change({
                 ...entry,
-                text: `${name}=${Number(value.toPrecision(12))}`,
+                text: `${name}=${roundSig(value, 12)}`,
                 latex: undefined,
               });
           }}

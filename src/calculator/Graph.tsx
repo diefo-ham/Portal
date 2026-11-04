@@ -1,11 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import {
-  defaultView,
-  formatNumber as fmt,
-  validView,
-  type Point,
-  type Viewport,
-} from "./model";
+import { clamp } from "@/src/utils/calculator";
+import { defaultView, formatNumber as fmt, validView } from "./model";
 import {
   implicitRegion,
   implicitSegments,
@@ -20,6 +15,7 @@ import {
 import type { GraphObject } from "./workspace";
 import { coordinateForm } from "./exact";
 import { clipAffineInequality } from "./affine";
+import type { Point, Viewport } from "@/src/types/calculator";
 
 function ticks(min: number, max: number, minor = false) {
   const rough = (max - min) / 8,
@@ -206,7 +202,7 @@ export function Graph({
     p
       .map(
         (v, i) =>
-          `${i ? "L" : "M"}${px(v.x).toFixed(2)},${Math.max(-10000, Math.min(10000, py(v.y))).toFixed(2)}`,
+          `${i ? "L" : "M"}${px(v.x).toFixed(2)},${clamp(py(v.y), -10000, 10000).toFixed(2)}`,
       )
       .join("");
   const locate = (clientX: number, clientY: number) => {

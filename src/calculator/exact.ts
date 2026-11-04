@@ -1,3 +1,4 @@
+import { roundSig } from "@/src/utils/calculator";
 /** Conservative, bounded recognition, never a symbolic algebra engine. */
 export function rational(
   value: number,
@@ -80,7 +81,5 @@ export function coordinateForm(value: number): string {
   if (pi) return piForm(pi);
   const radical = radicalForm(value, 5e-11);
   if (radical) return radical;
-  return Number.isFinite(value)
-    ? Number(value.toPrecision(6)).toString()
-    : "Undefined";
+  return Number.isFinite(value) ? roundSig(value, 6).toString() : "Undefined";
 }

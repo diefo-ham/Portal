@@ -7,28 +7,12 @@ import type { MathNode } from "mathjs";
 import { parseListRanges, rangeValues } from "./listRanges";
 import { restrictionSource } from "./restrictionSyntax";
 import { piecewiseSource } from "./piecewise";
+import type { Numeric, Scalar } from "@/src/types/calculator";
 const { parse, ConditionalNode } = create({
   parseDependencies,
   ConditionalNodeDependencies,
 });
 
-export type Angle = "radians" | "degrees";
-export type Numeric = number | number[];
-export interface Scalar {
-  node: MathNode;
-  symbols: Set<string>;
-  calls: Set<string>;
-  value: (
-    scope: Record<string, number>,
-    functions: Record<string, (x: number) => number>,
-    angle: Angle,
-  ) => number;
-  evaluate: (
-    scope: Record<string, Numeric>,
-    functions: Record<string, (x: number) => number>,
-    angle: Angle,
-  ) => Numeric;
-}
 const constants: Record<string, number> = {
   pi: Math.PI,
   e: Math.E,

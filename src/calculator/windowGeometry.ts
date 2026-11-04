@@ -1,13 +1,11 @@
-export interface WindowGeometry {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import { clamp } from "@/src/utils/calculator";
+import { readJson } from "@/src/utils/storage";
+import type { Size, WindowGeometry } from "@/src/types/calculator";
+
 export const geometryKey = "sat-calculator-window-v1";
 export function clampGeometry(
   g: WindowGeometry,
-  viewport: { width: number; height: number },
+  viewport: Size,
 ): WindowGeometry {
   const margin = 8;
   const maxWidth = Math.max(1, viewport.width - margin * 2);
@@ -20,14 +18,11 @@ export function clampGeometry(
   return {
     width,
     height,
-    x: Math.max(margin, Math.min(g.x, viewport.width - width - margin)),
-    y: Math.max(margin, Math.min(g.y, viewport.height - height - margin)),
+    x: clamp(g.x, margin, viewport.width - width - margin),
+    y: clamp(g.y, margin, viewport.height - height - margin),
   };
 }
-export function defaultGeometry(viewport: {
-  width: number;
-  height: number;
-}): WindowGeometry {
+export function defaultGeometry(viewport: Size): WindowGeometry {
   const width = Math.min(760, viewport.width * 0.58);
   return clampGeometry(
     {
@@ -39,19 +34,13 @@ export function defaultGeometry(viewport: {
     viewport,
   );
 }
-export function readGeometry(viewport: {
-  width: number;
-  height: number;
-}): WindowGeometry {
-  try {
-    const value = JSON.parse(localStorage.getItem(geometryKey) || "null");
-    if (
-      value &&
-      [value.x, value.y, value.width, value.height].every(Number.isFinite)
-    )
-      return clampGeometry(value, viewport);
-  } catch {
-    /* Device preference is optional. */
-  }
+export function readGeometry(viewport: Size): WindowGeometry {
+  // The saved value is untrusted: only use it if every field is a number.
+  const value = readJson(geometryKey) as Partial<WindowGeometry> | null;
+  if (
+    value &&
+    [value.x, value.y, value.width, value.height].every(Number.isFinite)
+  )
+    return clampGeometry(value as WindowGeometry, viewport);
   return defaultGeometry(viewport);
 }

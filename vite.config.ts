@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { serveLocalLibrary } from "./scripts/local-library.mjs";
@@ -6,6 +7,8 @@ export default defineConfig({
   // Relative URLs let the same build run at a domain root, a GitHub Pages
   // project path, or the local server. Set VITE_BASE to pin an absolute path.
   base: process.env.VITE_BASE ?? "./",
+  // "@/src/utils/storage" resolves from the project root (also in tsconfig.json).
+  resolve: { alias: { "@": fileURLToPath(new URL(".", import.meta.url)) } },
   plugins: [
     react(),
     serviceWorker(),

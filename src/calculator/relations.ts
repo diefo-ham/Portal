@@ -1,16 +1,15 @@
 import type { MathNode } from "mathjs";
-import { scalar, type Scalar, type Angle } from "./math";
+import { scalar } from "./math";
 import { roots } from "./numerics";
 import { restrictionSource } from "./restrictionSyntax";
-
-export type ParameterBound = {
-  min?: number;
-  max?: number;
-  minOpen?: boolean;
-  maxOpen?: boolean;
-};
-export type ParameterBounds = Record<string, ParameterBound>;
-export type Restriction = { left: Scalar; right: Scalar; op: string };
+import { roundSig } from "@/src/utils/calculator";
+import type {
+  Angle,
+  ParameterBound,
+  ParameterBounds,
+  Restriction,
+  Scalar,
+} from "@/src/types/calculator";
 
 /** Solver/regression braces are parameter bounds, never expression domains. */
 export function relationSource(source: string): {
@@ -339,7 +338,7 @@ export function solveScalarRelation(
       else min = max - 2000;
     }
     candidates = min === max ? [min] : roots(fn, min, max, 4096);
-    message = `Numerical real solutions searched in [${Number(min.toPrecision(6))}, ${Number(max.toPrecision(6))}]${trig ? ` ${angle}` : ""}.`;
+    message = `Numerical real solutions searched in [${roundSig(min, 6)}, ${roundSig(max, 6)}]${trig ? ` ${angle}` : ""}.`;
     const probes = [0.13, 0.37, 0.61, 0.89].map((t) =>
       fn(min + (max - min) * t),
     );
