@@ -329,16 +329,16 @@
    the next one. */
 .calc-solutions {
   display: grid;
-  gap: 4px;
-  padding: 6px 8px;
-  font-size: 13px;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 .calc-solution + .calc-solution {
   border-top: 1px solid var(--line);
-  padding-top: 4px;
+  padding-top: 0.25rem;
 }
 .graph-color-0 {
   --curve: #376344;

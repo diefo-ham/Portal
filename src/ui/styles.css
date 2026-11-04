@@ -5,13 +5,14 @@
 html {
   background: var(--bg);
   color: var(--ink);
-  font: 15px/1.6 var(--font-ui);
+  font-size: 100%;
   font-synthesis: none;
   text-size-adjust: 100%;
   scrollbar-gutter: stable;
 }
 body {
   margin: 0;
+  font: 0.9375rem/1.6 var(--font-ui);
 }
 button,
 input,
