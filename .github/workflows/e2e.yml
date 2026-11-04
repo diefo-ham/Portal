@@ -1,10 +1,8 @@
 name: Browser tests
 
 # Deploys to main already run the full suite (deploy.yml). This runs it for pull
-# requests and for pushes to any other branch.
+# requests only, so a branch with an open PR is not checked twice per push.
 on:
-  push:
-    branches-ignore: [main]
   pull_request:
   workflow_dispatch:
 
