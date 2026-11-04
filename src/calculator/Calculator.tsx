@@ -8,7 +8,7 @@ import {
 } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import "./calculator.css";
+import "./calculator.scss";
 import { Graph } from "./Graph";
 import { GraphColor } from "./GraphColor";
 import { SplitDivider, useCalculatorSplit } from "./SplitDivider";

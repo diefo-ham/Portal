@@ -16,7 +16,7 @@ import {
   readGeometry,
   type WindowGeometry,
 } from "./windowGeometry";
-import "./layout.css";
+import "./layout.scss";
 const Surface = lazy(() => import("./CalculatorSurface"));
 const viewport = () => ({
   width: Math.min(

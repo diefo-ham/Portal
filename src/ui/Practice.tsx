@@ -11,7 +11,7 @@ import {
 } from "../core/practiceTest";
 import { numericValue } from "../core/practice";
 import { sectionName } from "./Filters";
-import "../calculator/layout.css";
+import "../calculator/layout.scss";
 import { useCalculatorState } from "../calculator/useCalculatorState";
 import { CalculatorPanel } from "../calculator/CalculatorPanel";
 import { DocumentPanels } from "./DocumentPanels";
