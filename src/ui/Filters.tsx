@@ -32,6 +32,8 @@ export function Filters({
   const skills = relevant.filter(
     (q) => !value.domains?.length || value.domains.includes(domainKey(q)),
   );
+  // A choice of one skill is no choice: the filter shows only when there is something to pick.
+  const skillOptions = taxonomyOptions(skills, "skill");
   const answerStatusOptions = [
     { value: "incorrect", label: t("Mistakes") },
     { value: "unanswered", label: t("Unanswered") },
@@ -160,14 +162,16 @@ export function Filters({
       )}
       {!compact && (
         <>
-          <MultiSelect
-            label={t("Skill")}
-            options={taxonomyOptions(skills, "skill")}
-            value={value.skills ?? []}
-            onChange={(selected) =>
-              onChange({ ...value, skill: "", skills: selected })
-            }
-          />
+          {(skillOptions.length > 1 || !!value.skills?.length) && (
+            <MultiSelect
+              label={t("Skill")}
+              options={skillOptions}
+              value={value.skills ?? []}
+              onChange={(selected) =>
+                onChange({ ...value, skill: "", skills: selected })
+              }
+            />
+          )}
           <MultiSelect
             label={t("Difficulty")}
             options={difficultyOptions}

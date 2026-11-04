@@ -509,3 +509,19 @@ test("test mode: a test's ••• menu renames and deletes it", async ({
     0,
   );
 });
+
+test("the skill filter is hidden when there is only one skill to pick", async ({
+  page,
+}) => {
+  await seedBoth(page);
+  await page.goto("/#/paa");
+  await page.getByText("Afinar la selección").click();
+  const skill = page.getByText("Destreza", { exact: true });
+  await expect(skill).toBeVisible();
+  // Lectura has a single skill in this bank: nothing to choose between.
+  await page
+    .getByRole("group", { name: "Parte" })
+    .getByRole("button", { name: "Lectura" })
+    .click();
+  await expect(skill).toHaveCount(0);
+});
