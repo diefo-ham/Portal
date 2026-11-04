@@ -1,0 +1,127 @@
+import type { PrepareReport } from "../importing/pdf/prepare";
+import { useT } from "./i18n";
+
+const SUBJECTS: Record<string, string> = {
+  read_write: "Reading & Writing",
+  math: "Math",
+};
+
+/** Plain-language account of how the active and inactive files were read. */
+export function explainClassification(report: PrepareReport): string[] {
+  const lines = Object.entries(report.interpretation).map(([group, mode]) => {
+    const subject = SUBJECTS[group] ?? group;
+    if (mode === "active-only")
+      return `The two ${subject} files share no questions, so the questions in the active file were marked active.`;
+    if (mode === "inclusive")
+      return `The active ${subject} file also contains the inactive questions, so only the questions found nowhere else were marked active.`;
+    return `Every ${subject} question outside the inactive file was marked unknown.`;
+  });
+  for (const conflict of report.conflicts)
+    lines.push(
+      `The ${SUBJECTS[conflict.section] ?? conflict.section} files overlap unevenly, so the questions that could not be classified were marked unknown.`,
+    );
+  return lines;
+}
+
+export const downloadReport = (report: PrepareReport, name: string) => {
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
+  );
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+/** What one preparation did: how many questions, what was left out, how it was read. */
+export function PdfReport({
+  kind,
+  report,
+  unchanged,
+}: {
+  kind: "SAT" | "PAA";
+  report: PrepareReport;
+  unchanged: boolean;
+}) {
+  const t = useT();
+  const paa = kind === "PAA";
+  return (
+    <div className="pdf-prepare-report" role="status">
+      <p>
+        {unchanged ? (
+          <>
+            <strong>{t("Nothing changed.")}</strong>{" "}
+            {t(
+              "These PDFs give exactly the {n} questions and images already stored.",
+              { n: report.importedQuestions },
+            )}{" "}
+          </>
+        ) : (
+          <strong>
+            {t("Added {n} questions.", { n: report.importedQuestions })}
+          </strong>
+        )}{" "}
+        {report.quarantined.length
+          ? t("{n} could not be read safely and were left out.", {
+              n: report.quarantined.length,
+            })
+          : ""}
+      </p>
+      {paa && !!report.ignored?.length && (
+        <p className="small">
+          {t("Set aside, because they are not PAA question exports: {files}", {
+            files: report.ignored.join(", "),
+          })}
+        </p>
+      )}
+      {!paa && (
+        <p className="small muted">
+          {t(
+            "{active} are marked active and stay hidden until you choose to include them; {inactive} are inactive.",
+            {
+              active: report.counts.testStatus.active ?? 0,
+              inactive: report.counts.testStatus.inactive ?? 0,
+            },
+          )}
+          {report.counts.testStatus.unknown
+            ? " " +
+              t("{n} are unknown.", { n: report.counts.testStatus.unknown })
+            : ""}
+        </p>
+      )}
+      <details>
+        <summary>{t("How this was worked out")}</summary>
+        {!paa &&
+          explainClassification(report).map((line) => (
+            <p key={line} className="small">
+              {line}
+            </p>
+          ))}
+        {report.quarantined.slice(0, 5).map((item) => (
+          <p key={item.sourceId} className="small">
+            {t("Left out: {id} ({file}, pages {pages}): {reason}", {
+              id: item.sourceId,
+              file: item.file,
+              pages: item.pages.join(", "),
+              reason: item.reason,
+            })}
+          </p>
+        ))}
+        <button
+          className="secondary"
+          onClick={() =>
+            downloadReport(
+              report,
+              paa
+                ? "paa-preparation-report.json"
+                : "pdf-preparation-report.json",
+            )
+          }
+        >
+          {t("Download report")}
+        </button>
+      </details>
+    </div>
+  );
+}

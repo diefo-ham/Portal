@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -18,9 +18,35 @@ function writeExports(names = Object.keys(fixtures)) {
   });
 }
 
+/** The pop-up opened from the empty Home screen, where the PDFs are dropped. */
 async function openPreparation(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Add your question PDFs" }).click();
+  return page.getByRole("dialog", { name: "Add your question PDFs" });
+}
+
+/** Drops files onto the pop-up as a person would, with a real DataTransfer. */
+async function dropFiles(
+  dialog: ReturnType<Page["getByRole"]>,
+  files: { name: string; base64: string; type?: string }[],
+) {
+  await dialog.evaluate((element, items) => {
+    const transfer = new DataTransfer();
+    for (const item of items) {
+      const bytes = Uint8Array.from(atob(item.base64), (c) => c.charCodeAt(0));
+      transfer.items.add(
+        new File([bytes], item.name, { type: item.type ?? "application/pdf" }),
+      );
+    }
+    for (const type of ["dragenter", "dragover", "drop"])
+      element.dispatchEvent(
+        new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
+  }, files);
 }
 
 test("PDF exports are prepared in the browser, practised offline, and hide the answer highlight", async ({
@@ -39,21 +65,28 @@ test("PDF exports are prepared in the browser, practised offline, and hide the a
       await route.abort();
     } else await route.continue();
   });
-  await openPreparation(page);
-  await page.getByLabel("PDF export files").setInputFiles(writeExports());
-  await expect(page.getByLabel("Chosen exports")).toContainText(
-    "✓ math_active.pdf",
+  const dialog = await openPreparation(page);
+  await dialog.getByLabel("PDF export files").setInputFiles(writeExports());
+  await expect(dialog.getByLabel("Chosen exports")).toContainText(
+    "math_active.pdf",
   );
-  const prepare = page.getByRole("button", { name: "Add questions" });
+  await expect(dialog.getByLabel("Chosen exports")).toContainText(
+    "SAT · Math · active",
+  );
+  const prepare = dialog.getByRole("button", { name: "Add questions" });
   // Nothing needs to be decided: the active and inactive files are told apart
   // from their contents.
   await expect(prepare).toBeEnabled();
   await prepare.click();
-  await expect(page.getByText("Added 8 questions.")).toBeVisible({
+  await expect(dialog.getByText("Added 8 questions.")).toBeVisible({
     timeout: 90_000,
   });
-  await expect(page.getByText(/4 are marked active and stay hidden/)).toBeVisible();
+  await expect(
+    dialog.getByText(/4 are marked active and stay hidden/),
+  ).toBeVisible();
   expect(remote).toEqual([]);
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(dialog).toBeHidden();
 
   // Active questions stay hidden by default; the inactive ones are practised.
   await page.getByRole("button", { name: "Browse", exact: true }).click();
@@ -88,14 +121,115 @@ test("PDF exports are prepared in the browser, practised offline, and hide the a
 });
 
 test("preparation needs all four exports", async ({ page }) => {
-  await openPreparation(page);
-  await page
+  const dialog = await openPreparation(page);
+  await dialog
     .getByLabel("PDF export files")
     .setInputFiles(writeExports(["math_active.pdf", "math_inactive.pdf"]));
-  await expect(page.getByLabel("Chosen exports")).toContainText(
-    "read_write_inactive.pdf (not chosen)",
+  await expect(dialog).toContainText(
+    "The SAT exports are read together. Still needed: read_write_inactive.pdf",
   );
   await expect(
-    page.getByRole("button", { name: "Add questions" }),
+    dialog.getByRole("button", { name: "Add questions" }),
   ).toBeDisabled();
+});
+
+test("dropping every PDF at once sorts the SAT exports and sets the rest aside", async ({
+  page,
+}) => {
+  const dialog = await openPreparation(page);
+  await dropFiles(dialog, [
+    ...Object.entries(fixtures).map(([name, base64]) => ({ name, base64 })),
+    // An SAT export under another name is not a PAA export: it is set aside.
+    { name: "carta.pdf", base64: fixtures["math_active.pdf"] },
+    { name: "notas.txt", base64: btoa("no es un PDF"), type: "text/plain" },
+  ]);
+  const chosen = dialog.getByLabel("Chosen exports");
+  await expect(chosen).toContainText("read_write_inactive.pdf");
+  await expect(chosen).toContainText("SAT · Reading & Writing · inactive");
+  await expect(chosen).toContainText("carta.pdf");
+  await expect(dialog).toContainText(
+    "Ignored, because they are not PDFs: notas.txt",
+  );
+  await dialog.getByRole("button", { name: "Add questions" }).click();
+  await expect(dialog.getByText("Added 8 questions.")).toBeVisible({
+    timeout: 90_000,
+  });
+  await expect(dialog).toContainText(
+    "None of these PDFs is a question export, so nothing was added. Set aside: carta.pdf",
+  );
+});
+
+test("choosing a folder of exports sorts the PDFs inside it and ignores the rest", async ({
+  page,
+}) => {
+  const remote: string[] = [];
+  page.on("request", (request) => {
+    const url = request.url();
+    if (!url.startsWith("http://127.0.0.1:4318") && !/^(data|blob):/.test(url))
+      remote.push(url);
+  });
+  const dir = mkdtempSync(join(tmpdir(), "sat-study-folder-"));
+  const folder = join(dir, "exports");
+  mkdirSync(join(folder, "more"), { recursive: true });
+  for (const [name, base64] of Object.entries(fixtures))
+    writeFileSync(join(folder, name), Buffer.from(base64, "base64"));
+  writeFileSync(
+    join(folder, "more", "carta.pdf"),
+    Buffer.from(fixtures["math_active.pdf"], "base64"),
+  );
+  writeFileSync(join(folder, "notes.txt"), "not a PDF");
+
+  const dialog = await openPreparation(page);
+  await dialog.getByLabel("PDF folder").setInputFiles(folder);
+  const chosen = dialog.getByLabel("Chosen exports");
+  await expect(chosen).toContainText("read_write_active.pdf");
+  await expect(chosen).toContainText("SAT · Math · inactive");
+  await expect(chosen).toContainText("carta.pdf");
+  await expect(dialog).toContainText(
+    "Ignored, because they are not PDFs: notes.txt",
+  );
+  await dialog.getByRole("button", { name: "Add questions" }).click();
+  await expect(dialog.getByText("Added 8 questions.")).toBeVisible({
+    timeout: 90_000,
+  });
+  expect(remote).toEqual([]);
+});
+
+test("Escape closes the pop-up and returns focus to the button", async ({
+  page,
+}) => {
+  const dialog = await openPreparation(page);
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Add your question PDFs" }),
+  ).toBeFocused();
+});
+
+test("Settings lists each PDF and removes one, keeping the others", async ({
+  page,
+}) => {
+  const dialog = await openPreparation(page);
+  await dialog.getByLabel("PDF export files").setInputFiles(writeExports());
+  await dialog.getByRole("button", { name: "Add questions" }).click();
+  await expect(dialog.getByText("Added 8 questions.")).toBeVisible({
+    timeout: 90_000,
+  });
+  await dialog.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  const list = page.getByRole("list", { name: "Your question PDFs" });
+  await expect(list.getByRole("listitem")).toHaveCount(4);
+  await expect(
+    list.getByRole("listitem").filter({ hasText: "math_active.pdf" }),
+  ).toContainText("2 questions · 2 active");
+  await page.getByRole("button", { name: "Remove math_active.pdf" }).click();
+  await page
+    .getByRole("dialog", { name: "Remove math_active.pdf?" })
+    .getByRole("button", { name: "Remove PDF" })
+    .click();
+  await expect(list.getByRole("listitem")).toHaveCount(3);
+  await expect(page.getByText("6 questions are stored")).toBeVisible();
+  await expect(page.getByText("PDF removed.")).toBeVisible();
 });

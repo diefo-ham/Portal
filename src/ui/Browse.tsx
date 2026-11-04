@@ -210,7 +210,7 @@ export function Browse({
           <h2>{t("Your question library is empty.")}</h2>
           <p>
             {t(
-              "Add your own College Board question PDFs in Settings; they are prepared on this device and nothing is uploaded.",
+              "Add your own College Board question PDFs; they are prepared on this device and nothing is uploaded.",
             )}
           </p>
           <button className="primary" onClick={onAddQuestions}>

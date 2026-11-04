@@ -325,6 +325,21 @@
 .calc-residuals {
   overflow-wrap: anywhere;
 }
+/* One answer per row, so a shared value (y = 3) is never read as part of
+   the next one. */
+.calc-solutions {
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.calc-solution + .calc-solution {
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
 .graph-color-0 {
   --curve: #376344;
 }

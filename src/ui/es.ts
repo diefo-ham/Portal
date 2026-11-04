@@ -32,8 +32,8 @@ export const es: Record<string, string> = {
   "Choose a focus, settle in, and take it one question at a time.":
     "Elige un tema, ponte cómodo y ve una pregunta a la vez.",
   "Add your questions to begin.": "Agrega tus preguntas para empezar.",
-  "This portal comes with no questions. Add your own College Board question PDFs in Settings and they are prepared on this device; nothing is uploaded.":
-    "Este portal no trae preguntas. Agrega tus propios PDF de preguntas en Ajustes y se preparan en este dispositivo; no se envía nada.",
+  "This portal comes with no questions. Add your own College Board question PDFs and they are prepared on this device; nothing is uploaded.":
+    "Este portal no trae preguntas. Agrega tus propios PDF de preguntas y se preparan en este dispositivo; no se envía nada.",
   "Add your question PDFs": "Agrega tus PDF de preguntas",
   "Practice selection": "Selección de práctica",
   "Choose your focus": "Elige tu enfoque",
@@ -340,8 +340,8 @@ export const es: Record<string, string> = {
   "Search the question bank, inspect individual questions, and save the ones you want to revisit.":
     "Busca en el banco de preguntas, abre cada pregunta y marca las que quieras repasar.",
   "Your question library is empty.": "Tu banco de preguntas está vacío.",
-  "Add your own College Board question PDFs in Settings; they are prepared on this device and nothing is uploaded.":
-    "Agrega tus propios PDF de preguntas en Ajustes; se preparan en este dispositivo y no se envía nada.",
+  "Add your own College Board question PDFs; they are prepared on this device and nothing is uploaded.":
+    "Agrega tus propios PDF de preguntas; se preparan en este dispositivo y no se envía nada.",
   "Find a question": "Buscar una pregunta",
   "Search questions": "Buscar preguntas",
   "Search questions, skills, or source IDs…":
@@ -386,10 +386,6 @@ export const es: Record<string, string> = {
     "{questions} preguntas · {attempts} intentos · {bookmarks} marcadores",
   "Everything lives in this browser, so clearing its site data for {origin} also removes it. Safari can also clear a site's data after about a week without a visit.":
     "Todo vive en este navegador; si borras los datos del sitio {origin}, también se borra. Safari además puede borrar los datos de un sitio tras una semana sin visitarlo.",
-  "Choose the PDF (or PDFs) with your PAA questions. They are read in this browser and never uploaded; about 150 questions take a minute or two. Keep this tab open while it works.":
-    "Elige el PDF (o los PDF) con tus preguntas de la PAA. Se leen en este navegador y nunca se envían; unas 150 preguntas tardan uno o dos minutos. Mantén esta pestaña abierta mientras trabaja.",
-  "Choose the four PDF exports from your question bank. They are read in this browser and never uploaded, and the whole set takes about 5 to 10 minutes. Keep this tab open while it works.":
-    "Elige las cuatro exportaciones en PDF de tu banco de preguntas. Se leen en este navegador y nunca se envían; todo el conjunto tarda de 5 a 10 minutos. Mantén esta pestaña abierta mientras trabaja.",
   "Choose the PDFs": "Elegir los PDF",
   "PDF export files": "Archivos PDF de preguntas",
   "Chosen exports": "Archivos elegidos",
@@ -447,4 +443,52 @@ export const es: Record<string, string> = {
   "Your original PDFs are not touched.": "Tus PDF originales no se tocan.",
   "Erase everything": "Borrar todo",
   "Remove questions": "Quitar las preguntas",
+  "Your question PDFs": "Tus PDF de preguntas",
+  "Add PDFs": "Agregar PDF",
+  "These are the PDFs your questions came from. Add more, or take one out; your answers and bookmarks are kept.":
+    "Estos son los PDF de los que salieron tus preguntas. Agrega más o quita uno; tus respuestas y marcadores se conservan.",
+  "No PDFs added yet. Add your question PDFs: they are read in this browser and never uploaded.":
+    "Todavía no hay PDF. Agrega tus PDF de preguntas: se leen en este navegador y nunca se envían.",
+  "{n} active (hidden until you include them)":
+    "{n} activas (ocultas hasta que las incluyas)",
+  "{n} inactive": "{n} inactivas",
+  "{n} unknown": "{n} desconocidas",
+  Remove: "Quitar",
+  "Remove {name}": "Quitar {name}",
+  "Remove {name}?": "¿Quitar {name}?",
+  "Remove PDF": "Quitar el PDF",
+  "This deletes the {n} questions that come only from this PDF, and their images, from this browser, and ends saved sessions that use them. Your answers and bookmarks are kept and apply again when you add the PDF again.":
+    "Esto borra de este navegador las {n} preguntas que vienen solo de este PDF, con sus imágenes, y termina las sesiones guardadas que las usan. Tus respuestas y marcadores se conservan y vuelven a aplicarse cuando agregues el PDF otra vez.",
+  "{n} questions also come from another PDF and stay.":
+    "{n} preguntas también vienen de otro PDF y se quedan.",
+  "The SAT exports are read together, so to add this one back, add all four again.":
+    "Las exportaciones de la SAT se leen juntas; para volver a agregar esta, agrega las cuatro otra vez.",
+  "PDF removed. Add it again whenever you like; your answers and bookmarks were kept.":
+    "Se quitó el PDF. Puedes agregarlo otra vez cuando quieras; tus respuestas y marcadores se conservaron.",
+  Close: "Cerrar",
+  "Close window": "Cerrar la ventana",
+  "Drop all your PDFs, or the folder that holds them, together: the four SAT exports and your PAA export. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.":
+    "Suelta juntos todos tus PDF, o la carpeta que los contiene: las cuatro exportaciones de la SAT y tu exportación de la PAA. Se ordenan solos, se leen en este navegador y nunca se envían. Todo el conjunto puede tardar de 5 a 10 minutos; mantén esta pestaña abierta mientras trabaja.",
+  "Drop PDFs here": "Suelta los PDF aquí",
+  "Choose a folder": "Elegir una carpeta",
+  "PDF folder": "Carpeta de PDF",
+  "SAT exports are recognised by name: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf and math_inactive.pdf. Any other PDF is read as a PAA export, or set aside if it is not one.":
+    "Las exportaciones de la SAT se reconocen por el nombre: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf y math_inactive.pdf. Cualquier otro PDF se lee como exportación de la PAA, o se deja aparte si no lo es.",
+  "PAA export, or set aside (checked when reading)":
+    "Exportación de la PAA, o se deja aparte (se comprueba al leer)",
+  Math: "Matemáticas",
+  "Reading & Writing": "Lectura y redacción",
+  active: "activa",
+  inactive: "inactiva",
+  "Ignored, because they are not PDFs: {files}":
+    "Se ignoraron porque no son PDF: {files}",
+  "The SAT exports are read together. Still needed: {files}":
+    "Las exportaciones de la SAT se leen juntas. Faltan: {files}",
+  "None of these PDFs is a question export, so nothing was added. Set aside: {files}":
+    "Ninguno de estos PDF es una exportación de preguntas, así que no se agregó nada. Se dejaron aparte: {files}",
+  "{active} are marked active and stay hidden until you choose to include them; {inactive} are inactive.":
+    "{active} están marcadas como activas y siguen ocultas hasta que decidas incluirlas; {inactive} son inactivas.",
+  "{n} are unknown.": "{n} son desconocidas.",
+  "Left out: {id} ({file}, pages {pages}): {reason}":
+    "Se dejó fuera: {id} ({file}, páginas {pages}): {reason}",
 };

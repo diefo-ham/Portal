@@ -205,6 +205,16 @@ export function Calculator({
     () => calculateWorkspace(deferred),
     [deferred.entries, deferred.angle],
   );
+  // Every expression in a system holds the same solutions array, so the
+  // answer is shown once, under the last expression that carries it.
+  const lastSolutionRow = useMemo(() => {
+    const last = new Map<object, string>();
+    for (const entry of deferred.entries) {
+      const solutions = workspace.results[entry.id]?.solutions;
+      if (solutions) last.set(solutions, entry.id);
+    }
+    return last;
+  }, [deferred.entries, workspace]);
   const root = useRef<HTMLElement>(null);
   const current = useRef(state);
   current.current = state;
@@ -482,31 +492,45 @@ export function Calculator({
                         />
                       )}
                       {result?.systemKind &&
-                        Object.keys(result.parameters ?? {}).length > 0 &&
-                        result.solutions?.length !== 1 && (
-                          <output aria-label="Determined system parameters">
-                            {Object.entries(result.parameters!)
-                              .map(
-                                ([name, value]) =>
-                                  `${name} = ${exactForm(value, entry.text) ?? fmt(value)}`,
-                              )
-                              .join(", ")}
-                          </output>
+                        !result.solutions?.length &&
+                        Object.keys(result.parameters ?? {}).length > 0 && (
+                          <div
+                            className="calc-solutions"
+                            role="status"
+                            aria-label="Determined system parameters"
+                          >
+                            {Object.entries(result.parameters!).map(
+                              ([name, value]) => (
+                                <div className="calc-solution" key={name}>
+                                  {`${name} = ${exactForm(value, entry.text) ?? fmt(value)}`}
+                                </div>
+                              ),
+                            )}
+                          </div>
                         )}
                       {result?.solutions &&
-                        (result.solutions.length > 1 || result.systemKind) && (
-                          <output aria-label="Real parameter solutions">
-                            {result.solutions
-                              .map((solution) =>
-                                Object.entries(solution)
+                        (result.solutions.length > 1 || result.systemKind) &&
+                        lastSolutionRow.get(result.solutions) === entry.id && (
+                          // One row per solution, so a shared value such as
+                          // y = 3 is never read as part of the next one (y = 3x).
+                          // Every expression in a system carries the same
+                          // answer, so it is shown once, under the last one.
+                          <div
+                            className="calc-solutions"
+                            role="status"
+                            aria-label="Real parameter solutions"
+                          >
+                            {result.solutions.map((solution, row) => (
+                              <div className="calc-solution" key={row}>
+                                {Object.entries(solution)
                                   .map(
                                     ([name, value]) =>
                                       `${name} = ${exactForm(value, entry.text) ?? radicalForm(value) ?? fmt(value)}`,
                                   )
-                                  .join(", "),
-                              )
-                              .join(" or ")}
-                          </output>
+                                  .join(", ")}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       {result?.parameter && (
                         <Slider
