@@ -49,8 +49,8 @@ Production licenses/notices are included in `public/licenses/` and the build.
 | `TableEditor.tsx`       | Paired cells, pasted rows, keyboard editing                        |
 | `Calculator.tsx`        | Expression workspace, typeset feedback, controls                   |
 | `useCalculatorState.ts` | Session-scoped local persistence adapter                           |
-| `layout.css`            | Practice integration, loaded before the lazy engine to avoid jumps |
-| `calculator.css`        | Calculator controls and graph surfaces in both portal themes       |
+| `layout.scss`            | Practice integration, loaded before the lazy engine to avoid jumps |
+| `calculator.scss`        | Calculator controls and graph surfaces in both portal themes       |
 
 ## Expressions and graphs
 
