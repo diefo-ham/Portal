@@ -3,7 +3,6 @@ import { sectionLabel } from "../core/assessments";
 import { deleteSession, renameSession } from "../core/commands";
 import type { SegmentKey, Section, Session, StudyData } from "../core/model";
 import { numericValue } from "../core/practice";
-import { SESSION_NAME_MAX_LENGTH } from "../core/sessions";
 import { timerWarning } from "../core/practiceTest";
 import {
   PART_ORDER,
@@ -29,6 +28,10 @@ import { DocumentPanels } from "./DocumentPanels";
 import { TimedTestResults } from "./TimedTestResults";
 import { formatElapsed } from "./formatTime";
 import { useQuestionTimer } from "./useQuestionTimer";
+import { ConfirmTestDialog } from "./PracticeTest/ConfirmTestDialog";
+import { RenameTestDialog } from "./PracticeTest/RenameTestDialog";
+import { TestList } from "./PracticeTest/TestList";
+import { useBusy } from "@/src/helpers/useBusy";
 
 /**
  * PAA test mode, as close to the real test as the sources allow: the parts in
@@ -80,12 +83,9 @@ export const TimedTestSetup = ({
     Partial<Record<SegmentKey, string>>
   >({});
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [menuId, setMenuId] = useState("");
+  const [busy, run] = useBusy();
   const [renameTarget, setRenameTarget] = useState<Session>();
   const [deleteTarget, setDeleteTarget] = useState<Session>();
-  const [name, setName] = useState("");
-  const nameInput = useRef<HTMLInputElement>(null);
   const pool = useMemo(
     () => timedTestPool(data, parts, unusedOnly),
     [data, parts, unusedOnly],
@@ -106,33 +106,25 @@ export const TimedTestSetup = ({
   );
   const unfinished = data.sessions.find((s) => s.timedTest && !s.finishedAt);
   const tests = data.sessions.filter((s) => s.timedTest).toReversed();
-  useEffect(() => {
-    if (renameTarget) nameInput.current?.select();
-  }, [renameTarget]);
-  const openRename = (session: Session) => {
-    setMenuId("");
-    setName(session.name || "Prueba");
-    setRenameTarget(session);
-  };
-  const saveRename = async () => {
-    if (!renameTarget) return;
-    setBusy(true);
-    try {
+  const saveRename = (name: string) =>
+    run(async () => {
+      if (!renameTarget) return;
       await mutate((d) => renameSession(d, renameTarget.id, name));
       setRenameTarget(undefined);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
-    try {
+    });
+  const confirmDelete = () =>
+    run(async () => {
+      if (!deleteTarget) return;
       await mutate((d) => deleteSession(d, deleteTarget.id, removesAnswers));
       setDeleteTarget(undefined);
-    } finally {
-      setBusy(false);
-    }
+    });
+  const testMeta = (session: Session) => {
+    const summary = session.finishedAt
+      ? timedSummary(data, session)
+      : undefined;
+    return summary
+      ? `${summary.correct} de ${summary.total} correctas (${summary.percent}%) · ${formatElapsed(session.timedTest!.durationMs ?? 0)}`
+      : "en curso";
   };
   const preset = (next: Section[]) => {
     setParts(next);
@@ -145,35 +137,33 @@ export const TimedTestSetup = ({
       : PART_ORDER.filter((id) => id === part || parts.includes(id));
     if (next.length) preset(next);
   };
-  const start = async () => {
-    setBusy(true);
-    setError("");
-    try {
-      let id = "";
-      await mutate((d) => {
-        id = beginTimedTest(d, {
-          parts,
-          count: wanted,
-          unusedOnly,
-          ...(timed
-            ? {
-                limitMinutes: Object.fromEntries(
-                  plan.map((segment) => [
-                    segment.key,
-                    Number(minutesOf(segment)),
-                  ]),
-                ),
-              }
-            : {}),
-        }).id;
-      });
-      onOpen(id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
+  const start = () =>
+    run(async () => {
+      setError("");
+      try {
+        let id = "";
+        await mutate((d) => {
+          id = beginTimedTest(d, {
+            parts,
+            count: wanted,
+            unusedOnly,
+            ...(timed
+              ? {
+                  limitMinutes: Object.fromEntries(
+                    plan.map((segment) => [
+                      segment.key,
+                      Number(minutesOf(segment)),
+                    ]),
+                  ),
+                }
+              : {}),
+          }).id;
+        });
+        onOpen(id);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    });
   return (
     <main className="page narrow test-mode-page">
       <p className="eyebrow">PRUEBA CRONOMETRADA</p>
@@ -367,153 +357,62 @@ export const TimedTestSetup = ({
           </section>
         )
       )}
-      {tests.length > 0 && (
-        <section className="utility practice-test-list-section">
-          <h2>Tus pruebas</h2>
-          <div className="practice-test-list" role="list">
-            {tests.map((session) => {
-              const summary = session.finishedAt
-                ? timedSummary(data, session)
-                : undefined;
-              return (
-                <div
-                  className="practice-test-row"
-                  role="listitem"
-                  key={session.id}
-                >
-                  <div className="practice-test-row-copy">
-                    <span className="practice-test-row-name">
-                      {session.name}
-                    </span>
-                    <span className="practice-test-row-meta">
-                      {new Date(session.startedAt).toLocaleDateString()}
-                      {summary
-                        ? ` · ${summary.correct} de ${summary.total} correctas (${summary.percent}%) · ${formatElapsed(session.timedTest!.durationMs ?? 0)}`
-                        : " · en curso"}
-                    </span>
-                  </div>
-                  <div className="practice-test-row-actions">
-                    <button onClick={() => onOpen(session.id)}>
-                      {session.finishedAt ? "Ver resultados" : "Retomar"}
-                    </button>
-                    <div className="session-action-wrap">
-                      <button
-                        className="session-menu-trigger"
-                        aria-label={`Acciones de ${session.name}`}
-                        aria-expanded={menuId === session.id}
-                        onClick={() =>
-                          setMenuId(menuId === session.id ? "" : session.id)
-                        }
-                      >
-                        •••
-                      </button>
-                      {menuId === session.id && (
-                        <div className="session-menu" role="menu">
-                          <button
-                            role="menuitem"
-                            onClick={() => openRename(session)}
-                          >
-                            Renombrar
-                          </button>
-                          <button
-                            className="danger"
-                            role="menuitem"
-                            onClick={() => {
-                              setMenuId("");
-                              setDeleteTarget(session);
-                            }}
-                          >
-                            {session.finishedAt
-                              ? "Borrar examen"
-                              : "Cancelar la prueba"}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <TestList
+        title="Tus pruebas"
+        tests={tests}
+        meta={testMeta}
+        openLabel={(s) => (s.finishedAt ? "Ver resultados" : "Retomar")}
+        actionsLabel={(s) => `Acciones de ${s.name}`}
+        menuItems={(s) => [
+          { label: "Renombrar", onSelect: () => setRenameTarget(s) },
+          {
+            label: s.finishedAt ? "Borrar examen" : "Cancelar la prueba",
+            danger: true,
+            onSelect: () => setDeleteTarget(s),
+          },
+        ]}
+        onOpen={onOpen}
+      />
       {renameTarget && (
-        <div className="portal-modal-backdrop" role="presentation">
-          <section
-            className="portal-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="rename-test-heading"
-          >
-            <p className="eyebrow">MODO DE PRUEBA</p>
-            <h2 id="rename-test-heading">Renombrar la prueba</h2>
-            <label>
-              Nombre de la prueba
-              <input
-                ref={nameInput}
-                value={name}
-                maxLength={SESSION_NAME_MAX_LENGTH}
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void saveRename();
-                }}
-              />
-            </label>
-            <div className="modal-actions">
-              <button onClick={() => setRenameTarget(undefined)}>
-                Cancelar
-              </button>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() => void saveRename()}
-              >
-                Guardar nombre
-              </button>
-            </div>
-          </section>
-        </div>
+        <RenameTestDialog
+          initialName={renameTarget.name || "Prueba"}
+          eyebrow="MODO DE PRUEBA"
+          heading="Renombrar la prueba"
+          fieldLabel="Nombre de la prueba"
+          cancelLabel="Cancelar"
+          saveLabel="Guardar nombre"
+          busy={busy}
+          onSave={(name) => void saveRename(name)}
+          onCancel={() => setRenameTarget(undefined)}
+        />
       )}
       {deleteTarget && (
-        <div className="portal-modal-backdrop" role="presentation">
-          <section
-            className="portal-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-test-heading"
-          >
-            <p className="eyebrow">
-              {deleteTarget.finishedAt ? "BORRAR EXAMEN" : "CANCELAR LA PRUEBA"}
-            </p>
-            <h2 id="delete-test-heading">
-              {deleteTarget.finishedAt
-                ? "¿Borrar esta prueba?"
-                : "¿Abandonar esta prueba?"}
-            </h2>
-            <p>
-              {deleteTarget.finishedAt
-                ? `Se borra «${deleteTarget.name}» con sus resultados. `
-                : `Se quita «${deleteTarget.name}» sin resultados. `}
-              {removesAnswers
-                ? "Sus respuestas también se quitarán de tu progreso y esas preguntas volverán a quedar sin contestar."
-                : "Tus respuestas se conservan en tu historial de estudio."}
-            </p>
-            <div className="modal-actions">
-              <button onClick={() => setDeleteTarget(undefined)}>
-                Conservar la prueba
-              </button>
-              <button
-                className="danger"
-                disabled={busy}
-                onClick={() => void confirmDelete()}
-              >
-                {deleteTarget.finishedAt
-                  ? "Borrar examen"
-                  : "Cancelar la prueba"}
-              </button>
-            </div>
-          </section>
-        </div>
+        <ConfirmTestDialog
+          eyebrow={
+            deleteTarget.finishedAt ? "BORRAR EXAMEN" : "CANCELAR LA PRUEBA"
+          }
+          heading={
+            deleteTarget.finishedAt
+              ? "¿Borrar esta prueba?"
+              : "¿Abandonar esta prueba?"
+          }
+          cancelLabel="Conservar la prueba"
+          confirmLabel={
+            deleteTarget.finishedAt ? "Borrar examen" : "Cancelar la prueba"
+          }
+          busy={busy}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => setDeleteTarget(undefined)}
+        >
+          <p>
+            {deleteTarget.finishedAt
+              ? `Se borra «${deleteTarget.name}» con sus resultados. `
+              : `Se quita «${deleteTarget.name}» sin resultados. `}
+            {removesAnswers
+              ? "Sus respuestas también se quitarán de tu progreso y esas preguntas volverán a quedar sin contestar."
+              : "Tus respuestas se conservan en tu historial de estudio."}
+          </p>
+        </ConfirmTestDialog>
       )}
     </main>
   );
