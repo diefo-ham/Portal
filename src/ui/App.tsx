@@ -27,7 +27,7 @@ import {
 import { filterQuestions, selectSessionQuestionIds } from "../core/practice";
 import { useStudy } from "./useStudy";
 import { Practice } from "./Practice";
-import { PracticeTestSetup, PracticeTestRun } from "./PracticeTest";
+import { PracticeTestSetup, PracticeTestRun } from "./PracticeTest/PracticeTest";
 import { Home } from "./Home";
 import { Review } from "./Review";
 import { Help } from "./Help";

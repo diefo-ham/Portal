@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import type { Session, StudyData, TestSelection } from "../core/model";
-import { renameSession } from "../core/commands";
-import { SESSION_NAME_MAX_LENGTH } from "../core/sessions";
+import { useEffect, useState } from "react";
+import type { Session, StudyData, TestSelection } from "../../core/model";
+import { renameSession } from "../../core/commands";
 import {
   availability,
   beginPracticeTest,
@@ -17,8 +16,14 @@ import {
   sectionLabel,
   testAnswerIsValid,
   timerWarning,
-} from "../core/practiceTest";
-import { Practice, time } from "./Practice";
+} from "../../core/practiceTest";
+import { Practice, time } from "../Practice";
+import { ConfirmTestDialog } from "./ConfirmTestDialog";
+import { HowPracticeTestsWork } from "./HowPracticeTestsWork";
+import { PracticeTestOptions, type Timing } from "./PracticeTestOptions";
+import { RenameTestDialog } from "./RenameTestDialog";
+import { TestList } from "./TestList";
+import { useBusy } from "@/src/helpers/useBusy";
 type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
 export type PracticeTestSetupProps = {
   data: StudyData;
@@ -34,59 +39,48 @@ export const PracticeTestSetup = ({
   onSettings,
 }: PracticeTestSetupProps) => {
   const [selection, setSelection] = useState<TestSelection>("full");
-  const [timing, setTiming] = useState<"timed" | "untimed">("timed");
-  const [busy, setBusy] = useState(false);
-  const [menuId, setMenuId] = useState("");
+  const [timing, setTiming] = useState<Timing>("timed");
+  const [busy, run] = useBusy();
   const [renameTarget, setRenameTarget] = useState<Session>();
   const [cancelTarget, setCancelTarget] = useState<Session>();
   const [deleteTarget, setDeleteTarget] = useState<Session>();
-  const [name, setName] = useState("");
-  const nameInput = useRef<HTMLInputElement>(null);
   const error = availability(data, selection);
   const tests = data.sessions
     .filter((s) => s.practiceTest)
     .slice()
     .reverse();
-  useEffect(() => {
-    if (renameTarget) nameInput.current?.select();
-  }, [renameTarget]);
-  const openRename = (session: Session) => {
-    setMenuId("");
-    setName(session.name || "Practice Test");
-    setRenameTarget(session);
-  };
-  const saveRename = async () => {
-    if (!renameTarget) return;
-    setBusy(true);
-    try {
+  const start = () =>
+    run(async () => {
+      try {
+        let id = "";
+        await mutate((d) => {
+          id = beginPracticeTest(d, selection, timing).id;
+        });
+        onOpen(id);
+      } catch {
+        /* global error */
+      }
+    });
+  const saveRename = (name: string) =>
+    run(async () => {
+      if (!renameTarget) return;
       await mutate((draft) => renameSession(draft, renameTarget.id, name));
       setRenameTarget(undefined);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const confirmCancel = async () => {
-    if (!cancelTarget) return;
-    setBusy(true);
-    try {
+    });
+  const confirmCancel = () =>
+    run(async () => {
+      if (!cancelTarget) return;
       await mutate((draft) => cancelPracticeTest(draft, cancelTarget.id));
       setCancelTarget(undefined);
-    } finally {
-      setBusy(false);
-    }
-  };
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setBusy(true);
-    try {
+    });
+  const confirmDelete = () =>
+    run(async () => {
+      if (!deleteTarget) return;
       await mutate((draft) =>
         deleteCompletedPracticeTest(draft, deleteTarget.id),
       );
       setDeleteTarget(undefined);
-    } finally {
-      setBusy(false);
-    }
-  };
+    });
   return (
     <main className="page narrow practice-test-setup">
       <p className="eyebrow">PRACTICE TEST</p>
@@ -95,253 +89,88 @@ export const PracticeTestSetup = ({
         Use unused active questions for a full adaptive test or one module.
         These questions may also appear in a future Bluebook test.
       </p>
-      <section className="utility test-setup-fields">
-        <label>
-          Test selection
-          <select
-            value={selection}
-            onChange={(e) => setSelection(e.target.value as TestSelection)}
-          >
-            {selections.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Timing
-          <select
-            value={timing}
-            onChange={(e) => setTiming(e.target.value as typeof timing)}
-          >
-            <option value="timed">Timed</option>
-            <option value="untimed">Untimed</option>
-          </select>
-        </label>
-        <p className="small muted">
-          {selection === "full"
-            ? "98 questions · four modules · optional 10-minute break."
-            : `${selection.startsWith("math") ? 22 : 27} questions · one module.`}{" "}
-          {timing === "timed"
-            ? "32 minutes per Reading and Writing module; 35 minutes per Math module."
-            : "Elapsed time only. No deadline or automatic module end."}{" "}
-          Leaving an active module pauses its clock until you explicitly resume.
-        </p>
-        {error && (
-          <p role="status">
-            {error}{" "}
-            <button className="text-button" onClick={onSettings}>
-              Open reset settings
-            </button>
-          </p>
-        )}
-        <button
-          className="primary"
-          disabled={!!error || busy}
-          onClick={async () => {
-            setBusy(true);
-            try {
-              let id = "";
-              await mutate((d) => {
-                id = beginPracticeTest(d, selection, timing).id;
-              });
-              onOpen(id);
-            } catch {
-              /* global error */
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Start Practice Test
-        </button>
-      </section>
-      <details className="utility">
-        <summary>How Practice Tests work</summary>
-        <p>
-          A Full Test moves through Reading and Writing Modules 1 and 2, an
-          optional break, then Math Modules 1 and 2. You can move freely inside
-          a module. Finishing it locks its answers.
-        </p>
-        <p>
-          Module 2 adapts to scored Module 1 performance using a transparent
-          approximation. Individual modules use the difficulty route you select.
-        </p>
-        <p>
-          Exactly two randomly chosen questions per module are simulated as
-          unscored. Their identities stay hidden during the test. Results show
-          scored accuracy and an unofficial estimated SAT range, using available
-          difficulty and route metadata.
-        </p>
-        <p>
-          Questions included in a module stay used for Practice Tests, even if
-          you leave or delete the attempt. Overall study-progress reset in
-          Settings restores eligibility.
-        </p>
-      </details>
-      {tests.length > 0 && (
-        <section className="utility practice-test-list-section">
-          <h2>Your Practice Tests</h2>
-          <div className="practice-test-list" role="list">
-            {tests.map((s) => (
-              <div className="practice-test-row" role="listitem" key={s.id}>
-                <div className="practice-test-row-copy">
-                  <span className="practice-test-row-name">{s.name}</span>
-                  <span className="practice-test-row-meta">
-                    {new Date(s.startedAt).toLocaleDateString()} ·{" "}
-                    {s.practiceTest!.timing}
-                  </span>
-                </div>
-                <div className="practice-test-row-actions">
-                  <button onClick={() => onOpen(s.id)}>
-                    {s.finishedAt ? "View results" : "Resume test"}
-                  </button>
-                  <div className="session-action-wrap">
-                    <button
-                      className="session-menu-trigger"
-                      aria-label={`Practice Test actions for ${s.name}`}
-                      aria-expanded={menuId === s.id}
-                      onClick={() => setMenuId(menuId === s.id ? "" : s.id)}
-                    >
-                      •••
-                    </button>
-                    {menuId === s.id && (
-                      <div className="session-menu" role="menu">
-                        <button role="menuitem" onClick={() => openRename(s)}>
-                          Rename
-                        </button>
-                        {!s.finishedAt && (
-                          <button
-                            className="danger"
-                            role="menuitem"
-                            onClick={() => {
-                              setMenuId("");
-                              setCancelTarget(s);
-                            }}
-                          >
-                            Cancel test
-                          </button>
-                        )}
-                        {s.finishedAt && (
-                          <button
-                            className="danger"
-                            role="menuitem"
-                            onClick={() => {
-                              setMenuId("");
-                              setDeleteTarget(s);
-                            }}
-                          >
-                            Delete test
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <PracticeTestOptions
+        selection={selection}
+        timing={timing}
+        error={error}
+        busy={busy}
+        onSelection={setSelection}
+        onTiming={setTiming}
+        onStart={() => void start()}
+        onSettings={onSettings}
+      />
+      <HowPracticeTestsWork />
+      <TestList
+        title="Your Practice Tests"
+        tests={tests}
+        meta={(s) => s.practiceTest!.timing}
+        openLabel={(s) => (s.finishedAt ? "View results" : "Resume test")}
+        actionsLabel={(s) => `Practice Test actions for ${s.name}`}
+        menuItems={(s) => [
+          { label: "Rename", onSelect: () => setRenameTarget(s) },
+          s.finishedAt
+            ? {
+                label: "Delete test",
+                danger: true,
+                onSelect: () => setDeleteTarget(s),
+              }
+            : {
+                label: "Cancel test",
+                danger: true,
+                onSelect: () => setCancelTarget(s),
+              },
+        ]}
+        onOpen={onOpen}
+      />
       {renameTarget && (
-        <div className="portal-modal-backdrop" role="presentation">
-          <section
-            className="portal-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="rename-test-heading"
-          >
-            <p className="eyebrow">PRACTICE TEST</p>
-            <h2 id="rename-test-heading">Rename Practice Test</h2>
-            <label>
-              Test name
-              <input
-                ref={nameInput}
-                value={name}
-                maxLength={SESSION_NAME_MAX_LENGTH}
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void saveRename();
-                }}
-              />
-            </label>
-            <div className="modal-actions">
-              <button onClick={() => setRenameTarget(undefined)}>Cancel</button>
-              <button
-                className="primary"
-                disabled={busy}
-                onClick={() => void saveRename()}
-              >
-                Save name
-              </button>
-            </div>
-          </section>
-        </div>
+        <RenameTestDialog
+          initialName={renameTarget.name || "Practice Test"}
+          eyebrow="PRACTICE TEST"
+          heading="Rename Practice Test"
+          fieldLabel="Test name"
+          cancelLabel="Cancel"
+          saveLabel="Save name"
+          busy={busy}
+          onSave={(name) => void saveRename(name)}
+          onCancel={() => setRenameTarget(undefined)}
+        />
       )}
       {cancelTarget && (
-        <div className="portal-modal-backdrop" role="presentation">
-          <section
-            className="portal-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cancel-test-heading"
-          >
-            <p className="eyebrow">CANCEL PRACTICE TEST</p>
-            <h2 id="cancel-test-heading">Abandon this Practice Test?</h2>
-            <p>
-              The resumable attempt will be removed without results or an SAT
-              estimate. Questions already shown will remain used for Practice
-              Tests.
-            </p>
-            <div className="modal-actions">
-              <button onClick={() => setCancelTarget(undefined)}>
-                Keep test
-              </button>
-              <button
-                className="danger"
-                disabled={busy}
-                onClick={() => void confirmCancel()}
-              >
-                Cancel Practice Test
-              </button>
-            </div>
-          </section>
-        </div>
+        <ConfirmTestDialog
+          eyebrow="CANCEL PRACTICE TEST"
+          heading="Abandon this Practice Test?"
+          cancelLabel="Keep test"
+          confirmLabel="Cancel Practice Test"
+          busy={busy}
+          onConfirm={() => void confirmCancel()}
+          onCancel={() => setCancelTarget(undefined)}
+        >
+          <p>
+            The resumable attempt will be removed without results or an SAT
+            estimate. Questions already shown will remain used for Practice
+            Tests.
+          </p>
+        </ConfirmTestDialog>
       )}
       {deleteTarget && (
-        <div className="portal-modal-backdrop" role="presentation">
-          <section
-            className="portal-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-test-heading"
-          >
-            <p className="eyebrow">DELETE PRACTICE TEST</p>
-            <h2 id="delete-test-heading">Delete this completed test?</h2>
-            <p>
-              Delete “{deleteTarget.name}” and its results? Questions exposed by
-              this test will remain used and ineligible for future Practice
-              Tests.
-            </p>
-            <p className="small muted">
-              Bookmarks, settings, and other Practice or Practice Test history
-              will not be changed.
-            </p>
-            <div className="modal-actions">
-              <button onClick={() => setDeleteTarget(undefined)}>
-                Keep test
-              </button>
-              <button
-                className="danger"
-                disabled={busy}
-                onClick={() => void confirmDelete()}
-              >
-                Delete test
-              </button>
-            </div>
-          </section>
-        </div>
+        <ConfirmTestDialog
+          eyebrow="DELETE PRACTICE TEST"
+          heading="Delete this completed test?"
+          cancelLabel="Keep test"
+          confirmLabel="Delete test"
+          busy={busy}
+          onConfirm={() => void confirmDelete()}
+          onCancel={() => setDeleteTarget(undefined)}
+        >
+          <p>
+            Delete “{deleteTarget.name}” and its results? Questions exposed by
+            this test will remain used and ineligible for future Practice Tests.
+          </p>
+          <p className="small muted">
+            Bookmarks, settings, and other Practice or Practice Test history
+            will not be changed.
+          </p>
+        </ConfirmTestDialog>
       )}
     </main>
   );
