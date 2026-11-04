@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { storageUsage } from "../storage/localData";
+import { useT } from "./i18n";
 
 type Action = "questions" | "everything";
 
@@ -19,6 +20,7 @@ export function ClearData({
   onRemoveQuestions: () => Promise<void>;
   onEraseEverything: () => Promise<void>;
 }) {
+  const t = useT();
   const dialog = useRef<HTMLDialogElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   const [action, setAction] = useState<Action>("questions");
@@ -34,12 +36,14 @@ export function ClearData({
   const everything = action === "everything";
   return (
     <section className="reset-maintenance clear-data">
-      <h2>Free up space</h2>
+      <h2>{t("Free up space")}</h2>
       <p>
         {usage !== undefined
-          ? `This site is using about ${size(usage)} on this device. `
+          ? t("This site is using about {size} on this device.", {
+              size: size(usage),
+            }) + " "
           : ""}
-        The question images take most of it.
+        {t("The question images take most of it.")}
       </p>
       <div className="row">
         <button
@@ -47,14 +51,14 @@ export function ClearData({
           disabled={busy || !hasQuestions}
           onClick={() => ask("questions")}
         >
-          Remove my questions
+          {t("Remove my questions")}
         </button>
         <button
           className="text-button danger"
           disabled={busy}
           onClick={() => ask("everything")}
         >
-          Erase all data on this device
+          {t("Erase all data on this device")}
         </button>
       </div>
       <dialog
@@ -64,33 +68,37 @@ export function ClearData({
       >
         <h2 id="clear-data-title">
           {everything
-            ? "Erase all data on this device?"
-            : "Remove your questions?"}
+            ? t("Erase all data on this device?")
+            : t("Remove your questions?")}
         </h2>
         {everything ? (
           <>
             <p>
-              This deletes your questions, answers, sessions, bookmarks and
-              settings from this browser, and the saved offline copy of the app.
-              It cannot be undone.
+              {t(
+                "This deletes your questions, answers, sessions, bookmarks and settings from this browser, and the saved offline copy of the app. It cannot be undone.",
+              )}
             </p>
             <p className="small muted">
-              Your original PDFs are not touched, so you can add them again.
+              {t(
+                "Your original PDFs are not touched, so you can add them again.",
+              )}
             </p>
           </>
         ) : (
           <>
             <p>
-              This deletes the questions and their images from this browser and
-              ends your saved sessions. Your answers and bookmarks are kept and
-              apply again when you add the same PDFs.
+              {t(
+                "This deletes the questions and their images from this browser and ends your saved sessions. Your answers and bookmarks are kept and apply again when you add the same PDFs.",
+              )}
             </p>
-            <p className="small muted">Your original PDFs are not touched.</p>
+            <p className="small muted">
+              {t("Your original PDFs are not touched.")}
+            </p>
           </>
         )}
         <div className="row reset-actions">
           <button ref={cancel} onClick={() => dialog.current?.close()}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             className="danger"
@@ -100,7 +108,7 @@ export function ClearData({
               void (everything ? onEraseEverything() : onRemoveQuestions());
             }}
           >
-            {everything ? "Erase everything" : "Remove questions"}
+            {everything ? t("Erase everything") : t("Remove questions")}
           </button>
         </div>
       </dialog>

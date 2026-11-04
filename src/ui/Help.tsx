@@ -1,42 +1,190 @@
 import { useRef, useState, type MouseEvent } from "react";
+import { assessmentInfo } from "../core/assessments";
+import { useAssessment, useT } from "./i18n";
 
 export function ShortcutHelp() {
+  const t = useT();
+  const calculator = assessmentInfo(useAssessment()).calculator;
   return (
     <div className="shortcut-help">
       <dl>
         <dt>← / →</dt>
-        <dd>Previous / next question</dd>
+        <dd>{t("Previous / next question")}</dd>
         <dt>1–4</dt>
-        <dd>Choose answer A–D (letters also work while reading)</dd>
+        <dd>{t("Choose answer A–D (letters also work while reading)")}</dd>
         <dt>Enter / Space</dt>
         <dd>
-          Check your answer; after feedback, advance or review the session
+          {t(
+            "Check your answer; after feedback, advance or review the session",
+          )}
         </dd>
         <dt>E</dt>
-        <dd>Toggle the current question’s bookmark</dd>
-        <dt>\</dt>
-        <dd>Toggle calculator</dd>
+        <dd>{t("Toggle the current question’s bookmark")}</dd>
+        {calculator && (
+          <>
+            <dt>\</dt>
+            <dd>Toggle calculator</dd>
+          </>
+        )}
         <dt>Escape</dt>
         <dd>
-          Close a temporary panel first. While reading, open Leave session;
-          press Escape again to leave.
+          {t(
+            "Close a temporary panel first. While reading, open Leave session; press Escape again to leave.",
+          )}
         </dd>
       </dl>
       <p className="small muted">
-        Shortcuts apply while reading. Focused controls keep their normal keys;
-        Enter also submits a selected answer choice or numeric answer. Use Tab
-        to reach controls and Space to activate them.
+        {t(
+          "Shortcuts apply while reading. Focused controls keep their normal keys; Enter also submits a selected answer choice or numeric answer. Use Tab to reach controls and Space to activate them.",
+        )}
       </p>
       <p className="small muted">
-        Exit saves your place. Resume any unfinished set from Practice. Find
-        saved questions in Review → Bookmarks. The question number opens the
-        session map. Practice tools contain timing and question details.
+        {t(
+          "Exit saves your place. Resume any unfinished set from Practice. Find saved questions in Review → Bookmarks. The question number opens the session map. Practice tools contain timing and question details.",
+        )}
       </p>
     </div>
   );
 }
 
 export function Help() {
+  return useAssessment() === "PAA" ? <PaaHelp /> : <SatHelp />;
+}
+
+function PaaHelp() {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const close = () => dialog.current?.close();
+  return (
+    <>
+      <button
+        ref={trigger}
+        className="text-button help-link"
+        aria-label="Ayuda y atajos de teclado"
+        onClick={() => dialog.current?.showModal()}
+      >
+        Ayuda
+      </button>
+      <dialog
+        ref={dialog}
+        className="practice-dialog help-dialog"
+        aria-labelledby="help-title"
+        onClose={() => trigger.current?.focus()}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) close();
+        }}
+      >
+        <div className="dialog-heading">
+          <h2 id="help-title">Cómo usar PAA Study</h2>
+          <button aria-label="Cerrar la ayuda" onClick={close}>
+            ×
+          </button>
+        </div>
+        <div className="help-content">
+          <section className="help-overview" aria-label="Resumen de PAA Study">
+            <p>
+              PAA Study tiene cuatro áreas: practica un grupo de preguntas,
+              repasa lo que fallaste, explora el banco completo o haz una prueba
+              cronometrada.
+            </p>
+            <dl>
+              <div>
+                <dt>Práctica</dt>
+                <dd>Elige una parte, un dominio o una destreza y empieza.</dd>
+              </div>
+              <div>
+                <dt>Repaso</dt>
+                <dd>
+                  Vuelve a tus errores, a lo que dejaste sin contestar y a tus
+                  marcadores.
+                </dd>
+              </div>
+              <div>
+                <dt>Explorar</dt>
+                <dd>Busca y abre preguntas una por una.</dd>
+              </div>
+              <div>
+                <dt>Modo de prueba</dt>
+                <dd>
+                  Una prueba con las partes de la PAA, cada una con su reloj.
+                </dd>
+              </div>
+            </dl>
+          </section>
+          <details>
+            <summary>Modo de prueba</summary>
+            <p>
+              Sigue la prueba real tan de cerca como se sabe: las partes van en
+              orden (Lectura y Redacción, Matemáticas, Inglés), cada una con su
+              propio reloj. Eliges las partes, cuántas preguntas y el tiempo de
+              cada una, o puedes quitar el límite.
+            </p>
+            <p>
+              Dentro de una parte puedes saltar preguntas, volver y marcarlas
+              para revisar; el botón Resumen muestra cuáles has contestado y es
+              desde donde terminas la parte. Al terminarla (tú o el reloj) ya no
+              puedes volver a ella, y entre una parte y otra puedes descansar:
+              el siguiente reloj no corre hasta que lo empieces.
+            </p>
+            <p>
+              No ves si acertaste hasta el final, y no hay penalidad por
+              contestar mal: contesta todas. Si sales, el reloj de la parte se
+              detiene (la prueba real no tiene pausa). Al terminar, los
+              resultados se muestran por parte, dominio y destreza, y todas las
+              preguntas se pueden revisar; las pruebas están en Modo de prueba,
+              donde puedes renombrarlas o borrarlas.
+            </p>
+          </details>
+          <details>
+            <summary>Lecturas y preguntas relacionadas</summary>
+            <p>
+              Las preguntas que comparten una lectura se agrupan y siguen su
+              orden original. Algunas preguntas de «mejor evidencia» citan la
+              pregunta anterior, que se muestra junto a la pregunta.
+            </p>
+          </details>
+          <details>
+            <summary>Respuestas numéricas</summary>
+            <p>
+              En Matemáticas, algunas preguntas piden escribir la respuesta.
+              Debe ser un número positivo (entero, fracción o decimal), de hasta
+              4 caracteres, sin números mixtos. Un decimal se acepta si es
+              exacto o si tiene al menos tres cifras y es el valor correcto
+              truncado o redondeado: para 2/3 valen .666 y .667, pero no .66 ni
+              .67.
+            </p>
+          </details>
+          <details>
+            <summary>Tu progreso</summary>
+            <p>
+              El portal muestra el porcentaje de respuestas correctas por parte,
+              dominio y destreza. No es una puntuación de la PAA: la prueba
+              oficial convierte las respuestas correctas de la prueba completa a
+              una escala de 200 a 800, y no se ha publicado una tabla para hacer
+              esa conversión por tu cuenta. Por eso aquí no hay una puntuación
+              estimada.
+            </p>
+          </details>
+          <details>
+            <summary>Atajos de teclado</summary>
+            <ShortcutHelp />
+          </details>
+          <details>
+            <summary>Tus datos</summary>
+            <p>
+              Todo se guarda en este navegador y funciona sin conexión. En
+              Ajustes puedes agregar tus PDF de preguntas, reiniciar el progreso
+              de la PAA o quitar las preguntas. El progreso del SAT y el de la
+              PAA se guardan por separado.
+            </p>
+          </details>
+        </div>
+      </dialog>
+    </>
+  );
+}
+
+function SatHelp() {
   const dialog = useRef<HTMLDialogElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [openSection, setOpenSection] = useState<string>();

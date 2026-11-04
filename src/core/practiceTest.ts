@@ -2,7 +2,7 @@ import {
   defaultFilters,
   type StudyData,
   type Question,
-  type Section,
+  type SatSection,
   type ModuleMix,
   type TestModule,
   type TestSelection,
@@ -55,7 +55,7 @@ const readingCluster = (q: Question) => {
 /** Presentation ordering only. Selection and balancing are already complete. */
 export function orderModuleQuestions(
   selected: Question[],
-  section: Section,
+  section: SatSection,
 ): Question[] {
   if (section === "reading-writing")
     return selected.slice().sort((a, b) => {
@@ -88,10 +88,10 @@ export function orderModuleQuestions(
   return ordered;
 }
 
-export const moduleSize = (section: Section) => (section === "math" ? 22 : 27);
-export const moduleLimit = (section: Section) =>
+export const moduleSize = (section: SatSection) => (section === "math" ? 22 : 27);
+export const moduleLimit = (section: SatSection) =>
   (section === "math" ? 35 : 32) * 60_000;
-export const sectionLabel = (section: Section) =>
+export const sectionLabel = (section: SatSection) =>
   section === "math" ? "Math" : "Reading and Writing";
 export const moduleLabel = (m: Pick<TestModule, "section" | "mix">) =>
   `${sectionLabel(m.section)} — ${m.mix === "first" ? "Module 1" : `Module 2, ${m.mix === "higher" ? "Higher" : "Lower"} Difficulty`}`;
@@ -104,7 +104,7 @@ export const selections: { value: TestSelection; label: string }[] = [
     })),
   ),
 ];
-export function unusedPool(data: StudyData, section: Section) {
+export function unusedPool(data: StudyData, section: SatSection) {
   const used = new Set([
     ...(data.practiceTestUsedIds || []),
     ...data.sessions
@@ -120,10 +120,10 @@ export function availability(
   data: StudyData,
   selection: TestSelection,
 ): string | undefined {
-  const sections: Section[] =
+  const sections: SatSection[] =
     selection === "full"
       ? ["reading-writing", "math"]
-      : [selection.split(":")[0] as Section];
+      : [selection.split(":")[0] as SatSection];
   for (const section of sections) {
     const needed = moduleSize(section) * (selection === "full" ? 2 : 1);
     // Reserve capacity, not identities, for unfinished Full Tests. Adaptive
@@ -157,7 +157,7 @@ export function availability(
  * Missing difficulty counts as medium. Scarce metadata gracefully redistributes slots. */
 export function constructModule(
   pool: Question[],
-  section: Section,
+  section: SatSection,
   mix: ModuleMix,
   random = Math.random,
 ): Question[] {
@@ -227,7 +227,7 @@ export function constructModule(
 function appendModule(
   data: StudyData,
   session: Session,
-  section: Section,
+  section: SatSection,
   mix: ModuleMix,
   now: number,
   random: () => number,
@@ -298,6 +298,7 @@ export function beginPracticeTest(
     statuses: [],
   });
   session.startedAt = new Date(now).toISOString();
+  session.assessment = "SAT";
   session.name = `Practice Test · ${selections.find((s) => s.value === selection)!.label}`;
   session.paused = false;
   session.timerVisible = true;
@@ -315,7 +316,7 @@ export function beginPracticeTest(
   const [section, mix] =
     selection === "full"
       ? (["reading-writing", "first"] as const)
-      : (selection.split(":") as [Section, ModuleMix]);
+      : (selection.split(":") as [SatSection, ModuleMix]);
   appendModule(data, session, section, mix, now, random);
   data.sessions.push(session);
   return session;
@@ -600,7 +601,7 @@ export function continueAfterBreak(
 export function estimatedRange(
   data: StudyData,
   session: Session,
-  section: Section,
+  section: SatSection,
   scope = session.practiceTest!.modules,
 ): [number, number] | undefined {
   const modules = scope.filter((m) => m.section === section);

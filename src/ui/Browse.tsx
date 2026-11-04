@@ -8,6 +8,7 @@ import { defaultFilters } from "../core/model";
 import { latestAttempt } from "../core/practice";
 import { DocumentPanels } from "./DocumentPanels";
 import { Filters, sectionName } from "./Filters";
+import { useAssessment, useT } from "./i18n";
 
 type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
 
@@ -32,6 +33,8 @@ export function Browse({
   onAddQuestions: () => void;
   mutate: Mutate;
 }) {
+  const t = useT();
+  const assessment = useAssessment();
   const [selectedId, setSelectedId] = useState("");
   const questionTop = useRef<HTMLElement>(null);
   const selectedIndex = filtered.findIndex((q) => q.id === selectedId);
@@ -49,7 +52,9 @@ export function Browse({
     if (
       question.testStatus === "active" &&
       !window.confirm(
-        "This question belongs to an active practice test and may spoil a future Bluebook test. View it anyway?",
+        t(
+          "This question belongs to an active practice test and may spoil a future Bluebook test. View it anyway?",
+        ),
       )
     )
       return;
@@ -76,36 +81,39 @@ export function Browse({
       <main className="page browse-detail-page">
         <div className="browse-detail-toolbar">
           <button className="text-button" onClick={() => setSelectedId("")}>
-            ← Back to questions
+            {t("← Back to questions")}
           </button>
           <span className="small muted">
-            {selectedIndex + 1} of {filtered.length} matching questions
+            {t("{n} of {total} matching questions", {
+              n: selectedIndex + 1,
+              total: filtered.length,
+            })}
           </span>
         </div>
         <article
           className="question-card browse-question"
           ref={questionTop}
           tabIndex={-1}
-          aria-label={`Browse question ${selectedIndex + 1}`}
+          aria-label={t("Browse question {n}", { n: selectedIndex + 1 })}
         >
           <div className="question-heading">
             <div>
               <p className="eyebrow">{sectionName(selected.section)}</p>
               <span className="muted small">
-                {selected.domain || "Domain unspecified"}
+                {selected.domain || t("Domain unspecified")}
               </span>
             </div>
             <button
               className={marked ? "bookmark selected" : "bookmark"}
               aria-pressed={marked}
-              aria-label={marked ? "Remove bookmark" : "Bookmark question"}
-              title={marked ? "Remove bookmark" : "Bookmark question"}
+              aria-label={marked ? t("Remove bookmark") : t("Bookmark question")}
+              title={marked ? t("Remove bookmark") : t("Bookmark question")}
               onClick={() => void toggleBookmark(selected)}
             >
               {marked ? "★" : "☆"}
             </button>
           </div>
-          {selected.passage && (
+          {selected.passage && !selected.document && (
             <div className="passage">{selected.passage}</div>
           )}
           {selected.media?.map((media, index) => (
@@ -116,7 +124,9 @@ export function Browse({
           ))}
           {selected.document ? (
             <>
-              <h1 className="sr-only">Question {selected.sourceId}</h1>
+              <h1 className="sr-only">
+                {t("Question {id}", { id: selected.sourceId ?? "" })}
+              </h1>
               {selected.document.extractionWarnings?.map((warning, index) => (
                 <p className="notice" key={index}>
                   {warning}
@@ -128,7 +138,7 @@ export function Browse({
             <>
               <h1 className="question-text">{selected.stem}</h1>
               {selected.answer.type === "choice" && (
-                <ol className="browse-choices" aria-label="Answer choices">
+                <ol className="browse-choices" aria-label={t("Answer choices")}>
                   {selected.choices?.map((choice) => (
                     <li key={choice.id}>
                       <span className="choice-letter">{choice.id}</span>
@@ -140,30 +150,41 @@ export function Browse({
             </>
           )}
           <div className="browse-metadata">
-            <span>{selected.skill || "Skill unspecified"}</span>
-            <span>{selected.difficulty || "Difficulty unspecified"}</span>
+            <span>
+              {selected.skill || t("Skill unspecified")}
+              {selected.skillDetail ? ` · ${selected.skillDetail}` : ""}
+            </span>
+            <span>
+              {selected.difficulty
+                ? t(selected.difficulty)
+                : t("Difficulty unspecified")}
+            </span>
             <span>
               {attempt
                 ? attempt.correct
-                  ? "Latest result: correct"
-                  : "Latest result: incorrect"
-                : "No recorded answer"}
+                  ? t("Latest result: correct")
+                  : t("Latest result: incorrect")
+                : t("No recorded answer")}
             </span>
-            <span>Practice-test status: {selected.testStatus}</span>
-            {selected.sourceId && <span>Source ID: {selected.sourceId}</span>}
+            {assessment !== "PAA" && (
+              <span>Practice-test status: {selected.testStatus}</span>
+            )}
+            {selected.sourceId && (
+              <span>{t("Source ID: {id}", { id: selected.sourceId })}</span>
+            )}
           </div>
           <div className="question-footer browse-navigation">
             <button
               disabled={selectedIndex === 0}
               onClick={() => open(filtered[selectedIndex - 1])}
             >
-              ← Previous
+              {t("← Previous")}
             </button>
             <button
               disabled={selectedIndex === filtered.length - 1}
               onClick={() => open(filtered[selectedIndex + 1])}
             >
-              Next question →
+              {t("Next question →")}
             </button>
           </div>
         </article>
@@ -175,30 +196,32 @@ export function Browse({
     <main className="page browse-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">QUESTION LIBRARY</p>
-          <h1>Browse questions.</h1>
+          <p className="eyebrow">{t("QUESTION LIBRARY")}</p>
+          <h1>{t("Browse questions.")}</h1>
           <p className="muted">
-            Search the question bank, inspect individual questions, and save the
-            ones you want to revisit.
+            {t(
+              "Search the question bank, inspect individual questions, and save the ones you want to revisit.",
+            )}
           </p>
         </div>
       </div>
       {!data.questions.length ? (
         <section className="empty-state">
-          <h2>Your question library is empty.</h2>
+          <h2>{t("Your question library is empty.")}</h2>
           <p>
-            Add your own College Board question PDFs in Settings; they are
-            prepared on this device and nothing is uploaded.
+            {t(
+              "Add your own College Board question PDFs in Settings; they are prepared on this device and nothing is uploaded.",
+            )}
           </p>
           <button className="primary" onClick={onAddQuestions}>
-            Add your question PDFs
+            {t("Add your question PDFs")}
           </button>
         </section>
       ) : (
         <>
           <section className="filter-panel">
             <div className="section-heading">
-              <h2>Find a question</h2>
+              <h2>{t("Find a question")}</h2>
               <button
                 className="text-button"
                 onClick={() =>
@@ -208,15 +231,15 @@ export function Browse({
                   })
                 }
               >
-                Reset filters
+                {t("Reset filters")}
               </button>
             </div>
             <Filters data={data} value={filters} onChange={onChangeFilters} />
             <div className="filter-bottom">
               <label className="search">
-                <span className="sr-only">Search questions</span>
+                <span className="sr-only">{t("Search questions")}</span>
                 <input
-                  placeholder="Search questions, skills, or source IDs…"
+                  placeholder={t("Search questions, skills, or source IDs…")}
                   value={filters.search}
                   onChange={(event) =>
                     onChangeFilters({ ...filters, search: event.target.value })
@@ -228,14 +251,16 @@ export function Browse({
           <div className="library-toolbar">
             <div>
               <h2>
-                Matching questions{" "}
+                {t("Matching questions")}{" "}
                 <span className="count">{filtered.length}</span>
               </h2>
-              <p className="small muted">
-                {filters.active === "hide"
-                  ? "Active practice-test questions are protected."
-                  : "Active practice-test questions may appear."}
-              </p>
+              {assessment !== "PAA" && (
+                <p className="small muted">
+                  {filters.active === "hide"
+                    ? "Active practice-test questions are protected."
+                    : "Active practice-test questions may appear."}
+                </p>
+              )}
             </div>
           </div>
           <div className="question-list">
@@ -256,11 +281,11 @@ export function Browse({
                       <span className="row-meta">
                         {sectionName(question.section)}
                         <span> / </span>
-                        {question.domain || "Domain unspecified"}
+                        {question.domain || t("Domain unspecified")}
                       </span>
                       <span className="row-title">{question.stem}</span>
                       <span className="small muted">
-                        {question.skill || "Skill unspecified"}
+                        {question.skill || t("Skill unspecified")}
                       </span>
                     </span>
                     <span className="row-tags">
@@ -269,12 +294,14 @@ export function Browse({
                       >
                         {attempt
                           ? attempt.correct
-                            ? "Correct"
-                            : "Incorrect"
-                          : "Unanswered"}
+                            ? t("Correct")
+                            : t("Incorrect")
+                          : t("Unanswered")}
                       </span>
                       <span className="small muted">
-                        {question.difficulty || "Unspecified"}
+                        {question.difficulty
+                          ? t(question.difficulty)
+                          : t("Unspecified")}
                       </span>
                     </span>
                     <span className="row-arrow">↗</span>
@@ -282,7 +309,7 @@ export function Browse({
                   <button
                     className={marked ? "bookmark selected" : "bookmark"}
                     aria-label={
-                      marked ? "Remove bookmark" : "Bookmark question"
+                      marked ? t("Remove bookmark") : t("Bookmark question")
                     }
                     aria-pressed={marked}
                     onClick={() => void toggleBookmark(question)}
@@ -295,8 +322,8 @@ export function Browse({
           </div>
           {!filtered.length && (
             <div className="empty-state">
-              <h2>No questions match yet.</h2>
-              <p>Try broadening your filters.</p>
+              <h2>{t("No questions match yet.")}</h2>
+              <p>{t("Try broadening your filters.")}</p>
               <button
                 onClick={() =>
                   onChangeFilters({
@@ -305,13 +332,13 @@ export function Browse({
                   })
                 }
               >
-                Reset filters
+                {t("Reset filters")}
               </button>
             </div>
           )}
           {filtered.length > visible && (
             <button className="load-more" onClick={onShowMore}>
-              Show more questions
+              {t("Show more questions")}
             </button>
           )}
         </>

@@ -7,6 +7,7 @@
 - Notes are intentionally absent from the product; retain the legacy note field only for stored-data/backup compatibility. Bookmarks remain useful, and progress reset preserves them unless the user explicitly chooses to clear them.
 - Keep presentation highly iterable. Core question rules, import normalization, persistence, calculator providers, and analytics must remain separate from UI.
 - The calculator is the locally bundled Offline engine and makes no external requests. Desmos was retired on 2026-11-03; the comparison scripts under `scripts/` use a Desmos key only on a developer's own machine, never in the app, the build or CI. Never commit an API key.
+- The portal serves two tests, SAT and PAA, from one codebase. `assessment` is a first-class field on questions, attempts and sessions; stored data without it is SAT. Study screens get a view scoped to one test, progress and bookmarks never mix, and PAA internal IDs start with `paa-` so they can never collide with an SAT ID. Test differences live in `src/core/assessments.ts`, not in the UI. See `docs/paa.md`.
 - Prefer maintainable, small solutions over enterprise complexity. Preserve progress and working behavior during redesigns.
 - Validate imports as untrusted data. Do not execute imported HTML or fetch remote question assets.
 - Run meaningful core and workflow tests before stable checkpoints. Never commit real exports, backups, or browser profiles.

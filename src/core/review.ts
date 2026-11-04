@@ -1,5 +1,9 @@
+import { assessmentInfo } from "./assessments";
 import {
+  assessmentOf,
   defaultFilters,
+  type Assessment,
+  type SatSection,
   type Section,
   type Session,
   type StudyData,
@@ -59,7 +63,12 @@ export function sessionTiming(
 // Revisit unanswered *assigned* material, rather than treating the entire unseen
 // bank as unfinished work. A later answer resolves it in the global review queue.
 export function reviewQueues(data: StudyData, protectTests = true) {
-  const assigned = new Set(data.sessions.flatMap((s) => s.questionIds));
+  // A timed test still in progress has not left anything unanswered yet.
+  const assigned = new Set(
+    data.sessions
+      .filter((s) => !(s.timedTest && !s.finishedAt))
+      .flatMap((s) => s.questionIds),
+  );
   const eligible = filterQuestions(data, {
     ...defaultFilters,
     statuses: [],
@@ -75,20 +84,10 @@ export function reviewQueues(data: StudyData, protectTests = true) {
   };
 }
 
-export const SAT_DOMAINS: Record<Section, readonly string[]> = {
-  math: [
-    "Algebra",
-    "Advanced Math",
-    "Problem-Solving and Data Analysis",
-    "Geometry and Trigonometry",
-  ],
-  "reading-writing": [
-    "Information and Ideas",
-    "Craft and Structure",
-    "Expression of Ideas",
-    "Standard English Conventions",
-  ],
-};
+export const SAT_DOMAINS = assessmentInfo("SAT").domains as Record<
+  SatSection,
+  readonly string[]
+>;
 
 export interface AttemptPerformance {
   attempts: number;
@@ -115,9 +114,16 @@ export interface DomainPerformance extends AttemptPerformance {
 /** Accuracy is calculated from submitted attempts only. Repeated attempts are
  * intentionally retained because this describes study performance over time,
  * rather than the current state of each unique question. */
-export function performanceOverview(data: StudyData) {
+export function performanceOverview(
+  data: StudyData,
+  assessment: Assessment = "SAT",
+) {
+  const info = assessmentInfo(assessment);
+  const ownQuestions = data.questions.filter(
+    (question) => assessmentOf(question) === assessment,
+  );
   const questions = new Map(
-    data.questions.map((question) => [question.id, question]),
+    ownQuestions.map((question) => [question.id, question]),
   );
   type MutableMetric = Omit<AttemptPerformance, "accuracy">;
   type MutableDomain = Omit<
@@ -144,10 +150,9 @@ export function performanceOverview(data: StudyData) {
       : undefined,
   });
   const all = blank();
-  const sectionMetrics: Record<Section, MutableMetric> = {
-    math: blank(),
-    "reading-writing": blank(),
-  };
+  const sectionMetrics = Object.fromEntries(
+    info.performanceOrder.map((section) => [section, blank()]),
+  ) as Record<string, MutableMetric>;
   const domains = new Map<string, MutableDomain>();
   const domainKeyFor = (section: Section, domain: string) =>
     `${section}:${metadataKey(domain)}`;
@@ -166,9 +171,10 @@ export function performanceOverview(data: StudyData) {
     domains.set(key, created);
     return created;
   };
-  for (const section of ["math", "reading-writing"] as const)
-    for (const domain of SAT_DOMAINS[section]) ensureDomain(section, domain);
-  for (const question of data.questions) {
+  for (const section of info.performanceOrder)
+    for (const domain of info.domains[section] ?? [])
+      ensureDomain(section, domain);
+  for (const question of ownQuestions) {
     const domain = ensureDomain(
       question.section,
       question.domain || "Domain unspecified",
@@ -208,10 +214,12 @@ export function performanceOverview(data: StudyData) {
   }
   return {
     all: finish(all),
-    sections: {
-      math: finish(sectionMetrics.math),
-      "reading-writing": finish(sectionMetrics["reading-writing"]),
-    },
+    sections: Object.fromEntries(
+      Object.entries(sectionMetrics).map(([section, metric]) => [
+        section,
+        finish(metric),
+      ]),
+    ) as Record<string, AttemptPerformance>,
     domains: [...domains.values()].map((domain) => ({
       ...finish(domain),
       key: domain.key,

@@ -13,6 +13,7 @@ export interface BackupPreferences {
   timerDefault?: boolean;
   showCorrectExplanations?: boolean;
   protectTests?: boolean;
+  deleteRemovesAnswers?: boolean;
 }
 
 export interface ParsedBackup {
@@ -33,6 +34,7 @@ function parsePreferences(raw: unknown): BackupPreferences | undefined {
       value.timerDefault,
       value.showCorrectExplanations,
       value.protectTests,
+      value.deleteRemovesAnswers,
     ].some((setting) => setting !== undefined && typeof setting !== "boolean")
   )
     throw new Error("Invalid backup preferences.");
@@ -44,6 +46,9 @@ function parsePreferences(raw: unknown): BackupPreferences | undefined {
       ? { showCorrectExplanations: value.showCorrectExplanations as boolean }
       : {}),
     ...(value.protectTests !== undefined ? { protectTests: value.protectTests as boolean } : {}),
+    ...(value.deleteRemovesAnswers !== undefined
+      ? { deleteRemovesAnswers: value.deleteRemovesAnswers as boolean }
+      : {}),
   };
 }
 
@@ -122,8 +127,54 @@ export function parseBackup(raw: unknown): StudyData {
     )
       throw new Error("Invalid session label in backup.");
     if (typeof s.name === "string") s.name = normalizeSessionName(s.name);
+    if (s.timedTest !== undefined) {
+      const test = s.timedTest;
+      const number = (v: unknown) =>
+        typeof v === "number" && Number.isFinite(v) && v >= 0;
+      const optional = (v: unknown) => v === undefined || number(v);
+      const segmentOk = (seg: (typeof test.segments)[number]) =>
+        object(seg) &&
+        ["lectura-redaccion", "matematicas", "ingles"].includes(seg.key) &&
+        Array.isArray(seg.parts) &&
+        seg.parts.every((part) => typeof part === "string") &&
+        Array.isArray(seg.questionIds) &&
+        seg.questionIds.length > 0 &&
+        seg.questionIds.every((id) => s.questionIds.includes(id)) &&
+        [
+          seg.limitMs,
+          seg.startedAt,
+          seg.pausedAt,
+          seg.pausedMs,
+          seg.completedAt,
+          seg.durationMs,
+        ].every(optional);
+      if (
+        !object(test) ||
+        test.version !== 2 ||
+        !Array.isArray(test.parts) ||
+        !test.parts.length ||
+        test.parts.some((part) => typeof part !== "string") ||
+        !Array.isArray(test.segments) ||
+        !test.segments.length ||
+        !test.segments.every(segmentOk) ||
+        test.segments.reduce((n, seg) => n + seg.questionIds.length, 0) !==
+          s.questionIds.length ||
+        !Number.isInteger(test.current) ||
+        test.current < 0 ||
+        test.current >= test.segments.length ||
+        !["segment", "break"].includes(test.phase) ||
+        !number(test.startedAt) ||
+        !optional(test.completedAt) ||
+        !optional(test.durationMs) ||
+        typeof test.unusedOnly !== "boolean" ||
+        !Array.isArray(test.marked) ||
+        test.marked.some((id) => !s.questionIds.includes(id))
+      )
+        throw new Error("Invalid timed test in backup.");
+    }
     if (
       [
+        s.filters.sections,
         s.filters.domains,
         s.filters.skills,
         s.filters.statuses,
@@ -229,6 +280,24 @@ export function parseBackup(raw: unknown): StudyData {
       ]),
     ],
     sessions: d.sessions.map((s) => {
+      // A restored test starts paused, with its clock stopped now. Between
+      // parts no clock runs, so there is nothing to pause.
+      if (s.timedTest && !s.finishedAt) {
+        const test = s.timedTest;
+        if (test.phase === "break") return { ...s, paused: false };
+        return {
+          ...s,
+          paused: true,
+          timedTest: {
+            ...test,
+            segments: test.segments.map((seg, i) =>
+              i === test.current
+                ? { ...seg, pausedAt: seg.pausedAt ?? Date.now() }
+                : seg,
+            ),
+          },
+        };
+      }
       if (!s.practiceTest) return { ...s, paused: true };
       const currentIds = new Set(
         s.practiceTest.modules[s.practiceTest.currentModule]?.questionIds || [],

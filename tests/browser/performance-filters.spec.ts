@@ -13,18 +13,18 @@ test("Section, Domain, Skill, and Answer Status remain compatible", async ({
   page,
 }) => {
   const section = page.getByRole("group", { name: "Section", exact: true });
-  await expect(section.getByRole("button", { name: "All" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // Nothing selected means every part.
+  await expect(
+    section.locator('button[aria-pressed="true"]'),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: /^Domain:/ }).click();
   let domains = page.getByRole("group", { name: "Domain", exact: true });
   await domains.getByLabel("Craft and Structure", { exact: true }).check();
   await domains.getByRole("button", { name: "Done", exact: true }).click();
-  await expect(section.getByRole("button", { name: "All" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  // Nothing selected means every part.
+  await expect(
+    section.locator('button[aria-pressed="true"]'),
+  ).toHaveCount(0);
   await expect(page.getByText("Max 1", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "Domain: Craft and Structure" })
@@ -48,6 +48,8 @@ test("Section, Domain, Skill, and Answer Status remain compatible", async ({
   await skills.getByRole("button", { name: "Done", exact: true }).click();
   await expect(page.getByText("Max 1", { exact: true })).toBeVisible();
 
+  // Parts are toggles now: turn Math off, then Reading & Writing on.
+  await section.getByRole("button", { name: "Math", exact: true }).click();
   await section
     .getByRole("button", { name: "Reading & Writing", exact: true })
     .click();

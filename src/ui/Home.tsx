@@ -5,6 +5,7 @@ import { reviewQueues } from "../core/review";
 import { ContinueSessions } from "./ContinueSessions";
 import { Filters } from "./Filters";
 import { SessionCollections, type SessionActions } from "./SessionCollections";
+import { useT } from "./i18n";
 
 export function Home({
   data,
@@ -33,6 +34,7 @@ export function Home({
   onBrowse: () => void;
   onAddQuestions: () => void;
 }) {
+  const t = useT();
   const questions = filterQuestions(data, value);
   const maximum = questions.length;
   const numericLimit = Number(limit);
@@ -63,64 +65,66 @@ export function Home({
     });
   return (
     <main className="page home-page">
-      <p className="eyebrow">YOUR PRACTICE</p>
-      <h1>What would you like to work on?</h1>
+      <p className="eyebrow">{t("YOUR PRACTICE")}</p>
+      <h1>{t("What would you like to work on?")}</h1>
       <p className="muted">
-        Choose a focus, settle in, and take it one question at a time.
+        {t("Choose a focus, settle in, and take it one question at a time.")}
       </p>
       <ContinueSessions data={data} actions={sessionActions} />
       {!data.questions.length ? (
         <section className="empty-state">
-          <h2>Add your questions to begin.</h2>
+          <h2>{t("Add your questions to begin.")}</h2>
           <p>
-            This portal comes with no questions. Add your own College Board
-            question PDFs in Settings and they are prepared on this device;
-            nothing is uploaded.
+            {t(
+              "This portal comes with no questions. Add your own College Board question PDFs in Settings and they are prepared on this device; nothing is uploaded.",
+            )}
           </p>
           <button className="primary" onClick={onAddQuestions}>
-            Add your question PDFs
+            {t("Add your question PDFs")}
           </button>
         </section>
       ) : (
         <>
           <section
             className="practice-composer"
-            aria-label="Practice selection"
+            aria-label={t("Practice selection")}
           >
             <div className="section-heading">
-              <h2>Choose your focus</h2>
+              <h2>{t("Choose your focus")}</h2>
               <button className="text-button" onClick={reset}>
-                Reset filters
+                {t("Reset filters")}
               </button>
             </div>
             <Filters data={data} value={value} onChange={onChange} compact />
             <details className="refine-selection">
               <summary>
-                Refine selection
+                {t("Refine selection")}
                 {value.skills?.length ||
                 value.difficulty ||
                 value.difficulties?.length ||
                 value.bookmark ||
                 value.active !== (protectTests ? "hide" : "include")
-                  ? " · customized"
+                  ? t(" · customized")
                   : ""}
               </summary>
               <Filters data={data} value={value} onChange={onChange} advanced />
             </details>
             {value.search && (
               <p className="small muted">
-                Search carried over from Browse: {value.search}{" "}
+                {t("Search carried over from Browse: {search}", {
+                  search: value.search,
+                })}{" "}
                 <button
                   className="text-button"
                   onClick={() => onChange({ ...value, search: "" })}
                 >
-                  Clear search
+                  {t("Clear search")}
                 </button>
               </p>
             )}
             <div className="composer-start">
               <label>
-                Session size
+                {t("Session size")}
                 <input
                   className="session-size-input"
                   type="text"
@@ -145,39 +149,46 @@ export function Home({
                   )
                 }
               >
-                Start practice →
+                {t("Start practice →")}
               </button>
               <span className="small muted" id="session-size-maximum">
-                {maximum ? `Max ${maximum}` : "No questions available"}
+                {maximum
+                  ? t("Max {n}", { n: maximum })
+                  : t("No questions available")}
               </span>
             </div>
             {!questions.length && (
               <p className="muted small" role="status">
-                No questions match or remain for these filters. Change the
-                filters, or reset relevant study progress in Settings to restore
-                availability when appropriate.
+                {t(
+                  "No questions match or remain for these filters. Change the filters, or reset relevant study progress in Settings to restore availability when appropriate.",
+                )}
               </p>
             )}
           </section>
           <SessionCollections data={data} actions={sessionActions} />
           {(queues.mistakes.length > 0 || queues.unanswered.length > 0) && (
             <section className="gentle-review">
-              <h2>Something to revisit</h2>
+              <h2>{t("Something to revisit")}</h2>
               <p className="muted">
                 {queues.mistakes.length > 0
-                  ? `${queues.mistakes.length} questions could use another attempt. `
+                  ? t("{n} questions could use another attempt.", {
+                      n: queues.mistakes.length,
+                    }) + " "
                   : ""}
                 {queues.unanswered.length > 0
-                  ? `${queues.unanswered.length} questions from your practice sets are still unanswered.`
+                  ? t(
+                      "{n} questions from your practice sets are still unanswered.",
+                      { n: queues.unanswered.length },
+                    )
                   : ""}
               </p>
               <button className="text-button" onClick={onReview}>
-                See what’s waiting in Review →
+                {t("See what’s waiting in Review →")}
               </button>
             </section>
           )}
           <button className="text-button browse-link" onClick={onBrowse}>
-            Browse individual questions →
+            {t("Browse individual questions →")}
           </button>
         </>
       )}

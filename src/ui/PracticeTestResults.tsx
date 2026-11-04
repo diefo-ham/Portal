@@ -1,12 +1,18 @@
 import { useMemo, useState } from "react";
-import type { Section, Session, StudyData, TestModule } from "../core/model";
+import type {
+  Section,
+  SatSection,
+  Session,
+  StudyData,
+  TestModule,
+} from "../core/model";
 import { estimatedRange, scoredSummary } from "../core/practiceTest";
 import { domainKey, skillKey } from "../core/taxonomy";
 import { PerformanceGauge } from "./PerformanceGauge";
 import { SessionResults } from "./SessionResults";
 import { formatElapsed } from "./formatTime";
 
-type ResultScope = "overall" | Section;
+type ResultScope = "overall" | SatSection;
 type ResultMode = "percentage" | "estimate";
 
 export const formatPercentage = (value: number) => {
@@ -14,7 +20,7 @@ export const formatPercentage = (value: number) => {
   return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}%`;
 };
 
-export const resultSectionLabel = (section: Section) =>
+export const resultSectionLabel = (section: SatSection) =>
   section === "math" ? "Math" : "Reading & Writing";
 
 export const resultModuleLabel = (module: Pick<TestModule, "section" | "mix">) =>
@@ -24,7 +30,7 @@ export const resultModuleLabel = (module: Pick<TestModule, "section" | "mix">) =
       : `Module 2, ${module.mix === "higher" ? "Higher" : "Lower"} Difficulty`
   }`;
 
-interface SkillResult {
+export interface SkillResult {
   key: string;
   label: string;
   correct: number;
@@ -32,12 +38,28 @@ interface SkillResult {
   scored: number;
 }
 
-interface DomainResult extends SkillResult {
+export interface DomainResult extends SkillResult {
   section: Section;
   skills: SkillResult[];
 }
 
 function domainResults(data: StudyData, session: Session, modules: TestModule[]) {
+  const unscored = new Set(modules.flatMap((module) => module.unscoredIds));
+  return domainResultsOf(
+    data,
+    session,
+    modules
+      .flatMap((module) => module.questionIds)
+      .filter((id) => !unscored.has(id)),
+  );
+}
+
+/** Domains and skills of the given questions, with what this session answered. */
+export function domainResultsOf(
+  data: StudyData,
+  session: Session,
+  questionIds: string[],
+): DomainResult[] {
   const attempts = new Map(
     data.attempts
       .filter((attempt) => attempt.sessionId === session.id)
@@ -47,44 +69,40 @@ function domainResults(data: StudyData, session: Session, modules: TestModule[])
     string,
     Omit<DomainResult, "skills"> & { skills: Map<string, SkillResult> }
   >();
-  for (const module of modules) {
-    const unscored = new Set(module.unscoredIds);
-    for (const id of module.questionIds) {
-      if (unscored.has(id)) continue;
-      const question = data.questions.find((candidate) => candidate.id === id);
-      if (!question) continue;
-      const dKey = domainKey(question);
-      const domain = domains.get(dKey) || {
-        key: dKey,
-        label: question.domain || "Unspecified domain",
-        section: question.section,
-        correct: 0,
-        attempted: 0,
-        scored: 0,
-        skills: new Map<string, SkillResult>(),
-      };
-      const sKey = skillKey(question);
-      const skill = domain.skills.get(sKey) || {
-        key: sKey,
-        label: question.skill || "Unspecified skill",
-        correct: 0,
-        attempted: 0,
-        scored: 0,
-      };
-      const attempt = attempts.get(id);
-      domain.scored++;
-      skill.scored++;
-      if (attempt) {
-        domain.attempted++;
-        skill.attempted++;
-      }
-      if (attempt?.correct) {
-        domain.correct++;
-        skill.correct++;
-      }
-      domain.skills.set(sKey, skill);
-      domains.set(dKey, domain);
+  for (const id of questionIds) {
+    const question = data.questions.find((candidate) => candidate.id === id);
+    if (!question) continue;
+    const dKey = domainKey(question);
+    const domain = domains.get(dKey) || {
+      key: dKey,
+      label: question.domain || "Unspecified domain",
+      section: question.section,
+      correct: 0,
+      attempted: 0,
+      scored: 0,
+      skills: new Map<string, SkillResult>(),
+    };
+    const sKey = skillKey(question);
+    const skill = domain.skills.get(sKey) || {
+      key: sKey,
+      label: question.skill || "Unspecified skill",
+      correct: 0,
+      attempted: 0,
+      scored: 0,
+    };
+    const attempt = attempts.get(id);
+    domain.scored++;
+    skill.scored++;
+    if (attempt) {
+      domain.attempted++;
+      skill.attempted++;
     }
+    if (attempt?.correct) {
+      domain.correct++;
+      skill.correct++;
+    }
+    domain.skills.set(sKey, skill);
+    domains.set(dKey, domain);
   }
   return [...domains.values()]
     .map((domain) => ({
@@ -164,7 +182,7 @@ export function PracticeTestResults({
   const [scope, setScope] = useState<ResultScope>("overall");
   const [mode, setMode] = useState<ResultMode>("percentage");
   const [openDomain, setOpenDomain] = useState<
-    Partial<Record<Section, string>>
+    Partial<Record<SatSection, string>>
   >({});
   const modules = session.practiceTest!.modules;
   const availableSections = (["math", "reading-writing"] as const).filter((section) =>
@@ -190,7 +208,7 @@ export function PracticeTestResults({
   const strongestDomain = rankedDomains[0];
   const weakestDomain = rankedDomains.at(-1);
   const domainGlanceLabel = (domain: DomainResult) =>
-    `${scope === "overall" ? `${resultSectionLabel(domain.section)} · ` : ""}${domain.label}`;
+    `${scope === "overall" && availableSections.length > 1 ? `${resultSectionLabel(domain.section as SatSection)} · ` : ""}${domain.label}`;
   return (
     <SessionResults
       data={data}
@@ -210,14 +228,16 @@ export function PracticeTestResults({
               <button aria-pressed={mode === "estimate"} onClick={() => setMode("estimate")}>Estimated SAT range</button>
             </div>
           </div>
-          <div className="performance-scope result-scope" role="group" aria-label="Result scope">
-            <button aria-pressed={scope === "overall"} onClick={() => setScope("overall")}>Overall</button>
-            {availableSections.map((section) => (
-              <button key={section} aria-pressed={scope === section} onClick={() => setScope(section)}>
-                {resultSectionLabel(section)}
-              </button>
-            ))}
-          </div>
+          {availableSections.length > 1 && (
+            <div className="performance-scope result-scope" role="group" aria-label="Result scope">
+              <button aria-pressed={scope === "overall"} onClick={() => setScope("overall")}>Overall</button>
+              {availableSections.map((section) => (
+                <button key={section} aria-pressed={scope === section} onClick={() => setScope(section)}>
+                  {resultSectionLabel(section)}
+                </button>
+              ))}
+            </div>
+          )}
           {mode === "percentage" ? (
             <PerformanceGauge
               value={result.percentage}

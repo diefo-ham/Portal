@@ -1,19 +1,42 @@
-import { clearAssets, deleteDatabase, updateData } from "./database";
+import { scopeStudyData } from "../core/assessments";
+import type { Assessment } from "../core/model";
+import { referencedAssetKeys } from "../importing/documents";
+import {
+  clearAssets,
+  deleteAssetsExcept,
+  deleteDatabase,
+  updateData,
+} from "./database";
 
 /**
  * Removes the questions and their images but keeps answers and bookmarks.
  * Sessions are dropped with the questions they point at (attempts stay, without
  * a session); adding the same PDFs again brings the questions back under the
- * same IDs, so the saved answers apply again.
+ * same IDs, so the saved answers apply again. With an assessment, only that
+ * test's questions go and the other test is left as it is.
  */
-export async function removeQuestionLibrary() {
+export async function removeQuestionLibrary(assessment?: Assessment) {
   const data = await updateData((d) => {
-    d.questions = [];
-    d.imports = [];
-    d.sessions = [];
-    for (const attempt of d.attempts) delete attempt.sessionId;
+    if (!assessment) {
+      d.questions = [];
+      d.imports = [];
+      d.sessions = [];
+      for (const attempt of d.attempts) delete attempt.sessionId;
+      return;
+    }
+    const own = scopeStudyData(d, assessment);
+    const removedSessions = new Set(own.sessions.map((s) => s.id));
+    d.questions = d.questions.filter((q) => q.assessment !== assessment);
+    d.sessions = d.sessions.filter((s) => !removedSessions.has(s.id));
+    for (const attempt of d.attempts)
+      if (attempt.sessionId && removedSessions.has(attempt.sessionId))
+        delete attempt.sessionId;
+    // Import receipts are not tied to a test; they only record what was added.
+    if (!d.questions.length) d.imports = [];
   });
-  await clearAssets();
+  if (assessment && data.questions.length)
+    await deleteAssetsExcept(referencedAssetKeys(data));
+  else await clearAssets();
   return data;
 }
 

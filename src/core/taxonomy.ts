@@ -1,3 +1,4 @@
+import { sectionLabel } from "./assessments";
 import type { Question } from "./model";
 
 // Collapse casing/spacing only, within the original section/domain context.
@@ -62,16 +63,22 @@ export function taxonomyOptions(
     group.names.set(name, (group.names.get(name) ?? 0) + 1);
     groups.set(key, group);
   }
-  const options = [...groups].map(([value, group]) => ({
-    value,
-    label: checklistMetadataLabel(
-      [...group.names].sort(
-        (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
-      )[0][0],
-      kind,
-    ),
-    context: `${group.question.section === "math" ? "Math" : "Reading & Writing"}${kind === "skill" ? ` · ${checklistMetadataLabel(group.question.domain || "Unspecified domain", "domain")}` : ""}`,
-  }));
+  const options = [...groups].map(([value, group]) => {
+    // PAA names are already written as the study guide prints them.
+    const paa = group.question.assessment === "PAA";
+    const label = (name: string, as: "domain" | "skill") =>
+      paa ? metadataName(name) : checklistMetadataLabel(name, as);
+    return {
+      value,
+      label: label(
+        [...group.names].sort(
+          (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+        )[0][0],
+        kind,
+      ),
+      context: `${sectionLabel(group.question.section)}${kind === "skill" ? ` · ${label(group.question.domain || (paa ? "Dominio sin especificar" : "Unspecified domain"), "domain")}` : ""}`,
+    };
+  });
   return options
     .map((option) => ({
       ...option,

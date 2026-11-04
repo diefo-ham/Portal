@@ -1,4 +1,9 @@
-import type { Question } from "../core/model";
+import {
+  assessmentInfo,
+  assessmentOfSection,
+  isAssessment,
+} from "../core/assessments";
+import { assessmentOf, type Question } from "../core/model";
 import { numericValue } from "../core/practice";
 const record = (v: unknown): v is Record<string, unknown> =>
   !!v && typeof v === "object" && !Array.isArray(v);
@@ -25,11 +30,28 @@ export function parseQuestions(input: unknown): Question[] {
     )
       return fail("id must be unique, nonempty, and safe.");
     ids.add(raw.id);
-    if (!["math", "reading-writing"].includes(String(raw.section)))
-      return fail("section must be math or reading-writing.");
+    if (raw.assessment != null && !isAssessment(raw.assessment))
+      return fail("assessment must be SAT or PAA.");
+    const assessment = raw.assessment ?? "SAT";
+    const part = assessmentOfSection(String(raw.section));
+    if (!part)
+      return fail(
+        "section must be math or reading-writing (SAT), or lectura, redaccion, matematicas or ingles (PAA).",
+      );
+    if (part !== assessment)
+      return fail(`section ${raw.section} does not belong to ${assessment}.`);
+    // IDs carry their test, so one test's questions can never overwrite another's.
+    const prefix = assessmentInfo(assessment).idPrefix;
+    if (prefix ? !raw.id.startsWith(prefix) : raw.id.startsWith("paa-"))
+      return fail(
+        prefix
+          ? `${assessment} question IDs must start with "${prefix}".`
+          : 'only PAA question IDs may start with "paa-".',
+      );
     if (!text(raw.stem)) return fail("stem is required.");
     const q: Question = {
       id: raw.id,
+      assessment,
       section: raw.section as Question["section"],
       stem: raw.stem,
       testStatus: "unknown",
@@ -40,7 +62,9 @@ export function parseQuestions(input: unknown): Question[] {
       "source",
       "domain",
       "skill",
+      "skillDetail",
       "passage",
+      "passageGroup",
       "rationale",
     ] as const) {
       if (raw[key] != null) {
@@ -197,7 +221,12 @@ export function mergeQuestions(
     const sourceMatch =
       q.source &&
       q.sourceId &&
-      result.find((e) => e.source === q.source && e.sourceId === q.sourceId);
+      result.find(
+        (e) =>
+          assessmentOf(e) === assessmentOf(q) &&
+          e.source === q.source &&
+          e.sourceId === q.sourceId,
+      );
     if (sourceMatch) {
       skipped++;
       continue;
@@ -227,13 +256,16 @@ export function mergeQuestions(
 // Exact normalized content comparison only. Never infer identity from a shared stem.
 function contentKey(q: Question) {
   return JSON.stringify([
+    assessmentOf(q),
     q.source,
     q.sourceId,
     q.section,
     q.domain,
     q.skill,
+    q.skillDetail,
     q.difficulty,
     q.passage,
+    q.passageGroup,
     q.stem,
     q.choices,
     q.answer,

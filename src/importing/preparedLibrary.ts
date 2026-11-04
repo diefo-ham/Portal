@@ -5,7 +5,11 @@ import {
   readData,
   updateData,
 } from "../storage/database";
-import type { StudyData } from "../core/model";
+import { assessmentOf, type StudyData } from "../core/model";
+
+/** One key for "the same source question", which never crosses assessments. */
+const sourceKey = (q: StudyData["questions"][number]) =>
+  [assessmentOf(q), q.source, q.sourceId].join("\u0000");
 
 /** Source label of the original example questions older versions offered. */
 const EXAMPLE_SOURCE = "Original synthetic examples";
@@ -144,23 +148,23 @@ export async function ingestLibrary(
     const result = mergeQuestions(
       d.questions,
       incoming,
-      "College Board PDF exports",
+      label || "PDF question library",
     );
     // Prepared revisions may repair source layout/classification while stable IDs
     // preserve attempts, notes, bookmarks, and session membership.
     const revisions = new Map(
       incoming
         .filter((q) => q.source && q.sourceId)
-        .map((q) => [q.source + "\u0000" + q.sourceId, q]),
+        .map((q) => [sourceKey(q), q]),
     );
     const refreshed = result.questions.map((q) => {
-      const replacement = revisions.get(q.source + "\u0000" + q.sourceId);
+      const replacement = revisions.get(sourceKey(q));
       return replacement
         ? { ...replacement, id: q.id, importMetadata: q.importMetadata }
         : q;
     });
     const prepared = (q: StudyData["questions"][number]) =>
-      revisions.has(q.source + "\u0000" + q.sourceId);
+      revisions.has(sourceKey(q));
     // Example questions from earlier visits are not wanted beside real ones,
     // unless the person has already worked on them.
     const worked = new Set([

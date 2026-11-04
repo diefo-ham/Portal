@@ -1,9 +1,16 @@
-import type { Section, Session, StudyData } from "./model";
+import { sectionLabel } from "./assessments";
+import type { Session, StudyData } from "./model";
 
 export const SESSION_NAME_MAX_LENGTH = 80;
 
-const sectionLabel = (section: Section) =>
-  section === "math" ? "Math" : "Reading & Writing";
+/** Turns an English phrase into the portal's language; English passes through. */
+export type Say = (text: string, values?: Record<string, string | number>) => string;
+const english: Say = (text, values) =>
+  values
+    ? text.replace(/\{(\w+)\}/g, (match, name: string) =>
+        name in values ? String(values[name]) : match,
+      )
+    : text;
 
 export function normalizeSessionName(value: string): string | undefined {
   const normalized = value.trim().replace(/\s+/gu, " ");
@@ -11,14 +18,18 @@ export function normalizeSessionName(value: string): string | undefined {
   return Array.from(normalized).slice(0, SESSION_NAME_MAX_LENGTH).join("");
 }
 
-export function sessionDefaultName(data: StudyData, session: Session): string {
+export function sessionDefaultName(
+  data: StudyData,
+  session: Session,
+  t: Say = english,
+): string {
   if (session.practiceTest) return "Practice Test";
   const questions = session.questionIds
     .map((id) => data.questions.find((question) => question.id === id))
     .filter((question) => question !== undefined);
   const sections = [...new Set(questions.map((question) => question.section))];
   const section =
-    sections.length === 1 ? sectionLabel(sections[0]) : "Mixed practice";
+    sections.length === 1 ? sectionLabel(sections[0]) : t("Mixed practice");
   const skills = [
     ...new Set(questions.map((question) => question.skill).filter(Boolean)),
   ];
@@ -31,25 +42,32 @@ export function sessionDefaultName(data: StudyData, session: Session): string {
       ? session.filters.statuses
       : [];
   const source = session.filters.bookmark
-    ? "Bookmarks"
+    ? t("Bookmarks")
     : statuses.length === 1 &&
         (statuses[0] === "incorrect" || statuses[0] === "ever-missed")
-      ? "Mistakes"
+      ? t("Mistakes")
       : statuses.length === 1 && statuses[0] === "unanswered"
-        ? "Unanswered"
+        ? t("Unanswered")
         : "";
   const focus =
     skills.length === 1 ? skills[0] : domains.length === 1 ? domains[0] : "";
-  const count = `${session.questionIds.length} ${session.questionIds.length === 1 ? "question" : "questions"}`;
+  const count = t(
+    session.questionIds.length === 1 ? "{n} question" : "{n} questions",
+    { n: session.questionIds.length },
+  );
   return (
     normalizeSessionName(
       [source, section, focus, count].filter(Boolean).join(" · "),
-    ) || "Practice session"
+    ) || t("Practice session")
   );
 }
 
-export function sessionDisplayName(data: StudyData, session: Session): string {
-  return session.name || sessionDefaultName(data, session);
+export function sessionDisplayName(
+  data: StudyData,
+  session: Session,
+  t: Say = english,
+): string {
+  return session.name || sessionDefaultName(data, session, t);
 }
 
 export function repracticeSessionName(data: StudyData, session: Session) {

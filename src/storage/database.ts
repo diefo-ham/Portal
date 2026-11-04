@@ -1,10 +1,16 @@
-import { emptyData, type StudyData } from "../core/model";
+import { emptyData, type Assessment, type StudyData } from "../core/model";
+import { backfillAssessments, replaceSlice } from "../core/assessments";
 import {
   createResetArchive,
+  resetArchiveKey,
   validateResetArchive,
   type ResetArchive,
 } from "./resetArchive";
-export type UpdateOptions = { resetArchive?: "save" | "restore" };
+/** `assessment` says whose progress a reset archive saves or restores. */
+export type UpdateOptions = {
+  resetArchive?: "save" | "restore";
+  assessment?: Assessment;
+};
 let connection: Promise<IDBDatabase> | undefined;
 function database() {
   return (connection ??= new Promise<IDBDatabase>((resolve, reject) => {
@@ -140,7 +146,7 @@ export async function readData(): Promise<StudyData> {
   const db = await database();
   return new Promise((resolve, reject) => {
     const req = db.transaction("state").objectStore("state").get("current");
-    req.onsuccess = () => resolve(req.result ?? emptyData());
+    req.onsuccess = () => resolve(backfillAssessments(req.result ?? emptyData()));
     req.onerror = () => reject(req.error);
   });
 }
@@ -155,14 +161,21 @@ export async function updateData(
     let data: StudyData;
     const req = store.get("current");
     req.onsuccess = () => {
-      data = req.result ?? emptyData();
+      data = backfillAssessments(req.result ?? emptyData());
+      const assessment = options.assessment ?? "SAT";
       const commit = (archive?: unknown) => {
         try {
           if (options.resetArchive === "save")
-            store.put(createResetArchive(data), "reset-archive");
-          if (options.resetArchive === "restore")
-            Object.assign(data, validateResetArchive(archive, data).study);
+            store.put(
+              createResetArchive(data, assessment),
+              resetArchiveKey(assessment),
+            );
+          if (options.resetArchive === "restore") {
+            const restored = validateResetArchive(archive, data);
+            replaceSlice(data, restored.assessment ?? "SAT", restored.study);
+          }
           update(data);
+          backfillAssessments(data);
           store.put(data, "current");
         } catch (error) {
           tx.abort();
@@ -170,7 +183,7 @@ export async function updateData(
         }
       };
       if (options.resetArchive === "restore") {
-        const archive = store.get("reset-archive");
+        const archive = store.get(resetArchiveKey(assessment));
         archive.onsuccess = () => commit(archive.result);
       } else commit();
     };
@@ -183,16 +196,21 @@ export async function updateData(
   });
 }
 
-export async function readResetArchive(): Promise<ResetArchive | undefined> {
+export async function readResetArchive(
+  assessment: Assessment = "SAT",
+): Promise<ResetArchive | undefined> {
   const db = await database();
   return new Promise((resolve, reject) => {
     const store = db.transaction("state").objectStore("state");
     const current = store.get("current");
-    const archive = store.get("reset-archive");
+    const archive = store.get(resetArchiveKey(assessment));
     archive.onsuccess = () => {
       try {
         resolve(
-          validateResetArchive(archive.result, current.result ?? emptyData()),
+          validateResetArchive(
+            archive.result,
+            backfillAssessments(current.result ?? emptyData()),
+          ),
         );
       } catch {
         resolve(undefined);

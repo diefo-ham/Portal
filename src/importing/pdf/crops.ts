@@ -32,6 +32,7 @@ const labelHits = (page: PageLayout, phrase: string) =>
 export function planCrops(
   record: SourceRecord,
   pages: readonly PageLayout[],
+  language: "en" | "es" = "en",
 ): PanelPlan[] {
   if (pages.length !== record.pages.length)
     throw new Error("Page layouts do not match the question's pages");
@@ -62,7 +63,10 @@ export function planCrops(
           kind: "question",
           page: pageNumber,
           rect: rect(start, questionEnd),
-          alt: `Question ${record.id}, source page ${pageNumber}. Original layout includes any answer choices.`,
+          alt:
+            language === "es"
+              ? `Pregunta ${record.id}, página ${pageNumber} del original. El diseño original incluye las opciones de respuesta.`
+              : `Question ${record.id}, source page ${pageNumber}. Original layout includes any answer choices.`,
         });
     }
     if (boundary) {
@@ -75,7 +79,10 @@ export function planCrops(
         kind: "rationale",
         page: pageNumber,
         rect: rect(start, end),
-        alt: `Explanation for ${record.id}, source page ${pageNumber}.`,
+        alt:
+          language === "es"
+            ? `Explicación de ${record.id}, página ${pageNumber} del original.`
+            : `Explanation for ${record.id}, source page ${pageNumber}.`,
       });
   });
   if (

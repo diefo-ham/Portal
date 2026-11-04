@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import type { DocumentPanel, Question } from "../core/model";
 import { readAsset } from "../storage/database";
+import { useT } from "./i18n";
 function Panel({ panel }: { panel: DocumentPanel }) {
+  const t = useT();
   const [src, setSrc] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
@@ -17,7 +19,9 @@ function Panel({ panel }: { panel: DocumentPanel }) {
       .then((blob) => {
         if (!blob)
           throw new Error(
-            "Original PDF image is unavailable. Reload to retry importing the local library.",
+            t(
+              "Original PDF image is unavailable. Reload to retry importing the local library.",
+            ),
           );
         if (alive) {
           url = URL.createObjectURL(blob);
@@ -31,7 +35,7 @@ function Panel({ panel }: { panel: DocumentPanel }) {
       alive = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [panel.src]);
+  }, [panel.src, t]);
   return (
     <div className="pdf-panel">
       {error ? (
@@ -44,7 +48,7 @@ function Panel({ panel }: { panel: DocumentPanel }) {
           height={panel.height}
         />
       ) : (
-        <p className="muted small">Loading original PDF content…</p>
+        <p className="muted small">{t("Loading original PDF content…")}</p>
       )}
     </div>
   );
@@ -56,13 +60,14 @@ export function DocumentPanels({
   question: Question;
   kind: "question" | "rationale";
 }) {
+  const t = useT();
   return (
     <div
       className="pdf-document"
       aria-label={
         kind === "question"
-          ? "Original PDF question"
-          : "Original PDF explanation"
+          ? t("Original PDF question")
+          : t("Original PDF explanation")
       }
     >
       {question.document?.[kind].map((panel, i) => (

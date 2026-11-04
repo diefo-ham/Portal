@@ -29,9 +29,11 @@ An import is an object with `schemaVersion: 1` and a `questions` array. The impo
 
 | Field                | Required           | Meaning                                                                                                                        |
 | -------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `id`                 | Yes                | Stable internal string ID, unique in a file; prototype-related names rejected                                                  |
+| `id`                 | Yes                | Stable internal string ID, unique in a file; prototype-related names rejected. PAA IDs must start with `paa-`; SAT IDs must not |
 | `source`, `sourceId` | No                 | Source namespace and its original question ID; together the strongest duplicate key                                            |
-| `section`            | Yes                | `math` or `reading-writing`                                                                                                    |
+| `assessment`         | No                 | `SAT` (default) or `PAA`; see [the PAA notes](paa.md)                                                                          |
+| `section`            | Yes                | SAT: `math` or `reading-writing`. PAA: `lectura`, `redaccion`, `matematicas` or `ingles`. Must belong to `assessment`.         |
+| `passageGroup`       | No                 | Questions that share a reading carry the same group id; sessions keep them together                                            |
 | `domain`, `skill`    | No                 | Free text, preferably consistent across imports                                                                                |
 | `difficulty`         | No                 | `easy`, `medium`, `hard`                                                                                                       |
 | `passage`            | No                 | Plain text preceding the question; newlines preserved                                                                          |
@@ -53,7 +55,7 @@ Numeric response questions omit choices:
 
 ## Duplicate policy
 
-- Exact `(source, sourceId)` match: skip the incoming entry, retain existing content, status, and progress. Use a stable source namespace across equivalent exports. Re-import does not silently change active/inactive classification.
+- Exact `(assessment, source, sourceId)` match: skip the incoming entry, retain existing content, status, and progress. Use a stable source namespace across equivalent exports. Re-import does not silently change active/inactive classification.
 - Same internal ID and same question content: skip an exact duplicate.
 - Same internal ID but conflicting content: reject the complete import rather than overwrite history.
 - Different IDs without a source-ID match: retain both. No fuzzy merging. A future content-fingerprint tool should propose matches for review rather than merge uncertain items automatically.

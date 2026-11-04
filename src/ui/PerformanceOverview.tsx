@@ -1,5 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
+import { assessmentInfo, sectionLabel } from "../core/assessments";
 import type { Section, StudyData } from "../core/model";
+import { useAssessment, useT, type Translate } from "./i18n";
 import {
   performanceOverview,
   type AttemptPerformance,
@@ -9,12 +11,11 @@ import { PerformanceGauge } from "./PerformanceGauge";
 
 type Scope = { kind: "all" } | { kind: "section"; section: Section };
 
-const sectionLabel = (section: Section) =>
-  section === "math" ? "Math" : "Reading & Writing";
-const attemptsLabel = (count: number) =>
-  `${count} ${count === 1 ? "attempt" : "attempts"}`;
+const attemptsLabel = (t: Translate, count: number) =>
+  t(count === 1 ? "{n} attempt" : "{n} attempts", { n: count });
 
 function AttemptMarks({ metric }: { metric: AttemptPerformance }) {
+  const t = useT();
   if (!metric.attempts) return null;
   const limit = 12;
   const groups = Array.from(
@@ -36,14 +37,24 @@ function AttemptMarks({ metric }: { metric: AttemptPerformance }) {
       role="img"
       title={
         aggregated
-          ? `Twelve grouped marks summarize ${attemptsLabel(metric.attempts)}.`
-          : `${metric.correct} correct and ${metric.incorrect} incorrect.`
+          ? t("Twelve grouped marks summarize {attempts}.", {
+              attempts: attemptsLabel(t, metric.attempts),
+            })
+          : t("{correct} correct and {incorrect} incorrect.", {
+              correct: metric.correct,
+              incorrect: metric.incorrect,
+            })
       }
-      aria-label={
+      aria-label={t(
         aggregated
-          ? `${metric.correct} correct and ${metric.incorrect} incorrect across ${attemptsLabel(metric.attempts)}; marks are grouped.`
-          : `${metric.correct} correct and ${metric.incorrect} incorrect across ${attemptsLabel(metric.attempts)}.`
-      }
+          ? "{correct} correct and {incorrect} incorrect across {attempts}; marks are grouped."
+          : "{correct} correct and {incorrect} incorrect across {attempts}.",
+        {
+          correct: metric.correct,
+          incorrect: metric.incorrect,
+          attempts: attemptsLabel(t, metric.attempts),
+        },
+      )}
     >
       {groups.map((share, index) => (
         <span
@@ -70,26 +81,40 @@ function Gauge({
   metric: AttemptPerformance;
   label: string;
 }) {
+  const t = useT();
   const value = metric.accuracy ?? 0;
   return (
     <PerformanceGauge
       value={metric.accuracy === undefined ? undefined : value}
       label={label}
-      detail={metric.accuracy === undefined ? undefined : attemptsLabel(metric.attempts)}
+      detail={
+        metric.accuracy === undefined
+          ? undefined
+          : attemptsLabel(t, metric.attempts)
+      }
       ariaLabel={
         metric.accuracy === undefined
-          ? `${label}: not attempted, 0 attempts`
-          : `${label}: ${metric.accuracy}% accuracy across ${attemptsLabel(metric.attempts)}`
+          ? t("{label}: not attempted, 0 attempts", { label })
+          : t("{label}: {accuracy}% accuracy across {attempts}", {
+              label,
+              accuracy: metric.accuracy,
+              attempts: attemptsLabel(t, metric.attempts),
+            })
       }
       footer={
         <>
           {metric.attempts > 0 && (
             <p className="gauge-counts">
-              {metric.correct} correct · {metric.incorrect} incorrect
+              {t("{correct} correct · {incorrect} incorrect", {
+                correct: metric.correct,
+                incorrect: metric.incorrect,
+              })}
             </p>
           )}
           {metric.attempts > 0 && metric.attempts < 5 && (
-            <p className="small muted gauge-caution">Limited data so far.</p>
+            <p className="small muted gauge-caution">
+              {t("Limited data so far.")}
+            </p>
           )}
         </>
       }
@@ -112,6 +137,7 @@ function DomainRow({
   onSelect: () => void;
   onStart: (ids: string[], source?: "mistakes") => void;
 }) {
+  const t = useT();
   const mistakes = domain.questionIds.filter((id) => mistakeIds.has(id));
   const eligible = domain.questionIds.filter((id) => eligibleIds.has(id));
   return (
@@ -128,10 +154,11 @@ function DomainRow({
         <span className="domain-name">{domain.domain}</span>
         <span className="domain-metric">
           {domain.accuracy === undefined ? (
-            "No attempts"
+            t("No attempts")
           ) : (
             <>
-              {domain.accuracy}%<small>{attemptsLabel(domain.attempts)}</small>
+              {domain.accuracy}%
+              <small>{attemptsLabel(t, domain.attempts)}</small>
             </>
           )}
         </span>
@@ -145,33 +172,36 @@ function DomainRow({
                 <span>{skill.skill}</span>
                 <span>
                   {skill.accuracy === undefined
-                    ? "No attempts"
-                    : `${skill.accuracy}% · ${attemptsLabel(skill.attempts)}`}
+                    ? t("No attempts")
+                    : `${skill.accuracy}% · ${attemptsLabel(t, skill.attempts)}`}
                 </span>
               </div>
             ))}
           </div>
         ) : (
           <p className="small muted">
-            No skills from this domain are available in the local question
-            library.
+            {t(
+              "No skills from this domain are available in the local question library.",
+            )}
           </p>
         )}
         <div className="domain-actions">
           {mistakes.length > 0 && (
             <button
-              aria-label={`Review mistakes in ${domain.domain}`}
+              aria-label={t("Review mistakes in {domain}", {
+                domain: domain.domain,
+              })}
               onClick={() => onStart(mistakes, "mistakes")}
             >
-              Review mistakes
+              {t("Review mistakes")}
             </button>
           )}
           <button
-            aria-label={`Practice ${domain.domain}`}
+            aria-label={t("Practice {domain}", { domain: domain.domain })}
             disabled={!eligible.length}
             onClick={() => onStart(eligible)}
           >
-            Practice this domain
+            {t("Practice this domain")}
           </button>
         </div>
       </div>
@@ -190,7 +220,12 @@ export function PerformanceOverview({
   mistakeIds: string[];
   onStart: (ids: string[], source?: "mistakes") => void;
 }) {
-  const performance = useMemo(() => performanceOverview(data), [data]);
+  const t = useT();
+  const info = assessmentInfo(useAssessment());
+  const performance = useMemo(
+    () => performanceOverview(data, info.id),
+    [data, info.id],
+  );
   const [scope, setScope] = useState<Scope>({ kind: "all" });
   const [expandedDomainKey, setExpandedDomainKey] = useState<string>();
   const selectedDomain = performance.domains.find(
@@ -202,7 +237,9 @@ export function PerformanceOverview({
       : performance.sections[scope.section];
   const metric = selectedDomain || scopeMetric;
   const scopeLabel =
-    scope.kind === "all" ? "All SAT practice" : sectionLabel(scope.section);
+    scope.kind === "all"
+      ? t("All {name} practice", { name: info.name })
+      : sectionLabel(scope.section);
   const label = selectedDomain?.domain || scopeLabel;
   const mistakes = useMemo(() => new Set(mistakeIds), [mistakeIds]);
   const eligibleIds = useMemo(
@@ -223,13 +260,13 @@ export function PerformanceOverview({
     >
       <div className="performance-heading">
         <div>
-          <p className="eyebrow">PERFORMANCE SO FAR</p>
-          <h2 id="performance-heading">Explore your answered work</h2>
+          <p className="eyebrow">{t("PERFORMANCE SO FAR")}</p>
+          <h2 id="performance-heading">{t("Explore your answered work")}</h2>
         </div>
         <div
           className="performance-scope"
           role="group"
-          aria-label="Performance scope"
+          aria-label={t("Performance scope")}
         >
           <button
             aria-pressed={scope.kind === "all"}
@@ -238,9 +275,9 @@ export function PerformanceOverview({
               setExpandedDomainKey(undefined);
             }}
           >
-            All
+            {t("All")}
           </button>
-          {(["math", "reading-writing"] as const).map((section) => (
+          {info.performanceOrder.map((section) => (
             <button
               key={section}
               aria-pressed={
@@ -258,7 +295,7 @@ export function PerformanceOverview({
       </div>
       <Gauge metric={metric} label={label} />
       <div className="domain-groups">
-        {(["math", "reading-writing"] as const).map((section) => (
+        {info.performanceOrder.map((section) => (
           <section key={section} aria-labelledby={`domains-${section}`}>
             <h3 id={`domains-${section}`}>{sectionLabel(section)}</h3>
             <div>
@@ -284,10 +321,17 @@ export function PerformanceOverview({
         ))}
       </div>
       <p className="small muted performance-note">
-        Accuracy is correct submitted attempts divided by all submitted attempts
-        in the selected scope. Unanswered questions are not counted; repeated
-        attempts remain separate.
+        {t(
+          "Accuracy is correct submitted attempts divided by all submitted attempts in the selected scope. Unanswered questions are not counted; repeated attempts remain separate.",
+        )}
       </p>
+      {info.id === "PAA" && (
+        <p className="small muted performance-note">
+          {t(
+            "This is the share of answers you got right in practice. It is not a PAA score: the real score is converted from the full test.",
+          )}
+        </p>
+      )}
     </section>
   );
 }

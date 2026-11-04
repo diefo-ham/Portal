@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { assessmentInfo } from "../core/assessments";
 import type { StudyData } from "../core/model";
 import { reviewQueues, sessionOutcomes, sessionTiming } from "../core/review";
 import { sessionDisplayName } from "../core/sessions";
 import { PerformanceOverview } from "./PerformanceOverview";
 import { formatElapsed } from "./formatTime";
+import { useAssessment, useT } from "./i18n";
 
 export function Review({
   data,
@@ -19,6 +21,8 @@ export function Review({
   ) => void;
   onOpen: (id: string) => void;
 }) {
+  const t = useT();
+  const info = assessmentInfo(useAssessment());
   const [visible, setVisible] = useState(5);
   const queues = reviewQueues(data, protectTests);
   const bookmarks = data.questions
@@ -34,10 +38,12 @@ export function Review({
   const recent = data.sessions.toReversed();
   return (
     <main className="page narrow review-page">
-      <p className="eyebrow">REFLECT & RETURN</p>
-      <h1>What deserves another look?</h1>
+      <p className="eyebrow">{t("REFLECT & RETURN")}</p>
+      <h1>{t("What deserves another look?")}</h1>
       <p className="muted">
-        Return to a mistake, finish what you left, or try a familiar set again.
+        {t(
+          "Return to a mistake, finish what you left, or try a familiar set again.",
+        )}
       </p>
       <PerformanceOverview
         data={data}
@@ -47,41 +53,48 @@ export function Review({
       />
       <div className="review-paths">
         <section>
-          <h2>Mistakes</h2>
+          <h2>{t("Mistakes")}</h2>
           <p>
             {queues.mistakes.length
-              ? `${queues.mistakes.length} questions with an incorrect latest answer.`
-              : "No mistakes waiting to revisit."}
+              ? t("{n} questions with an incorrect latest answer.", {
+                  n: queues.mistakes.length,
+                })
+              : t("No mistakes waiting to revisit.")}
           </p>
           <button
             disabled={!queues.mistakes.length}
             onClick={() => onStart(queues.mistakes, "mistakes")}
           >
-            Practice mistakes
+            {t("Practice mistakes")}
           </button>
         </section>
         <section>
-          <h2>Left unanswered</h2>
+          <h2>{t("Left unanswered")}</h2>
           <p>
             {queues.unanswered.length
-              ? `${queues.unanswered.length} questions from your previous sets still have no submitted answer.`
-              : "Nothing left unanswered in your sets."}
+              ? t(
+                  "{n} questions from your previous sets still have no submitted answer.",
+                  { n: queues.unanswered.length },
+                )
+              : t("Nothing left unanswered in your sets.")}
           </p>
           <button
             disabled={!queues.unanswered.length}
             onClick={() => onStart(queues.unanswered, "unanswered")}
           >
-            Practice unanswered
+            {t("Practice unanswered")}
           </button>
         </section>
         <section>
-          <h2>Bookmarks</h2>
+          <h2>{t("Bookmarks")}</h2>
           <p>
             {bookmarks.length
-              ? `${bookmarks.length} saved questions ready to revisit.`
+              ? t("{n} saved questions ready to revisit.", {
+                  n: bookmarks.length,
+                })
               : protectedBookmarks
                 ? "Your saved questions are currently protected practice-test material."
-                : "Save a question with the star or E during practice."}
+                : t("Save a question with the star or E during practice.")}
             {protectedBookmarks > 0 && bookmarks.length > 0
               ? ` ${protectedBookmarks} saved questions are hidden by practice-test protection.`
               : ""}
@@ -90,21 +103,23 @@ export function Review({
             disabled={!bookmarks.length}
             onClick={() => onStart(bookmarks, "bookmarks")}
           >
-            Practice bookmarks
+            {t("Practice bookmarks")}
           </button>
         </section>
       </div>
       <p className="small muted">
-        {protectTests
-          ? "Practice-test protection is on for these review sets."
-          : "Review sets may include active practice-test questions."}{" "}
-        A later answer updates these queues; original session results remain
-        unchanged.
+        {info.protectedTests &&
+          (protectTests
+            ? "Practice-test protection is on for these review sets."
+            : "Review sets may include active practice-test questions.")}{" "}
+        {t(
+          "A later answer updates these queues; original session results remain unchanged.",
+        )}
       </p>
-      <h2 className="spaced">Your sessions</h2>
+      <h2 className="spaced">{t("Your sessions")}</h2>
       {!recent.length && (
         <p className="muted">
-          After a practice set, you can revisit its results here.
+          {t("After a practice set, you can revisit its results here.")}
         </p>
       )}
       {recent.slice(0, visible).map((session) => {
@@ -117,27 +132,28 @@ export function Review({
             onClick={() => onOpen(session.id)}
           >
             <span>
-              <strong>{sessionDisplayName(data, session)}</strong>
+              <strong>{sessionDisplayName(data, session, t)}</strong>
               <small className="session-outcomes">
-                {result.correct.length} correct · {result.incorrect.length}{" "}
-                incorrect · {result.unanswered.length} unanswered ·{" "}
+                {t("{n} correct", { n: result.correct.length })} ·{" "}
+                {t("{n} incorrect", { n: result.incorrect.length })} ·{" "}
+                {t("{n} unanswered", { n: result.unanswered.length })} ·{" "}
                 {new Date(session.startedAt).toLocaleDateString()}
                 {session.finishedAt && timing.totalMs !== undefined
-                  ? ` · ${formatElapsed(timing.totalMs)} active time`
+                  ? ` · ${t("{time} active time", { time: formatElapsed(timing.totalMs) })}`
                   : ""}
               </small>
             </span>
             <span>
               {session.finishedAt
-                ? "View results & retry →"
-                : "Resume practice →"}
+                ? t("View results & retry →")
+                : t("Resume practice →")}
             </span>
           </button>
         );
       })}
       {recent.length > visible && (
         <button className="load-more" onClick={() => setVisible(visible + 5)}>
-          Show older sessions
+          {t("Show older sessions")}
         </button>
       )}
     </main>

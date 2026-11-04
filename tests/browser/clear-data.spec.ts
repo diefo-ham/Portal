@@ -64,6 +64,10 @@ test("erasing everything returns the app to a clean first run", async ({
   await expect(
     page.getByRole("button", { name: "Add your question PDFs" }),
   ).toBeVisible();
+  // The remembered test goes too: a clean first run opens the SAT.
+  expect(
+    await page.evaluate(() => localStorage.getItem("sat-last-assessment")),
+  ).toBeNull();
   expect(
     await page.evaluate(() => localStorage.getItem("sat-timer-default")),
   ).toBeNull();

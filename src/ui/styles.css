@@ -337,7 +337,8 @@ details > summary:hover {
 }
 .section-segments {
   display: grid;
-  grid-template-columns: 0.65fr 1.65fr 0.75fr;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   min-height: var(--control-height);
   padding: 3px;
   border: 1px solid var(--control-border);
@@ -556,6 +557,8 @@ details > summary:hover {
   position: relative;
   min-width: 0;
   display: grid;
+  /* Without this the column sizes to the longest label and spills past its cell. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 7px;
 }
@@ -563,6 +566,10 @@ details > summary:hover {
   font-size: 12px;
   font-weight: 500;
   color: var(--muted);
+}
+.filter-hint {
+  font-weight: 400;
+  opacity: 0.8;
 }
 .multi-select > button {
   display: flex;
@@ -577,9 +584,26 @@ details > summary:hover {
   text-align: left;
 }
 .multi-select > button > span:first-child {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+/* A drawn chevron: the "⌄" glyph falls back to a plain "v" in some fonts. */
+.multi-select .chevron {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: -3px 3px 0 0;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  opacity: 0.75;
+  transform: rotate(45deg);
+}
+.multi-select > button[aria-expanded="true"] .chevron {
+  margin-top: 3px;
+  transform: rotate(-135deg);
 }
 .multi-select > button[aria-expanded="true"] {
   border-color: var(--accent);
@@ -606,8 +630,10 @@ details > summary:hover {
   max-height: min(300px, 42dvh);
   overflow: auto;
   overscroll-behavior: contain;
+  padding: 0;
+}
+.multi-options > input + .multi-option-list {
   margin-top: 5px;
-  padding: 3px;
 }
 .multi-option-list label {
   display: flex;
@@ -2602,9 +2628,10 @@ figcaption {
   margin: 0.5rem auto;
   padding: 0 1rem;
 }
+/* Answered questions in the practice overview: theme tokens, so dark mode keeps readable text. */
 .question-map .map-answered {
-  background: var(--accent-soft, #e3e9ed);
-  border-color: var(--accent, #52656a);
+  background: var(--surface-selected);
+  border-color: var(--accent);
 }
 .test-score {
   font-size: 2rem;
@@ -2755,6 +2782,10 @@ figcaption {
 .test-question-grid button.marked {
   box-shadow: inset 0 3px var(--warning);
 }
+.test-question-grid button[aria-current="step"] {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 .test-question-grid button strong {
   font-size: 16px;
 }
@@ -2846,3 +2877,151 @@ figcaption {
     width: 100%;
   }
 }
+
+/* The test toggle: one button that shows the current test and swaps it, like the calculator's Radians/Degrees. */
+.assessment-toggle {
+  min-height: 30px;
+  padding: 3px 12px;
+  border-color: var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-selected);
+  color: var(--ink);
+  font-size: 12px;
+  white-space: nowrap;
+}
+@media (max-width: 700px) {
+  .assessment-toggle {
+    order: 3;
+  }
+}
+
+/* Tests with more than two parts (the PAA): the selector gets a whole row. */
+.section-filter.wide {
+  grid-column: 1 / -1;
+}
+.section-filter.wide .section-segments {
+  grid-auto-columns: minmax(max-content, 1fr);
+  gap: 2px;
+  overflow-x: auto;
+}
+.section-filter.wide .section-segments button {
+  padding: 5px 16px;
+  font-size: 13px;
+}
+/* On a phone the four parts sit two by two instead of scrolling sideways. */
+@media (max-width: 560px) {
+  .section-filter.wide .section-segments {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .section-filter.wide .section-segments button {
+    padding: 5px 8px;
+  }
+}
+
+/* PAA test mode. */
+.test-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.test-presets button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-selected);
+}
+/* Checkboxes outside .filters need the same type size and row layout as the ones inside it. */
+.test-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: var(--space-4) 0 var(--space-1);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ink);
+}
+.test-option input {
+  margin: 0;
+}
+.test-mode-page .practice-composer > .small {
+  margin: var(--space-1) 0 0 25px;
+}
+.test-mode-page .composer-start {
+  margin: var(--space-5) 0 var(--space-1);
+}
+.test-result-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.test-result-row .session-row {
+  flex: 1;
+}
+.part-results {
+  width: 100%;
+  margin: var(--space-4) 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.part-results th,
+.part-results td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.part-results th:first-child {
+  text-align: left;
+}
+.part-results thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.test-mode-page .section-filter {
+  margin-bottom: var(--space-3);
+}
+.test-mode-page .practice-composer > button.primary {
+  margin-top: var(--space-4);
+}
+.part-plan {
+  width: 100%;
+  margin: var(--space-3) 0 var(--space-4);
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.part-plan th,
+.part-plan td {
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-weight: 400;
+}
+.part-plan thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+.part-plan input {
+  width: 72px;
+  text-align: center;
+}
+.test-rules {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 70ch;
+  margin-bottom: var(--space-3);
+}
+.test-break {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-6) auto;
+  max-width: 560px;
+}
+.test-part-name {
+  white-space: nowrap;
+}
+.test-mode-page .practice-composer > .test-rules {
+  margin-left: 0;
+}
+

@@ -99,7 +99,8 @@ test("progress survives closing and reopening the browser process", async ({}, t
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
     });
-    await page.goto("http://127.0.0.1:4318");
+    // A fresh profile has no remembered test; the link opens the SAT directly.
+    await page.goto("http://127.0.0.1:4318/#/sat");
     await loadSample(page);
     await page.getByRole("button", { name: "Start practice" }).click();
     await page.getByRole("radio").nth(1).check();
@@ -111,7 +112,7 @@ test("progress survives closing and reopening the browser process", async ({}, t
       headless: true,
     });
     page = await context.newPage();
-    await page.goto("http://127.0.0.1:4318");
+    await page.goto("http://127.0.0.1:4318/#/sat");
     await page.getByRole("button", { name: "Resume practice" }).click();
     await expect(page.getByText("Correct. Nicely done.")).toBeVisible();
     await expect(page.getByRole("radio").nth(1)).toBeChecked();

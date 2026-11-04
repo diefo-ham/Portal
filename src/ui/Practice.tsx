@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ShortcutHelp } from "./Help";
+import { useT } from "./i18n";
 import { useQuestionTimer } from "./useQuestionTimer";
 import { submitAnswer, finishSession } from "../core/commands";
 import type { Session, StudyData } from "../core/model";
@@ -44,6 +45,7 @@ export function Practice({
   onBack: () => void | Promise<unknown>;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
 }) {
+  const t = useT();
   const test = storedSession.practiceTest;
   const isTest = !!test && !storedSession.finishedAt;
   const module = isTest ? test.modules[test.currentModule] : undefined;
@@ -405,7 +407,7 @@ export function Practice({
             })
           }
         >
-          ← Exit
+          {t("← Exit")}
         </button>
         <button
           className="text-button"
@@ -413,16 +415,18 @@ export function Practice({
             if (isTest) void finish();
             else openPanel("overview");
           }}
-          aria-label="Open question overview"
+          aria-label={t("Open question overview")}
         >
-          Question {session.index + 1}{" "}
-          <span className="muted">of {session.questionIds.length}</span>
+          {t("Question {n}", { n: session.index + 1 })}{" "}
+          <span className="muted">
+            {t("of {total}", { total: session.questionIds.length })}
+          </span>
         </button>
         <div className="toolbar-right">
           {showTime && (
             <span
               className={`timer ${testClock ? "test-timer" : ""} ${testClock?.warning ? "timer-warning" : ""}`}
-              aria-label={testClock?.label || "Time on this question"}
+              aria-label={testClock?.label || t("Time on this question")}
             >
               {time(
                 testClock
@@ -454,7 +458,7 @@ export function Practice({
             </button>
           )}
           <button
-            aria-label="Practice tools"
+            aria-label={t("Practice tools")}
             onClick={() => openPanel("tools")}
           >
             •••
@@ -480,7 +484,7 @@ export function Practice({
           key={question.id}
           ref={questionTop}
           tabIndex={-1}
-          aria-label={`Question ${session.index + 1}`}
+          aria-label={t("Question {n}", { n: session.index + 1 })}
         >
           <div className="question-heading">
             <div>
@@ -496,15 +500,15 @@ export function Practice({
                     ? "Unmark for review"
                     : "Mark for review"
                   : annotation.bookmarked
-                    ? "Remove bookmark"
-                    : "Bookmark question"
+                    ? t("Remove bookmark")
+                    : t("Bookmark question")
               }
               title={
                 isTest
                   ? `${markedForReview ? "Unmark" : "Mark"} for review (E)`
                   : annotation.bookmarked
-                    ? "Remove bookmark (E)"
-                    : "Bookmark question (E)"
+                    ? t("Remove bookmark (E)")
+                    : t("Bookmark question (E)")
               }
               onClick={(e) => {
                 // Pointer activation returns to reading; keyboard activation keeps
@@ -526,7 +530,7 @@ export function Practice({
               {isTest && <span>Mark for review</span>}
             </button>
           </div>
-          {question.passage && (
+          {question.passage && !question.document && (
             <div className="passage">{question.passage}</div>
           )}
           {question.media?.map((m, i) => (
@@ -537,7 +541,9 @@ export function Practice({
           ))}
           {question.document ? (
             <>
-              <h1 className="sr-only">Question {question.sourceId}</h1>
+              <h1 className="sr-only">
+                {t("Question {id}", { id: question.sourceId ?? "" })}
+              </h1>
               {question.document.extractionWarnings?.map((warning, i) => (
                 <p className="notice" key={i}>
                   {warning}
@@ -546,8 +552,8 @@ export function Practice({
               <DocumentPanels question={question} kind="question" />
               <p className="small muted">
                 {question.answer.type === "choice"
-                  ? "Select an answer from the choices shown above."
-                  : "Enter your answer below."}
+                  ? t("Select an answer from the choices shown above.")
+                  : t("Enter your answer below.")}
               </p>
             </>
           ) : (
@@ -557,7 +563,7 @@ export function Practice({
             className="answers"
             disabled={!!attempt || pending || session.paused}
           >
-            <legend className="sr-only">Your answer</legend>
+            <legend className="sr-only">{t("Your answer")}</legend>
             {question.answer.type === "choice" ? (
               question.choices!.map((c) => (
                 <label
@@ -583,9 +589,9 @@ export function Practice({
               ))
             ) : (
               <label className="numeric-answer">
-                Your answer
+                {t("Your answer")}
                 <input
-                  aria-label="Your numeric answer"
+                  aria-label={t("Your numeric answer")}
                   inputMode="text"
                   value={answer}
                   onChange={(e) => {
@@ -599,7 +605,7 @@ export function Practice({
                         ] = v;
                     }).catch(() => {});
                   }}
-                  placeholder="Enter a number or fraction"
+                  placeholder={t("Enter a number or fraction")}
                   onKeyDown={(e) => {
                     if (
                       e.key === "Enter" &&
@@ -613,11 +619,19 @@ export function Practice({
                   }}
                 />
                 <span className="small muted">
-                  Decimals and fractions accepted (for example, 0.5 or 1/2).
+                  {question.assessment === "PAA"
+                    ? t(
+                        "Positive numbers only, up to 4 characters (for example, 7.5 or 15/2). Mixed numbers are not accepted.",
+                      )
+                    : t(
+                        "Decimals and fractions accepted (for example, 0.5 or 1/2).",
+                      )}
                 </span>
                 {answer && numericValue(answer) === undefined && (
                   <span className="incorrect small">
-                    Enter a valid number or fraction with a nonzero denominator.
+                    {t(
+                      "Enter a valid number or fraction with a nonzero denominator.",
+                    )}
                   </span>
                 )}
               </label>
@@ -634,7 +648,7 @@ export function Practice({
               }
               onClick={() => void submit()}
             >
-              Check answer
+              {t("Check answer")}
             </button>
           ) : (
             <section
@@ -643,39 +657,42 @@ export function Practice({
             >
               <h2>
                 {attempt.correct
-                  ? "Correct. Nicely done."
-                  : "Not quite. Let’s work through it."}
+                  ? t("Correct. Nicely done.")
+                  : t("Not quite. Let’s work through it.")}
               </h2>
               <p>
-                <strong>Correct answer:</strong> {correctAnswer(question)}
+                <strong>{t("Correct answer:")}</strong>{" "}
+                {correctAnswer(question, t)}
               </p>
               {attempt.correct && !showCorrectExplanations ? (
                 <details className="correct-explanation">
-                  <summary>View explanation</summary>
+                  <summary>{t("View explanation")}</summary>
                   {question.document ? (
                     <DocumentPanels question={question} kind="rationale" />
                   ) : (
                     <p className="rationale">
                       {question.rationale ||
-                        "No rationale was included in this import."}
+                        t("No rationale was included in this import.")}
                     </p>
                   )}
                 </details>
               ) : (
                 <>
-                  <h3>Explanation</h3>
+                  <h3>{t("Explanation")}</h3>
                   {question.document ? (
                     <DocumentPanels question={question} kind="rationale" />
                   ) : (
                     <p className="rationale">
                       {question.rationale ||
-                        "No rationale was included in this import."}
+                        t("No rationale was included in this import.")}
                     </p>
                   )}
                 </>
               )}
               <span className="small muted">
-                Your answer: {displayAnswer(question, attempt.answer)}
+                {t("Your answer: {answer}", {
+                  answer: displayAnswer(question, attempt.answer),
+                })}
                 {showTime ? ` · ${time(attempt.durationMs)}` : ""}
               </span>
             </section>
@@ -685,7 +702,7 @@ export function Practice({
               disabled={session.index === 0 || pending || session.paused}
               onClick={() => void navigate(session.index - 1)}
             >
-              ← Previous
+              {t("← Previous")}
             </button>
             {session.index < session.questionIds.length - 1 ? (
               <button
@@ -697,8 +714,8 @@ export function Practice({
                 {isTest
                   ? "Next question →"
                   : attempt
-                    ? "Next question →"
-                    : "Skip for now →"}
+                    ? t("Next question →")
+                    : t("Skip for now →")}
               </button>
             ) : (
               <button
@@ -707,7 +724,7 @@ export function Practice({
                 disabled={pending || session.paused}
                 onClick={() => void finish()}
               >
-                {isTest ? "Finish module →" : "Review session →"}
+                {isTest ? "Finish module →" : t("Review session →")}
               </button>
             )}
           </div>
@@ -748,27 +765,27 @@ export function Practice({
           {panelParent === "tools" && panel !== "tools" && (
             <button
               className="dialog-back"
-              aria-label="Back to Practice tools"
+              aria-label={t("Back to Practice tools")}
               onClick={() => {
                 setPanelParent(null);
                 setPanel("tools");
               }}
             >
-              ← <span>Back</span>
+              ← <span>{t("Back")}</span>
             </button>
           )}
           <h2>
             {panel === "overview"
-              ? "Question overview"
+              ? t("Question overview")
               : panel === "details"
-                ? "Question details"
+                ? t("Question details")
                 : panel === "leave"
-                  ? "Leave this session?"
+                  ? t("Leave this session?")
                   : panel === "cancel-test"
                     ? "Cancel Practice Test?"
-                    : "Practice tools"}
+                    : t("Practice tools")}
           </h2>
-          <button aria-label="Close panel" onClick={() => setPanel(null)}>
+          <button aria-label={t("Close panel")} onClick={() => setPanel(null)}>
             ×
           </button>
         </div>
@@ -777,22 +794,24 @@ export function Practice({
             <p>
               {isTest
                 ? "Your work is saved. Leaving pauses the module. Resume explicitly when you return."
-                : "Your work is saved. You can resume this session from Practice."}
+                : t(
+                    "Your work is saved. You can resume this session from Practice.",
+                  )}
             </p>
-            <button onClick={() => setPanel(null)}>Cancel</button>
+            <button onClick={() => setPanel(null)}>{t("Cancel")}</button>
             <button
               className="primary"
               disabled={pending}
               onClick={() => void leave()}
             >
-              Leave session
+              {t("Leave session")}
             </button>
           </div>
         )}
         {panel === "tools" && (
           <div className="tool-menu">
             <details>
-              <summary>Keyboard shortcuts & help</summary>
+              <summary>{t("Keyboard shortcuts & help")}</summary>
               <ShortcutHelp />
             </details>
             <button
@@ -803,7 +822,7 @@ export function Practice({
                 } else openToolDetail("overview");
               }}
             >
-              Question overview
+              {t("Question overview")}
             </button>
             {!isTest && (
               <label>
@@ -820,7 +839,7 @@ export function Practice({
                     }).catch(() => {});
                   }}
                 />{" "}
-                Show timer
+                {t("Show timer")}
               </label>
             )}
             {!isTest && (
@@ -835,11 +854,11 @@ export function Practice({
                   })
                 }
               >
-                {session.paused ? "Resume timer" : "Pause timer"}
+                {session.paused ? t("Resume timer") : t("Pause timer")}
               </button>
             )}
             <button onClick={() => openToolDetail("details")}>
-              Question details
+              {t("Question details")}
             </button>
             {isTest && onCancelTest && (
               <button
@@ -860,7 +879,7 @@ export function Practice({
                 }}
                 disabled={pending}
               >
-                Finish session
+                {t("Finish session")}
               </button>
             )}
           </div>
@@ -885,7 +904,7 @@ export function Practice({
         {panel === "overview" && (
           <>
             <section className="utility">
-              <h3>Session map</h3>
+              <h3>{t("Session map")}</h3>
               <div className="question-map">
                 {session.questionIds.map((id, index) => {
                   const a = attempts.find((a) => a.questionId === id);
@@ -893,7 +912,7 @@ export function Practice({
                   return (
                     <button
                       key={id}
-                      aria-label={`Go to question ${index + 1}${saved ? ", answered" : a ? (a.correct ? ", correct" : ", incorrect") : ""}`}
+                      aria-label={t("Go to question {n}", { n: index + 1 }) + (saved ? t(", answered") : a ? (a.correct ? t(", correct") : t(", incorrect")) : "")}
                       aria-current={
                         index === session.index ? "step" : undefined
                       }
@@ -910,7 +929,7 @@ export function Practice({
                 })}
               </div>
               <p className="small muted">
-                Filled squares are answered. You can skip and return.
+                {t("Filled squares are answered. You can skip and return.")}
               </p>
             </section>
             <button
@@ -920,30 +939,45 @@ export function Practice({
               }}
               disabled={pending}
             >
-              {isTest ? "Finish module" : "Finish session"}
+              {isTest ? "Finish module" : t("Finish session")}
             </button>
           </>
         )}
         {panel === "details" && (
           <div className="source-details">
-            <p>Difficulty: {question.difficulty || "Unspecified"}</p>
-            <p>{question.skill || "Skill unspecified"}</p>
             <p>
-              {question.source || "Source unspecified"}
+              {t("Difficulty: {difficulty}", {
+                difficulty: question.difficulty
+                  ? t(question.difficulty)
+                  : t("Unspecified"),
+              })}
+            </p>
+            <p>
+              {question.skill || t("Skill unspecified")}
+              {question.skillDetail ? ` · ${question.skillDetail}` : ""}
+            </p>
+            <p>
+              {question.source || t("Source unspecified")}
               {question.sourceId ? ` · ${question.sourceId}` : ""}
             </p>
-            <p>Practice-test status: {question.testStatus}</p>
+            {question.assessment !== "PAA" && (
+              <p>Practice-test status: {question.testStatus}</p>
+            )}
             {question.document && (
               <details>
-                <summary>PDF source details</summary>
+                <summary>{t("PDF source details")}</summary>
                 {question.document.provenance.map((p) => (
                   <p key={p.filename}>
-                    {p.filename} · pages {p.pages.join(", ")}
+                    {t("{file} · pages {pages}", {
+                      file: p.filename,
+                      pages: p.pages.join(", "),
+                    })}
                   </p>
                 ))}
                 <p>
-                  Original layout is shown above. Search text was extracted
-                  automatically and may omit math notation.
+                  {t(
+                    "Original layout is shown above. Search text was extracted automatically and may omit math notation.",
+                  )}
                 </p>
               </details>
             )}

@@ -18,8 +18,37 @@ export function numericValue(text: string): number | undefined {
   const n = parts.length === 2 ? parts[0] / parts[1] : parts[0];
   return Number.isFinite(n) ? n : undefined;
 }
+/**
+ * PAA grid-in rule (study guide, "ejercicios para suplir la respuesta"): answers
+ * are positive; a decimal is accepted when it is exact, or when it has at least
+ * three decimals and is the correct value cut off or rounded at that point
+ * (2/3 accepts .666 and .667, never .66 or .67).
+ */
+function isCorrectGridIn(accepted: string[], answer: string): boolean {
+  const text = answer.trim();
+  const value = numericValue(text);
+  if (value === undefined || value < 0 || /^[-−]/.test(text)) return false;
+  const exact = accepted.some((a) => {
+    const n = numericValue(a);
+    return (
+      n !== undefined && Math.abs(n - value) <= 1e-9 * Math.max(1, Math.abs(n))
+    );
+  });
+  if (exact) return true;
+  const decimals = /^\d*\.(\d+)$/.exec(text)?.[1].length ?? 0;
+  if (decimals < 3) return false;
+  const scale = 10 ** decimals;
+  return accepted.some((a) => {
+    const n = numericValue(a);
+    if (n === undefined || n < 0) return false;
+    const cut = Math.floor(n * scale + 1e-9) / scale;
+    const rounded = Math.round(n * scale) / scale;
+    return Math.abs(value - cut) < 1e-12 || Math.abs(value - rounded) < 1e-12;
+  });
+}
 export function isCorrect(q: Question, answer: string): boolean {
   if (q.answer.type === "choice") return q.answer.value === answer;
+  if (q.assessment === "PAA") return isCorrectGridIn(q.answer.accepted, answer);
   const value = numericValue(answer);
   return (
     value !== undefined &&
@@ -58,7 +87,11 @@ function matchesAnswerStatus(
           )
         : !!attempt && attempt.correct === (status === "correct");
 }
+/** The parts a filter asks for; none means every part. */
+export const selectedSections = (f: Filters): string[] =>
+  f.sections?.length ? f.sections : f.section ? [f.section] : [];
 export function filterQuestions(data: StudyData, f: Filters): Question[] {
+  const sections = selectedSections(f);
   return data.questions.filter((q) => {
     const statuses = f.status
       ? [f.status]
@@ -71,7 +104,7 @@ export function filterQuestions(data: StudyData, f: Filters): Question[] {
         ? [f.difficulty]
         : [];
     return (
-      (!f.section || q.section === f.section) &&
+      (!sections.length || sections.includes(q.section)) &&
       (!f.domain || metadataKey(q.domain) === metadataKey(f.domain)) &&
       (!f.skill || metadataKey(q.skill) === metadataKey(f.skill)) &&
       (!f.domains?.length || f.domains.includes(domainKey(q))) &&
@@ -86,7 +119,7 @@ export function filterQuestions(data: StudyData, f: Filters): Question[] {
         statuses.some((status) => matchesAnswerStatus(data, q.id, status))) &&
       (!f.bookmark || !!data.annotations[q.id]?.bookmarked) &&
       (!f.search ||
-        [q.stem, q.passage, q.sourceId, q.skill, q.domain]
+        [q.stem, q.passage, q.sourceId, q.skill, q.skillDetail, q.domain]
           .join(" ")
           .toLowerCase()
           .includes(f.search.toLowerCase()))
@@ -140,6 +173,42 @@ export function selectSessionQuestions(
     [selected[0], selected[1]] = [selected[1], selected[0]];
   }
   return selected;
+}
+/**
+ * Like selectSessionQuestions, but questions that share a reading stay together
+ * and in their original order. A reading's questions are chosen or left out as a
+ * whole where the size allows it. Without shared readings it is the same call.
+ */
+export function selectSessionQuestionIds(
+  questions: readonly Question[],
+  ids: string[],
+  limit = 0,
+  previous: string[] = [],
+  random: () => number = Math.random,
+): string[] {
+  const byId = new Map(questions.map((q, position) => [q.id, { q, position }]));
+  if (!ids.some((id) => byId.get(id)?.q.passageGroup))
+    return selectSessionQuestions(ids, limit, previous, random);
+  const units = new Map<string, string[]>();
+  for (const id of [...new Set(ids)].sort(
+    (a, b) => (byId.get(a)?.position ?? 0) - (byId.get(b)?.position ?? 0),
+  )) {
+    const key = byId.get(id)?.q.passageGroup ?? id;
+    units.set(key, [...(units.get(key) ?? []), id]);
+  }
+  const shuffled = [...units.values()];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  if (!limit) return shuffled.flat();
+  const selected: string[] = [];
+  for (const unit of shuffled) {
+    if (selected.length + unit.length <= limit) selected.push(...unit);
+    if (selected.length === limit) break;
+  }
+  // A reading longer than the requested size: keep its first questions, in order.
+  return selected.length ? selected : shuffled[0].slice(0, limit);
 }
 export function summarize(data: StudyData) {
   const attempts = data.attempts;

@@ -838,6 +838,8 @@ test("exact scored percentage stays visible across facets and review retains sim
   await expect(
     page.getByRole("img", { name: /50% scored accuracy/ }),
   ).toBeVisible();
+  // One module is one section: there is nothing to switch between.
+  await expect(page.getByRole("group", { name: "Result scope" })).toHaveCount(0);
   await expect(page.getByLabel("Domain highlights")).toContainText(
     "Strongest domain",
   );

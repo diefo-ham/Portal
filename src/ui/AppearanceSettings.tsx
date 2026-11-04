@@ -6,6 +6,7 @@ import {
   saveAppearance,
   type Theme,
 } from "./appearance";
+import { useT } from "./i18n";
 
 export function useAppearance() {
   const [theme, setTheme] = useState<Theme>(readTheme);
@@ -25,22 +26,23 @@ export function AppearanceSettings({
 }: {
   appearance: ReturnType<typeof useAppearance>;
 }) {
+  const t = useT();
   return (
     <section
       className="appearance-settings"
       aria-labelledby="appearance-heading"
     >
-      <h2 id="appearance-heading">Appearance</h2>
+      <h2 id="appearance-heading">{t("Appearance")}</h2>
       <label className="theme-control">
-        Theme
+        {t("Theme")}
         <select
-          aria-label="Theme"
+          aria-label={t("Theme")}
           value={appearance.theme}
           onChange={(event) => appearance.setTheme(event.target.value as Theme)}
         >
-          <option value="auto">Auto · follow system</option>
-          <option value="light">Light · paper & matcha</option>
-          <option value="dark">Dark · earth & parchment</option>
+          <option value="auto">{t("Auto · follow system")}</option>
+          <option value="light">{t("Light · paper & matcha")}</option>
+          <option value="dark">{t("Dark · earth & parchment")}</option>
         </select>
       </label>
       <label className="pdf-preference">
@@ -49,11 +51,12 @@ export function AppearanceSettings({
           checked={appearance.originalPdf}
           onChange={(event) => appearance.setOriginalPdf(event.target.checked)}
         />{" "}
-        Keep original PDF colors
+        {t("Keep original PDF colors")}
       </label>
       <p className="small muted">
-        PDF text and diagrams normally adapt to the reading theme. Use original
-        colors when a figure’s colors matter; source files are unchanged.
+        {t(
+          "PDF text and diagrams normally adapt to the reading theme. Use original colors when a figure’s colors matter; source files are unchanged.",
+        )}
       </p>
     </section>
   );

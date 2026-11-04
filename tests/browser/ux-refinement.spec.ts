@@ -47,7 +47,8 @@ test("session size is numeric, bounded, and adapts to the filtered pool", async 
   await expect(size).toHaveValue("5");
   await expect(start).toBeEnabled();
   await size.fill("3");
-  await page.getByRole("group", { name: "Section" }).getByText("All").click();
+  // Pressing the selected part again clears it: none selected means every part.
+  await page.getByRole("group", { name: "Section" }).getByText("Math").click();
   await expect(page.getByText("Max 10", { exact: true })).toBeVisible();
   await expect(size).toHaveValue("3");
   await size.fill("");

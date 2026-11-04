@@ -1,4 +1,9 @@
-export type Section = "math" | "reading-writing";
+/** Which test a question, attempt or session belongs to. Absent means SAT. */
+export type Assessment = "SAT" | "PAA";
+export type SatSection = "math" | "reading-writing";
+export type PaaSection = "lectura" | "redaccion" | "matematicas" | "ingles";
+/** A part of a test. Ids are unique across assessments. */
+export type Section = SatSection | PaaSection;
 export type TestStatus = "active" | "inactive" | "unknown";
 export type AnswerStatus = "incorrect" | "unanswered" | "completed";
 export type Difficulty = "easy" | "medium" | "hard";
@@ -10,13 +15,19 @@ export interface DocumentPanel {
 }
 export interface Question {
   id: string;
+  /** Defaults to SAT when absent; the storage layer always fills it in. */
+  assessment?: Assessment;
   sourceId?: string;
   source?: string;
   section: Section;
   domain?: string;
   skill?: string;
+  /** The skill as the source printed it, when `skill` is a grouped label (PAA). */
+  skillDetail?: string;
   difficulty?: Difficulty;
   passage?: string;
+  /** Questions that share one reading carry the same group id; sessions keep them together. */
+  passageGroup?: string;
   stem: string;
   choices?: { id: string; text: string }[];
   answer:
@@ -37,6 +48,8 @@ export interface Question {
 export interface Attempt {
   id: string;
   questionId: string;
+  /** Kept on the attempt so history stays separated even if the question is removed. */
+  assessment?: Assessment;
   /** Absent when the session was deleted but its study history was retained. */
   sessionId?: string;
   answer: string;
@@ -50,7 +63,9 @@ export interface Annotation {
   note: string;
 }
 export interface Filters {
+  /** Legacy single part. `sections` supersedes it; empty means every part. */
   section: string;
+  sections?: string[];
   domain: string;
   skill: string;
   /** Scoped multi-selections. Legacy domain/skill strings remain readable. */
@@ -68,6 +83,7 @@ export interface Filters {
 }
 export const defaultFilters: Filters = {
   section: "",
+  sections: [],
   domain: "",
   skill: "",
   difficulty: "",
@@ -78,9 +94,44 @@ export const defaultFilters: Filters = {
   statuses: ["unanswered"],
   difficulties: [],
 };
+/** The separately timed parts of the PAA: Lectura y Redacción, Matemáticas, Inglés. */
+export type SegmentKey = "lectura-redaccion" | "matematicas" | "ingles";
+export interface TimedSegment {
+  key: SegmentKey;
+  parts: Section[];
+  /** The segment's questions, in order. A finished segment is locked. */
+  questionIds: string[];
+  /** Milliseconds allowed; absent means no limit. */
+  limitMs?: number;
+  /** Set when the segment's clock starts. */
+  startedAt?: number;
+  /** Set while paused; the clock excludes paused time. */
+  pausedAt?: number;
+  pausedMs?: number;
+  completedAt?: number;
+  durationMs?: number;
+}
+/** PAA test mode: ordered, separately timed parts answered without feedback. See core/timedTest.ts. */
+export interface TimedTest {
+  version: 2;
+  parts: Section[];
+  segments: TimedSegment[];
+  /** Index of the segment being taken (or about to start, in a break). */
+  current: number;
+  /** "break": the last segment ended and the next has not started; no clock runs. */
+  phase: "segment" | "break";
+  startedAt: number;
+  completedAt?: number;
+  durationMs?: number;
+  /** Questions of the current segment marked to come back to; cleared when it ends. */
+  marked: string[];
+  unusedOnly: boolean;
+}
 export interface Session {
   practiceTest?: PracticeTest;
+  timedTest?: TimedTest;
   id: string;
+  assessment?: Assessment;
   /** Optional user-facing override; the default label is derived on demand. */
   name?: string;
   /** Session favorites are distinct from per-question bookmarks. */
@@ -117,9 +168,9 @@ export interface StudyData {
 }
 export type TestRoute = "lower" | "higher";
 export type ModuleMix = "first" | TestRoute;
-export type TestSelection = "full" | `${Section}:${ModuleMix}`;
+export type TestSelection = "full" | `${SatSection}:${ModuleMix}`;
 export interface TestModule {
-  section: Section;
+  section: SatSection;
   mix: ModuleMix;
   questionIds: string[];
   unscoredIds: string[];
@@ -137,7 +188,7 @@ export interface PracticeTest {
   timing: "timed" | "untimed";
   modules: TestModule[];
   currentModule: number;
-  routes: Partial<Record<Section, TestRoute>>;
+  routes: Partial<Record<SatSection, TestRoute>>;
   phase: "module" | "break" | "results";
   /** Test-local state; deliberately separate from persistent annotations. */
   markedForReview?: string[];
@@ -145,6 +196,8 @@ export interface PracticeTest {
   reviewingModule?: boolean;
   breakStartedAt?: number;
 }
+export const assessmentOf = (item: { assessment?: Assessment }): Assessment =>
+  item.assessment ?? "SAT";
 export const emptyData = (): StudyData => ({
   version: 1,
   questions: [],

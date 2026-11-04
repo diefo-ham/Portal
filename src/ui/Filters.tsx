@@ -4,10 +4,12 @@ import type {
   Filters as FilterValues,
   StudyData,
 } from "../core/model";
+import { assessmentInfo, sectionLabel } from "../core/assessments";
+import { selectedSections } from "../core/practice";
 import { domainKey, skillKey, taxonomyOptions } from "../core/taxonomy";
+import { useAssessment, useT } from "./i18n";
 import { MultiSelect } from "./MultiSelect";
-export const sectionName = (s: string) =>
-  s === "math" ? "Math" : "Reading & Writing";
+export const sectionName = (s: string) => sectionLabel(s);
 export function Filters({
   data,
   value,
@@ -21,16 +23,19 @@ export function Filters({
   compact?: boolean;
   advanced?: boolean;
 }) {
+  const t = useT();
+  const info = assessmentInfo(useAssessment());
+  const sections = selectedSections(value);
   const relevant = data.questions.filter(
-    (q) => !value.section || q.section === value.section,
+    (q) => !sections.length || sections.includes(q.section),
   );
   const skills = relevant.filter(
     (q) => !value.domains?.length || value.domains.includes(domainKey(q)),
   );
   const answerStatusOptions = [
-    { value: "incorrect", label: "Mistakes" },
-    { value: "unanswered", label: "Unanswered" },
-    { value: "completed", label: "Completed" },
+    { value: "incorrect", label: t("Mistakes") },
+    { value: "unanswered", label: t("Unanswered") },
+    { value: "completed", label: t("Completed") },
   ];
   const answerStatuses = answerStatusOptions.some(
     (option) => option.value === value.status,
@@ -46,16 +51,24 @@ export function Filters({
     )
     .map((difficulty) => ({
       value: difficulty,
-      label: difficulty[0].toUpperCase() + difficulty.slice(1),
+      label: t(difficulty[0].toUpperCase() + difficulty.slice(1)),
     }));
   const difficulties = value.difficulties?.length
     ? value.difficulties
     : difficultyOptions.some((option) => option.value === value.difficulty)
       ? [value.difficulty as Difficulty]
       : [];
-  const changeSection = (section: string) => {
+  // With none pressed every part is included. A test with two parts takes one at a
+  // time (both pressed would mean the same as none); pressing the other swaps it,
+  // pressing the same one clears it. A test with more parts adds or removes each.
+  const toggleSection = (part: string) => {
+    const next = sections.includes(part)
+      ? sections.filter((id) => id !== part)
+      : info.parts.length > 2
+        ? [...sections, part]
+        : [part];
     const sectionQuestions = data.questions.filter(
-      (question) => !section || question.section === section,
+      (question) => !next.length || next.includes(question.section),
     );
     const validDomainKeys = new Set(sectionQuestions.map(domainKey));
     const domains = (value.domains ?? []).filter((key) =>
@@ -71,7 +84,8 @@ export function Filters({
     );
     onChange({
       ...value,
-      section,
+      section: "",
+      sections: next,
       domain: "",
       skill: "",
       domains,
@@ -82,27 +96,34 @@ export function Filters({
     <div className="filters">
       {!advanced && (
         <>
-          <div className="section-filter">
-            <span className="filter-label">Section</span>
-            <div className="section-segments" role="group" aria-label="Section">
-              {[
-                ["", "All"],
-                ["reading-writing", "Reading & Writing"],
-                ["math", "Math"],
-              ].map(([section, label]) => (
+          <div
+            className={`section-filter ${info.parts.length > 2 ? "wide" : ""}`}
+          >
+            <span className="filter-label">
+              {t(info.id === "SAT" ? "Section" : "Test")}{" "}
+              <span className="filter-hint">
+                {t("· any if none is selected")}
+              </span>
+            </span>
+            <div
+              className="section-segments"
+              role="group"
+              aria-label={t(info.id === "SAT" ? "Section" : "Test")}
+            >
+              {info.parts.map((part) => (
                 <button
                   type="button"
-                  key={section || "all"}
-                  aria-pressed={value.section === section}
-                  onClick={() => changeSection(section)}
+                  key={part.id}
+                  aria-pressed={sections.includes(part.id)}
+                  onClick={() => toggleSection(part.id)}
                 >
-                  {label}
+                  {part.label}
                 </button>
               ))}
             </div>
           </div>
           <MultiSelect
-            label="Domain"
+            label={t("Domain")}
             options={taxonomyOptions(relevant, "domain")}
             value={value.domains ?? []}
             onChange={(domains) =>
@@ -122,10 +143,10 @@ export function Filters({
             }
           />
           <MultiSelect
-            label="Answer status"
+            label={t("Answer status")}
             options={answerStatusOptions}
             value={answerStatuses}
-            emptyLabel="All questions"
+            emptyLabel={t("All questions")}
             selectionSummary={(labels) => labels.join(", ")}
             onChange={(statuses) =>
               onChange({
@@ -140,7 +161,7 @@ export function Filters({
       {!compact && (
         <>
           <MultiSelect
-            label="Skill"
+            label={t("Skill")}
             options={taxonomyOptions(skills, "skill")}
             value={value.skills ?? []}
             onChange={(selected) =>
@@ -148,10 +169,10 @@ export function Filters({
             }
           />
           <MultiSelect
-            label="Difficulty"
+            label={t("Difficulty")}
             options={difficultyOptions}
             value={difficulties}
-            emptyLabel="Any difficulty"
+            emptyLabel={t("Any difficulty")}
             selectionSummary={(labels) => labels.join(", ")}
             onChange={(selected) =>
               onChange({
@@ -169,21 +190,23 @@ export function Filters({
                 onChange({ ...value, bookmark: e.target.checked ? "yes" : "" })
               }
             />{" "}
-            Bookmarked only
+            {t("Bookmarked only")}
           </label>
-          <label className="check-filter">
-            <input
-              type="checkbox"
-              checked={value.active === "hide"}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  active: e.target.checked ? "hide" : "include",
-                })
-              }
-            />{" "}
-            Protect practice-test questions
-          </label>
+          {info.protectedTests && (
+            <label className="check-filter">
+              <input
+                type="checkbox"
+                checked={value.active === "hide"}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    active: e.target.checked ? "hide" : "include",
+                  })
+                }
+              />{" "}
+              Protect practice-test questions
+            </label>
+          )}
         </>
       )}
     </div>

@@ -1,5 +1,6 @@
 import type { StudyData } from "../core/model";
 import type { SessionActions } from "./SessionCollections";
+import { useT } from "./i18n";
 import { SessionRow } from "./SessionRow";
 
 export function ContinueSessions({
@@ -9,8 +10,9 @@ export function ContinueSessions({
   data: StudyData;
   actions: SessionActions;
 }) {
+  const t = useT();
   const sessions = data.sessions
-    .filter((s) => !s.finishedAt && !s.practiceTest)
+    .filter((s) => !s.finishedAt && !s.practiceTest && !s.timedTest)
     .toReversed();
   if (!sessions.length) return null;
   const rows = sessions.map((session) => (
@@ -19,13 +21,15 @@ export function ContinueSessions({
   return (
     <section
       className="continue-area"
-      aria-label="Continue unfinished practice"
+      aria-label={t("Continue unfinished practice")}
     >
-      <h2>Continue</h2>
+      <h2>{t("Continue")}</h2>
       {rows.slice(0, 3)}
       {rows.length > 3 && (
         <details className="more-unfinished">
-          <summary>More unfinished sets ({rows.length - 3})</summary>
+          <summary>
+            {t("More unfinished sets ({n})", { n: rows.length - 3 })}
+          </summary>
           {rows.slice(3)}
         </details>
       )}

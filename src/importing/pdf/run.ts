@@ -13,9 +13,12 @@ import {
   parseOverrides,
   prepareLibrary,
   type ExportName,
+  type PrepareDeps,
   type PrepareReport,
+  type PreparedLibrary,
   type Progress,
 } from "./prepare.ts";
+import { preparePaaLibrary } from "./preparePaa.ts";
 
 export interface RunOptions {
   /** Defaults to reading the relationship from the files themselves. */
@@ -26,6 +29,22 @@ export interface RunOptions {
   progress?: (progress: Progress) => void;
 }
 
+const deps: PrepareDeps = {
+  open: openExport,
+  store: {
+    async encode(image) {
+      const blob = await encodeWebp(image);
+      // WebP where the browser can write it, lossless PNG otherwise (Safari).
+      if (blob.type !== "image/webp" && blob.type !== "image/png")
+        throw new Error(
+          "This browser cannot save the question images. Use a current Chrome, Edge, Firefox or Safari.",
+        );
+      return blob;
+    },
+    put: (key, blob) => writeAssets([{ key, blob }]),
+  },
+};
+
 export async function prepareFromPdfs(files: File[], options: RunOptions) {
   const assigned = assignExports(files);
   if (assigned.missing.length)
@@ -35,30 +54,37 @@ export async function prepareFromPdfs(files: File[], options: RunOptions) {
   const overrides = options.overridesFile
     ? parseOverrides(JSON.parse(await options.overridesFile.text()))
     : undefined;
-  const prepared = await prepareLibrary(
-    assigned.found as Record<ExportName, File>,
-    {
-      mode: options.mode,
-      overrides,
-      signal: options.signal,
-      progress: options.progress,
-    },
-    {
-      open: openExport,
-      store: {
-        async encode(image) {
-          const blob = await encodeWebp(image);
-          // WebP where the browser can write it, lossless PNG otherwise (Safari).
-          if (blob.type !== "image/webp" && blob.type !== "image/png")
-            throw new Error(
-              "This browser cannot save the question images. Use a current Chrome, Edge, Firefox or Safari.",
-            );
-          return blob;
-        },
-        put: (key, blob) => writeAssets([{ key, blob }]),
+  return adopt(
+    await prepareLibrary(
+      assigned.found as Record<ExportName, File>,
+      {
+        mode: options.mode,
+        overrides,
+        signal: options.signal,
+        progress: options.progress,
       },
-    },
+      deps,
+    ),
+    options,
   );
+}
+
+/** PAA exports: any number of PDFs, any file names, no active/inactive pairing. */
+export async function prepareFromPaaPdfs(files: File[], options: RunOptions) {
+  const overrides = options.overridesFile
+    ? parseOverrides(JSON.parse(await options.overridesFile.text()))
+    : undefined;
+  return adopt(
+    await preparePaaLibrary(
+      files,
+      { overrides, signal: options.signal, progress: options.progress },
+      deps,
+    ),
+    options,
+  );
+}
+
+async function adopt(prepared: PreparedLibrary, options: RunOptions) {
   const result = await ingestLibrary(
     memorySource(prepared.manifest, prepared.questionsJson),
     (message) =>

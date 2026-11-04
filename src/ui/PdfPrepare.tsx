@@ -5,6 +5,7 @@ import {
   type PrepareReport,
   type Progress,
 } from "../importing/pdf/prepare";
+import { useAssessment, useT } from "./i18n";
 
 interface Props {
   /** Runs the preparation and adopts the resulting library. */
@@ -52,6 +53,8 @@ const download = (report: PrepareReport) => {
 };
 
 export function PdfPrepare({ prepare }: Props) {
+  const t = useT();
+  const paa = useAssessment() === "PAA";
   const [files, setFiles] = useState<File[]>([]);
   const [overrides, setOverrides] = useState<File>();
   const [running, setRunning] = useState(false);
@@ -70,13 +73,20 @@ export function PdfPrepare({ prepare }: Props) {
     return () => window.removeEventListener("beforeunload", warn);
   }, [running]);
 
-  const ready = files.length > 0 && !assigned.missing.length && !running;
+  // PAA exports have no fixed names and no active/inactive pairs: any PDF will do.
+  const ready =
+    files.length > 0 && (paa || !assigned.missing.length) && !running;
   const start = async () => {
     controller.current = new AbortController();
     setRunning(true);
     setError("");
     setReport(undefined);
-    setProgress({ phase: "index", done: 0, total: 1, message: "Starting…" });
+    setProgress({
+      phase: "index",
+      done: 0,
+      total: 1,
+      message: t("Starting…"),
+    });
     try {
       const result = await prepare(files, {
         overridesFile: overrides,
@@ -88,7 +98,9 @@ export function PdfPrepare({ prepare }: Props) {
     } catch (e) {
       setError(
         controller.current.signal.aborted
-          ? "Cancelled. What was already prepared is kept and is reused if you start again."
+          ? t(
+              "Cancelled. What was already prepared is kept and is reused if you start again.",
+            )
           : e instanceof Error
             ? e.message
             : String(e),
@@ -100,16 +112,20 @@ export function PdfPrepare({ prepare }: Props) {
 
   return (
     <section className="data-card pdf-prepare" aria-labelledby="pdf-prepare-h">
-      <h2 id="pdf-prepare-h">Add your question PDFs</h2>
+      <h2 id="pdf-prepare-h">{t("Add your question PDFs")}</h2>
       <p>
-        Choose the four PDF exports from your question bank. They are read in
-        this browser and never uploaded, and the whole set takes about 5 to 10
-        minutes. Keep this tab open while it works.
+        {paa
+          ? t(
+              "Choose the PDF (or PDFs) with your PAA questions. They are read in this browser and never uploaded; about 150 questions take a minute or two. Keep this tab open while it works.",
+            )
+          : t(
+              "Choose the four PDF exports from your question bank. They are read in this browser and never uploaded, and the whole set takes about 5 to 10 minutes. Keep this tab open while it works.",
+            )}
       </p>
       <label className="file-button secondary">
-        Choose the PDFs
+        {t("Choose the PDFs")}
         <input
-          aria-label="PDF export files"
+          aria-label={t("PDF export files")}
           type="file"
           accept="application/pdf,.pdf"
           multiple
@@ -123,26 +139,33 @@ export function PdfPrepare({ prepare }: Props) {
         />
       </label>
       {files.length > 0 && (
-        <ul className="pdf-prepare-files" aria-label="Chosen exports">
-          {EXPORT_NAMES.map((name) => (
-            <li key={name}>
-              {assigned.found[name] ? "✓" : "–"} <code>{name}.pdf</code>
-              {assigned.found[name] ? "" : " (not chosen)"}
-            </li>
-          ))}
-          {assigned.unrecognized.map((name) => (
-            <li key={name} className="muted">
-              Ignored: {name}
-            </li>
-          ))}
+        <ul className="pdf-prepare-files" aria-label={t("Chosen exports")}>
+          {paa
+            ? files.map((file) => (
+                <li key={file.name}>
+                  ✓ <code>{file.name}</code>
+                </li>
+              ))
+            : EXPORT_NAMES.map((name) => (
+                <li key={name}>
+                  {assigned.found[name] ? "✓" : "–"} <code>{name}.pdf</code>
+                  {assigned.found[name] ? "" : " (not chosen)"}
+                </li>
+              ))}
+          {!paa &&
+            assigned.unrecognized.map((name) => (
+              <li key={name} className="muted">
+                Ignored: {name}
+              </li>
+            ))}
         </ul>
       )}
       <details className="pdf-prepare-advanced">
-        <summary>Advanced</summary>
+        <summary>{t("Advanced")}</summary>
         <label className="small">
-          Reviewed exceptions (optional JSON file){" "}
+          {t("Reviewed exceptions (optional JSON file)")}{" "}
           <input
-            aria-label="Reviewed exceptions"
+            aria-label={t("Reviewed exceptions")}
             type="file"
             accept=".json,application/json"
             disabled={running}
@@ -156,16 +179,18 @@ export function PdfPrepare({ prepare }: Props) {
           disabled={!ready}
           onClick={() => void start()}
         >
-          Add questions
+          {t("Add questions")}
         </button>
         {running && (
-          <button onClick={() => controller.current?.abort()}>Cancel</button>
+          <button onClick={() => controller.current?.abort()}>
+            {t("Cancel")}
+          </button>
         )}
       </div>
       {running && progress && (
         <div className="pdf-prepare-progress">
           <progress
-            aria-label="Progress"
+            aria-label={t("Progress")}
             max={progress.total}
             value={progress.done}
           />
@@ -177,35 +202,56 @@ export function PdfPrepare({ prepare }: Props) {
         <div className="pdf-prepare-report" role="status">
           <p>
             {unchanged ? (
-              <>
-                <strong>Nothing changed.</strong> These PDFs give exactly the{" "}
-                {report.importedQuestions} questions and images already stored.
-                If the stored ones look wrong, use Free up space → Remove my
-                questions, then add the PDFs again.{" "}
-              </>
+              paa ? (
+                <>
+                  <strong>{t("Nothing changed.")}</strong>{" "}
+                  {t(
+                    "These PDFs give exactly the {n} questions and images already stored.",
+                    { n: report.importedQuestions },
+                  )}{" "}
+                </>
+              ) : (
+                <>
+                  <strong>Nothing changed.</strong> These PDFs give exactly the{" "}
+                  {report.importedQuestions} questions and images already
+                  stored. If the stored ones look wrong, use Free up space →
+                  Remove my questions, then add the PDFs again.{" "}
+                </>
+              )
             ) : (
-              <strong>Added {report.importedQuestions} questions.</strong>
+              <strong>
+                {paa
+                  ? t("Added {n} questions.", { n: report.importedQuestions })
+                  : `Added ${report.importedQuestions} questions.`}
+              </strong>
             )}{" "}
             {report.quarantined.length
-              ? `${report.quarantined.length} could not be read safely and were left out.`
+              ? paa
+                ? t("{n} could not be read safely and were left out.", {
+                    n: report.quarantined.length,
+                  })
+                : `${report.quarantined.length} could not be read safely and were left out.`
               : ""}
           </p>
-          <p className="small muted">
-            {report.counts.testStatus.active ?? 0} are marked active and stay
-            hidden until you choose to include them;{" "}
-            {report.counts.testStatus.inactive ?? 0} are inactive
-            {report.counts.testStatus.unknown
-              ? `; ${report.counts.testStatus.unknown} are unknown`
-              : ""}
-            .
-          </p>
+          {!paa && (
+            <p className="small muted">
+              {report.counts.testStatus.active ?? 0} are marked active and stay
+              hidden until you choose to include them;{" "}
+              {report.counts.testStatus.inactive ?? 0} are inactive
+              {report.counts.testStatus.unknown
+                ? `; ${report.counts.testStatus.unknown} are unknown`
+                : ""}
+              .
+            </p>
+          )}
           <details>
-            <summary>How this was worked out</summary>
-            {explainClassification(report).map((line) => (
-              <p key={line} className="small">
-                {line}
-              </p>
-            ))}
+            <summary>{t("How this was worked out")}</summary>
+            {!paa &&
+              explainClassification(report).map((line) => (
+                <p key={line} className="small">
+                  {line}
+                </p>
+              ))}
             {report.quarantined.slice(0, 5).map((item) => (
               <p key={item.sourceId} className="small">
                 Left out: {item.sourceId} ({item.file}, pages{" "}
@@ -213,7 +259,7 @@ export function PdfPrepare({ prepare }: Props) {
               </p>
             ))}
             <button className="secondary" onClick={() => download(report)}>
-              Download report
+              {t("Download report")}
             </button>
           </details>
         </div>

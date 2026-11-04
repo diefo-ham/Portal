@@ -1,25 +1,28 @@
-import type { StudyData } from "../core/model";
+import { studySlice, type StudySlice } from "../core/assessments";
+import type { Assessment, StudyData } from "../core/model";
 import { parseBackup } from "../importing/backup";
 
 export interface ResetArchive {
   format: "sat-study-reset-v1";
   createdAt: string;
-  study: Pick<
-    StudyData,
-    "attempts" | "sessions" | "annotations" | "practiceTestUsedIds"
-  >;
+  /** Whose progress this holds. Archives from before PAA support are SAT's. */
+  assessment?: Assessment;
+  study: StudySlice;
 }
 
-export function createResetArchive(data: StudyData): ResetArchive {
+/** SAT keeps its original key, so an archive saved before PAA still restores. */
+export const resetArchiveKey = (assessment: Assessment) =>
+  assessment === "SAT" ? "reset-archive" : `reset-archive-${assessment}`;
+
+export function createResetArchive(
+  data: StudyData,
+  assessment: Assessment = "SAT",
+): ResetArchive {
   return {
     format: "sat-study-reset-v1",
     createdAt: new Date().toISOString(),
-    study: structuredClone({
-      attempts: data.attempts,
-      sessions: data.sessions,
-      annotations: data.annotations,
-      practiceTestUsedIds: data.practiceTestUsedIds,
-    }),
+    assessment,
+    study: structuredClone(studySlice(data, assessment)),
   };
 }
 
@@ -51,6 +54,7 @@ export function validateResetArchive(
   return {
     format: archive.format,
     createdAt: archive.createdAt,
+    ...(archive.assessment ? { assessment: archive.assessment } : {}),
     study: {
       attempts: validated.attempts,
       sessions: validated.sessions,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { type StudyData } from "../core/model";
+import { type Assessment, type StudyData } from "../core/model";
 import {
   readData,
   updateData,
@@ -9,7 +9,7 @@ import {
 import type { ResetArchive } from "../storage/resetArchive";
 import { keepStorage, storageErrorMessage } from "../storage/localData";
 import { loadPreparedLibrary } from "../importing/preparedLibrary";
-export function useStudy() {
+export function useStudy(assessment: Assessment = "SAT") {
   const [data, setData] = useState<StudyData>();
   const [archive, setArchive] = useState<ResetArchive>();
   const [error, setError] = useState("");
@@ -21,7 +21,6 @@ export function useStudy() {
     loadPreparedLibrary(setLoadingMessage)
       .then(async (next) => {
         setData(next);
-        setArchive(await readResetArchive());
       })
       .catch(async (e) => {
         setError(e instanceof Error ? e.message : String(e));
@@ -32,13 +31,27 @@ export function useStudy() {
         }
       });
   }, []);
+  // Each test keeps its own recovery archive for a progress reset.
+  useEffect(() => {
+    let current = true;
+    readResetArchive(assessment)
+      .then((found) => {
+        if (current) setArchive(found);
+      })
+      .catch(() => {
+        if (current) setArchive(undefined);
+      });
+    return () => {
+      current = false;
+    };
+  }, [assessment, data === undefined]);
   const mutate = useCallback(
     async (fn: (d: StudyData) => void, options?: UpdateOptions) => {
       setWrites((n) => n + 1);
       try {
         const next = await updateData(fn, options);
         setData(next);
-        if (options) setArchive(await readResetArchive());
+        if (options) setArchive(await readResetArchive(options.assessment));
         return next;
       } catch (e) {
         setError(storageErrorMessage(e));

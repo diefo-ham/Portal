@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Session, StudyData } from "../core/model";
 import { sessionOutcomes } from "../core/review";
 import { SESSION_NAME_MAX_LENGTH, sessionDisplayName } from "../core/sessions";
+import { useT } from "./i18n";
 
 export function SessionRow({
   data,
@@ -11,6 +12,7 @@ export function SessionRow({
   onDelete,
   onToggleStar,
   onRepractice,
+  removesAnswers = false,
 }: {
   data: StudyData;
   session: Session;
@@ -19,8 +21,10 @@ export function SessionRow({
   onDelete: (id: string) => void;
   onToggleStar: (id: string) => void;
   onRepractice?: (session: Session) => void;
+  removesAnswers?: boolean;
 }) {
-  const label = sessionDisplayName(data, session);
+  const t = useT();
+  const label = sessionDisplayName(data, session, t);
   const result = sessionOutcomes(data, session);
   const answered = result.correct.length + result.incorrect.length;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,20 +63,20 @@ export function SessionRow({
       <button
         className="session-row-open"
         onClick={() => onOpen(session.id)}
-        aria-label={`${session.finishedAt ? "Open session results" : "Resume practice"}: ${label}`}
+        aria-label={`${session.finishedAt ? t("Open session results") : t("Resume practice")}: ${label}`}
       >
         <span className="session-row-name">{label}</span>
         <span className="session-row-meta">
           {session.finishedAt
-            ? `${answered ? `${result.correct.length} of ${answered} answered correctly` : `${result.unanswered.length} unanswered`} · completed ${new Date(session.finishedAt).toLocaleDateString()}`
-            : `${answered} answered · ${result.unanswered.length} left · started ${new Date(session.startedAt).toLocaleString()}`}
+            ? `${answered ? t("{correct} of {answered} answered correctly", { correct: result.correct.length, answered }) : t("{n} unanswered", { n: result.unanswered.length })} · ${t("completed {date}", { date: new Date(session.finishedAt).toLocaleDateString() })}`
+            : `${t("{n} answered", { n: answered })} · ${t("{n} left", { n: result.unanswered.length })} · ${t("started {date}", { date: new Date(session.startedAt).toLocaleString() })}`}
         </span>
       </button>
       <button
         className={`session-star ${session.starred ? "selected" : ""}`}
         aria-pressed={!!session.starred}
-        aria-label={`${session.starred ? "Unstar" : "Star"} session ${label}`}
-        title={session.starred ? "Unstar session" : "Star session"}
+        aria-label={t(session.starred ? "Unstar session {label}" : "Star session {label}", { label })}
+        title={session.starred ? t("Unstar session") : t("Star session")}
         onClick={() => onToggleStar(session.id)}
       >
         {session.starred ? "★" : "☆"}
@@ -81,7 +85,7 @@ export function SessionRow({
         <button
           ref={menuButton}
           className="session-menu-trigger"
-          aria-label={`Session actions for ${label}`}
+          aria-label={t("Session actions for {label}", { label })}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen(!menuOpen)}
           onKeyDown={(event) => {
@@ -110,7 +114,7 @@ export function SessionRow({
                 setRenaming(true);
               }}
             >
-              Rename
+              {t("Rename")}
             </button>
             {session.finishedAt && onRepractice && (
               <button
@@ -120,7 +124,7 @@ export function SessionRow({
                   onRepractice(session);
                 }}
               >
-                Practice again
+                {t("Practice again")}
               </button>
             )}
             <button
@@ -132,7 +136,7 @@ export function SessionRow({
                 deleteCancel.current?.focus();
               }}
             >
-              Delete session
+              {t("Delete session")}
             </button>
           </div>
         )}
@@ -149,10 +153,10 @@ export function SessionRow({
           }}
         >
           <label>
-            <span className="sr-only">Session name</span>
+            <span className="sr-only">{t("Session name")}</span>
             <input
               ref={renameInput}
-              aria-label="Session name"
+              aria-label={t("Session name")}
               maxLength={SESSION_NAME_MAX_LENGTH}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
@@ -164,7 +168,7 @@ export function SessionRow({
               }}
             />
           </label>
-          <button onClick={finishRename}>Save</button>
+          <button onClick={finishRename}>{t("Save")}</button>
           <button
             className="text-button"
             onClick={() => {
@@ -172,10 +176,10 @@ export function SessionRow({
               menuButton.current?.focus();
             }}
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <span className="small muted">
-            Clear the name to use the automatic label.
+            {t("Clear the name to use the automatic label.")}
           </span>
         </div>
       )}
@@ -184,17 +188,23 @@ export function SessionRow({
         className="practice-dialog session-delete-dialog"
         aria-labelledby={`delete-session-${session.id}`}
       >
-        <h2 id={`delete-session-${session.id}`}>Delete this session?</h2>
+        <h2 id={`delete-session-${session.id}`}>
+          {t("Delete this session?")}
+        </h2>
         <p>
-          Delete “{label}”? Your answers and bookmarks will stay in your study
-          history.
+          {t(
+            removesAnswers
+              ? "Delete “{label}”? Its answers will also be removed from your progress, and those questions become unanswered again."
+              : "Delete “{label}”? Your answers and bookmarks will stay in your study history.",
+            { label },
+          )}
         </p>
         <div className="row reset-actions">
           <button
             ref={deleteCancel}
             onClick={() => deleteDialog.current?.close()}
           >
-            Cancel
+            {t("Cancel")}
           </button>
           <button
             className="danger"
@@ -203,7 +213,7 @@ export function SessionRow({
               onDelete(session.id);
             }}
           >
-            Delete session
+            {t("Delete session")}
           </button>
         </div>
       </dialog>

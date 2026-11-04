@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { TaxonomyOption } from "../core/taxonomy";
+import { useT } from "./i18n";
 export function MultiSelect({
   label,
   options,
@@ -15,6 +16,7 @@ export function MultiSelect({
   selectionSummary?: (labels: string[]) => string;
   emptyLabel?: string;
 }) {
+  const t = useT();
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -34,9 +36,9 @@ export function MultiSelect({
   const summary = value.length
     ? selectionSummary?.(names) ||
       (value.length === 1
-        ? names[0] || "1 selected"
-        : `${value.length} selected`)
-    : emptyLabel || `Any ${label.toLowerCase()}`;
+        ? names[0] || t("1 selected")
+        : t("{n} selected", { n: value.length }))
+    : emptyLabel || t("Any {label}", { label: label.toLowerCase() });
   return (
     <div
       className="multi-select"
@@ -73,7 +75,7 @@ export function MultiSelect({
         }}
       >
         <span>{summary}</span>
-        <span aria-hidden="true">⌄</span>
+        <span className="chevron" aria-hidden="true" />
       </button>
       {open && (
         <div
@@ -84,8 +86,8 @@ export function MultiSelect({
         >
           {options.length > 8 && (
             <input
-              aria-label={`Find ${label.toLowerCase()}`}
-              placeholder="Find…"
+              aria-label={t("Find {label}", { label: label.toLowerCase() })}
+              placeholder={t("Find…")}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -112,7 +114,7 @@ export function MultiSelect({
                 </label>
               ))}
             {!options.length && (
-              <p className="muted small">No options in this selection.</p>
+              <p className="muted small">{t("No options in this selection.")}</p>
             )}
           </div>
           <div className="multi-actions">
@@ -121,7 +123,7 @@ export function MultiSelect({
               className="text-button"
               onClick={() => onChange([])}
             >
-              Clear {label.toLowerCase()}
+              {t("Clear {label}", { label: label.toLowerCase() })}
             </button>
             <button
               type="button"
@@ -130,7 +132,7 @@ export function MultiSelect({
                 button.current?.focus();
               }}
             >
-              Done
+              {t("Done")}
             </button>
           </div>
         </div>
