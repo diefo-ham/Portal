@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./ui/App";
+import { App } from "./ui/App/App";
 import "./ui/styles.css";
 import { applyAppearance } from "./ui/appearance";
 import { registerWorker } from "./updates";

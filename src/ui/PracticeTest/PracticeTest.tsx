@@ -12,7 +12,6 @@ import {
   resumePracticeTest,
   moduleElapsed,
   moduleLimit,
-  selections,
   sectionLabel,
   testAnswerIsValid,
   timerWarning,

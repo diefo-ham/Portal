@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { es } from "../src/ui/es";
 import { translator } from "../src/ui/i18n";
 
-/** The first argument of every `t(...)` call in the screens, as string literals. */
+/**
+ * The first argument of every `t(...)` call in the screens (including their
+ * subfolders, but not their tests), as string literals.
+ */
 function phrases() {
   const found = new Map<string, string>();
   const folders = [
@@ -12,7 +15,9 @@ function phrases() {
     ["src/core", /sessions\.ts$/],
   ] as const;
   for (const [folder, pattern] of folders)
-    for (const file of readdirSync(folder).filter((name) => pattern.test(name))) {
+    for (const file of readdirSync(folder, { recursive: true })
+      .map(String)
+      .filter((name) => pattern.test(name) && !/\.test\.tsx?$/.test(name))) {
       const source = readFileSync(join(folder, file), "utf8");
       for (const call of source.matchAll(/(?<![\w.])t\(/g)) {
         let depth = 0;
