@@ -1,4 +1,5 @@
 import type { Point, Viewport } from "./model";
+import { clamp } from "@/src/utils/calculator";
 import type { GraphObject } from "./workspace";
 export const safeValue = (fn: (x: number) => number, x: number) => {
   try {
@@ -394,7 +395,7 @@ export function sampleFunction(
       ],
     );
   };
-  const n = Math.min(320, Math.max(80, Math.round(width / 4)));
+  const n = clamp(Math.round(width / 4), 80, 320);
   for (let i = 0; i < n && budget > 0; i++) {
     const a = view.xMin + ((view.xMax - view.xMin) * i) / n,
       b = view.xMin + ((view.xMax - view.xMin) * (i + 1)) / n;

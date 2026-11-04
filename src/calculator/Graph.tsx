@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { clamp } from "@/src/utils/calculator";
 import {
   defaultView,
   formatNumber as fmt,
@@ -206,7 +207,7 @@ export function Graph({
     p
       .map(
         (v, i) =>
-          `${i ? "L" : "M"}${px(v.x).toFixed(2)},${Math.max(-10000, Math.min(10000, py(v.y))).toFixed(2)}`,
+          `${i ? "L" : "M"}${px(v.x).toFixed(2)},${clamp(py(v.y), -10000, 10000).toFixed(2)}`,
       )
       .join("");
   const locate = (clientX: number, clientY: number) => {

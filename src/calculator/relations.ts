@@ -2,6 +2,7 @@ import type { MathNode } from "mathjs";
 import { scalar, type Scalar, type Angle } from "./math";
 import { roots } from "./numerics";
 import { restrictionSource } from "./restrictionSyntax";
+import { roundSig } from "@/src/utils/calculator";
 
 export type ParameterBound = {
   min?: number;
@@ -339,7 +340,7 @@ export function solveScalarRelation(
       else min = max - 2000;
     }
     candidates = min === max ? [min] : roots(fn, min, max, 4096);
-    message = `Numerical real solutions searched in [${Number(min.toPrecision(6))}, ${Number(max.toPrecision(6))}]${trig ? ` ${angle}` : ""}.`;
+    message = `Numerical real solutions searched in [${roundSig(min, 6)}, ${roundSig(max, 6)}]${trig ? ` ${angle}` : ""}.`;
     const probes = [0.13, 0.37, 0.61, 0.89].map((t) =>
       fn(min + (max - min) * t),
     );

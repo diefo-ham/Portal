@@ -27,6 +27,7 @@ import type { Fit } from "./regression";
 import { displayedCoefficients, fittedExpression } from "./fitDisplay";
 import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
+import { roundSig } from "@/src/utils/calculator";
 
 /** Long lists show their ends and can be opened up, so a range like [-10...10] stays readable. */
 function ListResult({ values }: { values: number[] }) {
@@ -632,7 +633,7 @@ export function Calculator({
             if (entry?.type === "expression" && Number.isFinite(value))
               change({
                 ...entry,
-                text: `${name}=${Number(value.toPrecision(12))}`,
+                text: `${name}=${roundSig(value, 12)}`,
                 latex: undefined,
               });
           }}

@@ -1,3 +1,4 @@
+import { roundSig } from "@/src/utils/calculator";
 export interface Viewport {
   xMin: number;
   xMax: number;
@@ -185,4 +186,4 @@ export interface Point {
   y: number;
 }
 export const formatNumber = (n: number) =>
-  Number.isFinite(n) ? Number(n.toPrecision(10)).toString() : "Undefined";
+  Number.isFinite(n) ? roundSig(n, 10).toString() : "Undefined";

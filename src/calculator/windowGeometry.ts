@@ -1,3 +1,6 @@
+import { clamp } from "@/src/utils/calculator";
+import { readJson } from "@/src/utils/storage";
+
 export interface WindowGeometry {
   x: number;
   y: number;
@@ -20,8 +23,8 @@ export function clampGeometry(
   return {
     width,
     height,
-    x: Math.max(margin, Math.min(g.x, viewport.width - width - margin)),
-    y: Math.max(margin, Math.min(g.y, viewport.height - height - margin)),
+    x: clamp(g.x, margin, viewport.width - width - margin),
+    y: clamp(g.y, margin, viewport.height - height - margin),
   };
 }
 export function defaultGeometry(viewport: {
@@ -43,15 +46,12 @@ export function readGeometry(viewport: {
   width: number;
   height: number;
 }): WindowGeometry {
-  try {
-    const value = JSON.parse(localStorage.getItem(geometryKey) || "null");
-    if (
-      value &&
-      [value.x, value.y, value.width, value.height].every(Number.isFinite)
-    )
-      return clampGeometry(value, viewport);
-  } catch {
-    /* Device preference is optional. */
-  }
+  // The saved value is untrusted: only use it if every field is a number.
+  const value = readJson(geometryKey) as Partial<WindowGeometry> | null;
+  if (
+    value &&
+    [value.x, value.y, value.width, value.height].every(Number.isFinite)
+  )
+    return clampGeometry(value as WindowGeometry, viewport);
   return defaultGeometry(viewport);
 }

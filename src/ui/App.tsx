@@ -47,23 +47,10 @@ import { PdfManager } from "./PdfManager";
 import { normalizeSessionName } from "../core/sessions";
 import { AssessmentProvider, translator } from "./i18n";
 import { TimedTestRun, TimedTestSetup } from "./TimedTest";
+import { readStorage, writeStorage } from "@/src/utils/storage";
 
 /** Which test the person last used; a fresh browser starts on the SAT. */
 const LAST_KEY = "sat-last-assessment";
-const remembered = (key: string) => {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-const remember = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* the choice just is not remembered */
-  }
-};
 /** Hash routes work on any static host; no server rewrite is needed. */
 const routeOf = (): Assessment | undefined => {
   const hash = location.hash.toLowerCase();
@@ -74,7 +61,7 @@ const routeOf = (): Assessment | undefined => {
       : undefined;
 };
 const lastChoice = (): Assessment | undefined => {
-  const last = remembered(LAST_KEY);
+  const last = readStorage(LAST_KEY);
   return isAssessment(last) ? last : undefined;
 };
 export function App() {
@@ -135,7 +122,7 @@ export function App() {
     name?: string;
   }>();
   const choose = (next: Assessment) => {
-    remember(LAST_KEY, next);
+    writeStorage(LAST_KEY, next);
     const hash = "#/" + next.toLowerCase();
     if (location.hash.toLowerCase() !== hash) location.hash = hash;
     setAssessment(next);

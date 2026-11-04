@@ -1,16 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { clamp } from "@/src/utils/calculator";
+import { readStorage, writeStorage } from "@/src/utils/storage";
 
 const key = "sat-study-calculator-split";
 export function useCalculatorSplit() {
   const body = useRef<HTMLDivElement>(null);
   const [ratio, setRatio] = useState(() => {
-    try {
-      const saved = Number(localStorage.getItem(key));
-      if (saved >= 0.15 && saved <= 0.85) return saved;
-    } catch {
-      /* Device preferences can be unavailable. */
-    }
-    return 0.39;
+    const saved = Number(readStorage(key));
+    return saved >= 0.15 && saved <= 0.85 ? saved : 0.39;
   });
   const [width, setWidth] = useState(760);
   useEffect(() => {
@@ -21,14 +18,10 @@ export function useCalculatorSplit() {
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    try {
-      localStorage.setItem(key, String(ratio));
-    } catch {
-      /* Best effort. */
-    }
+    writeStorage(key, String(ratio));
   }, [ratio]);
   // Keep both panels useful, but keep the preferred ratio for larger windows.
-  const current = Math.max(230, Math.min(width - 248, width * ratio));
+  const current = clamp(width * ratio, 230, width - 248);
   return { body, ratio: current / width, setRatio, width };
 }
 
@@ -43,7 +36,7 @@ export function SplitDivider({
 }) {
   const origin = useRef<{ x: number; ratio: number } | undefined>(undefined);
   const adjust = (value: number) =>
-    onChange(Math.max(230 / width, Math.min((width - 248) / width, value)));
+    onChange(clamp(value, 230 / width, (width - 248) / width));
   return (
     <div
       className="calc-split-divider"
