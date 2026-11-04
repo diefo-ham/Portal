@@ -4,17 +4,22 @@ import type { StudyData } from "../core/model";
 import { summarizePdfs, type PdfSummary } from "../core/pdfLibrary";
 import { useAssessment, useT } from "./i18n";
 
-interface Props {
+export type PdfManagerProps = {
   /** The study data; only this test's PDFs are listed. */
   data: StudyData;
   busy: boolean;
   /** Opens the pop-up where PDFs are dropped. */
   onAdd: () => void;
   onRemove: (key: string) => Promise<void>;
-}
+};
 
 /** The PDFs the questions came from, with a way to add more and to take one out. */
-export function PdfManager({ data, busy, onAdd, onRemove }: Props) {
+export const PdfManager = ({
+  data,
+  busy,
+  onAdd,
+  onRemove,
+}: PdfManagerProps) => {
   const t = useT();
   const assessment = useAssessment();
   const protectedTests = assessmentInfo(assessment).protectedTests;
@@ -135,4 +140,4 @@ export function PdfManager({ data, busy, onAdd, onRemove }: Props) {
       </dialog>
     </section>
   );
-}
+};

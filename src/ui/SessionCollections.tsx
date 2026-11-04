@@ -14,13 +14,15 @@ export interface SessionActions {
   removesAnswers?: boolean;
 }
 
-export function SessionCollections({
-  data,
-  actions,
-}: {
+export type SessionCollectionsProps = {
   data: StudyData;
   actions: SessionActions;
-}) {
+};
+
+export const SessionCollections = ({
+  data,
+  actions,
+}: SessionCollectionsProps) => {
   const t = useT();
   const [search, setSearch] = useState("");
   const completed = data.sessions
@@ -116,4 +118,4 @@ export function SessionCollections({
       </details>
     </section>
   );
-}
+};

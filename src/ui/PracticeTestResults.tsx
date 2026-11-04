@@ -166,19 +166,21 @@ function ScoreEstimate({
   );
 }
 
-export function PracticeTestResults({
-  data,
-  session,
-  mutate,
-  onBack,
-  onRetry,
-}: {
+export type PracticeTestResultsProps = {
   data: StudyData;
   session: Session;
   mutate: (fn: (data: StudyData) => void) => Promise<StudyData>;
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
-}) {
+};
+
+export const PracticeTestResults = ({
+  data,
+  session,
+  mutate,
+  onBack,
+  onRetry,
+}: PracticeTestResultsProps) => {
   const [scope, setScope] = useState<ResultScope>("overall");
   const [mode, setMode] = useState<ResultMode>("percentage");
   const [openDomain, setOpenDomain] = useState<
@@ -355,4 +357,4 @@ export function PracticeTestResults({
       }
     />
   );
-}
+};

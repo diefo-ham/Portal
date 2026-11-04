@@ -19,14 +19,14 @@ export type PrepareFiles = (
   },
 ) => Promise<{ report: PrepareReport; result?: { unchanged: boolean } }>;
 
-interface Props {
+export type AddPdfsDialogProps = {
   open: boolean;
   onClose: () => void;
   /** The four SAT exports, read together. */
   prepareSat: PrepareFiles;
   /** Any PAA exports; PDFs that are not PAA question exports are set aside. */
   preparePaa: PrepareFiles;
-}
+};
 
 interface Outcome {
   kind: "SAT" | "PAA";
@@ -48,13 +48,17 @@ const megabytes = (bytes: number) =>
  * everything else is read as a PAA export, and anything that is not one is set
  * aside. Nothing is guessed in advance: the PAA check looks at the contents.
  */
-export function AddPdfsDialog({ open, ...rest }: Props) {
+export const AddPdfsDialog = ({ open, ...rest }: AddPdfsDialogProps) => {
   // Mounted only while open: every opening starts clean, and a closed dialog
   // leaves nothing in the page for screen readers or other dialogs to meet.
   return open ? <OpenDialog {...rest} /> : null;
-}
+};
 
-function OpenDialog({ onClose, prepareSat, preparePaa }: Omit<Props, "open">) {
+function OpenDialog({
+  onClose,
+  prepareSat,
+  preparePaa,
+}: Omit<AddPdfsDialogProps, "open">) {
   const t = useT();
   const dialog = useRef<HTMLDialogElement>(null);
   const controller = useRef<AbortController | undefined>(undefined);

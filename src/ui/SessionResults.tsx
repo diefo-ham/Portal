@@ -17,15 +17,7 @@ export const correctAnswer = (q: Question, t?: Translate) =>
     ? displayAnswer(q, q.answer.value)
     : q.answer.accepted.join(t ? t(" or ") : " or ");
 
-export function SessionResults({
-  data,
-  session,
-  mutate,
-  onBack,
-  onRetry,
-  onCalculator,
-  testSummary,
-}: {
+export type SessionResultsProps = {
   testSummary?: ReactNode;
   data: StudyData;
   session: Session;
@@ -33,7 +25,17 @@ export function SessionResults({
   onBack: () => void;
   onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
   onCalculator?: () => void;
-}) {
+};
+
+export const SessionResults = ({
+  data,
+  session,
+  mutate,
+  onBack,
+  onRetry,
+  onCalculator,
+  testSummary,
+}: SessionResultsProps) => {
   const t = useT();
   const result = sessionOutcomes(data, session);
   const timing = sessionTiming(data, session);
@@ -377,4 +379,4 @@ export function SessionResults({
       </div>
     </main>
   );
-}
+};

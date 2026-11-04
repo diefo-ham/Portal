@@ -64,7 +64,7 @@ const lastChoice = (): Assessment | undefined => {
   const last = readStorage(LAST_KEY);
   return isAssessment(last) ? last : undefined;
 };
-export function App() {
+export const App = () => {
   const appearance = useAppearance();
   const [assessment, setAssessment] = useState<Assessment>(
     () => routeOf() ?? lastChoice() ?? "SAT",
@@ -757,4 +757,4 @@ export function App() {
       />
     </AssessmentProvider>
   );
-}
+};

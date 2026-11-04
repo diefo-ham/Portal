@@ -21,11 +21,11 @@ export function useAppearance() {
   return { theme, setTheme, originalPdf, setOriginalPdf };
 }
 
-export function AppearanceSettings({
-  appearance,
-}: {
+export type AppearanceSettingsProps = {
   appearance: ReturnType<typeof useAppearance>;
-}) {
+};
+
+export const AppearanceSettings = ({ appearance }: AppearanceSettingsProps) => {
   const t = useT();
   return (
     <section
@@ -60,4 +60,4 @@ export function AppearanceSettings({
       </p>
     </section>
   );
-}
+};

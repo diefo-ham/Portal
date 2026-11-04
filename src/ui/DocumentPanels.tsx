@@ -53,13 +53,12 @@ function Panel({ panel }: { panel: DocumentPanel }) {
     </div>
   );
 }
-export function DocumentPanels({
-  question,
-  kind,
-}: {
+export type DocumentPanelsProps = {
   question: Question;
   kind: "question" | "rationale";
-}) {
+};
+
+export const DocumentPanels = ({ question, kind }: DocumentPanelsProps) => {
   const t = useT();
   return (
     <div
@@ -75,4 +74,4 @@ export function DocumentPanels({
       ))}
     </div>
   );
-}
+};

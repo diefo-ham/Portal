@@ -209,17 +209,19 @@ function DomainRow({
   );
 }
 
-export function PerformanceOverview({
-  data,
-  protectTests,
-  mistakeIds,
-  onStart,
-}: {
+export type PerformanceOverviewProps = {
   data: StudyData;
   protectTests: boolean;
   mistakeIds: string[];
   onStart: (ids: string[], source?: "mistakes") => void;
-}) {
+};
+
+export const PerformanceOverview = ({
+  data,
+  protectTests,
+  mistakeIds,
+  onStart,
+}: PerformanceOverviewProps) => {
   const t = useT();
   const info = assessmentInfo(useAssessment());
   const performance = useMemo(
@@ -334,4 +336,4 @@ export function PerformanceOverview({
       )}
     </section>
   );
-}
+};

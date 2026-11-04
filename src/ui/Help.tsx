@@ -2,7 +2,7 @@ import { useRef, useState, type MouseEvent } from "react";
 import { assessmentInfo } from "../core/assessments";
 import { useAssessment, useT } from "./i18n";
 
-export function ShortcutHelp() {
+export const ShortcutHelp = () => {
   const t = useT();
   const calculator = assessmentInfo(useAssessment()).calculator;
   return (
@@ -45,11 +45,11 @@ export function ShortcutHelp() {
       </p>
     </div>
   );
-}
+};
 
-export function Help() {
+export const Help = () => {
   return useAssessment() === "PAA" ? <PaaHelp /> : <SatHelp />;
-}
+};
 
 function PaaHelp() {
   const dialog = useRef<HTMLDialogElement>(null);

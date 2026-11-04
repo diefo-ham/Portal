@@ -12,17 +12,7 @@ import { useAssessment, useT } from "./i18n";
 
 type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
 
-export function Browse({
-  data,
-  filters,
-  filtered,
-  visible,
-  onShowMore,
-  onChangeFilters,
-  protectTests,
-  onAddQuestions,
-  mutate,
-}: {
+export type BrowseProps = {
   data: StudyData;
   filters: FilterValues;
   filtered: Question[];
@@ -32,7 +22,19 @@ export function Browse({
   protectTests: boolean;
   onAddQuestions: () => void;
   mutate: Mutate;
-}) {
+};
+
+export const Browse = ({
+  data,
+  filters,
+  filtered,
+  visible,
+  onShowMore,
+  onChangeFilters,
+  protectTests,
+  onAddQuestions,
+  mutate,
+}: BrowseProps) => {
   const t = useT();
   const assessment = useAssessment();
   const [selectedId, setSelectedId] = useState("");
@@ -345,4 +347,4 @@ export function Browse({
       )}
     </main>
   );
-}
+};
