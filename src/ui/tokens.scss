@@ -26,19 +26,19 @@
   --outcome-correct: #708969;
   --outcome-incorrect: #b1755c;
   --outcome-unanswered: #d0d1c0;
-  --shadow: 0 8px 28px #33382512;
-  --dialog-shadow: 0 20px 80px #2823172b;
+  --shadow: 0 0.5rem 1.75rem #33382512;
+  --dialog-shadow: 0 1.25rem 5rem #2823172b;
   --backdrop: #24261f66;
-  --radius: 6px;
-  --radius-lg: 10px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --control-height: 40px;
+  --radius: 0.375rem;
+  --radius-lg: 0.625rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --control-height: 2.5rem;
   --motion: 150ms;
 }
 :root[data-theme="dark"] {
@@ -66,8 +66,8 @@
   --outcome-correct: #86996b;
   --outcome-incorrect: #b77f65;
   --outcome-unanswered: #615646;
-  --shadow: 0 8px 28px #130e091c;
-  --dialog-shadow: 0 20px 80px #100b0766;
+  --shadow: 0 0.5rem 1.75rem #130e091c;
+  --dialog-shadow: 0 1.25rem 5rem #100b0766;
   --backdrop: #100d0a99;
 }
 /* Provide an appropriate first paint before the local appearance module runs. */
