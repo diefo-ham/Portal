@@ -1,5 +1,5 @@
-import type { Fit } from "./regression";
 import { roundSig } from "@/src/utils/calculator";
+import type { Fit } from "@/src/types/calculator";
 export function displayedCoefficients(fit: Fit): number[] {
   return fit.coefficients.map((value, i) => {
     const tolerance = fit.coefficientTolerance?.[i] ?? 0;

@@ -1,6 +1,7 @@
 import { Calculator } from "./Calculator";
-import { emptyCalculator, type CalculatorState } from "./model";
+import { emptyCalculator } from "./model";
 import "./calculator.scss";
+import type { CalculatorState } from "@/src/types/calculator";
 
 export function CalculatorSurface({
   state,

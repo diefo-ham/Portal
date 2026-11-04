@@ -1,12 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { clamp } from "@/src/utils/calculator";
-import {
-  defaultView,
-  formatNumber as fmt,
-  validView,
-  type Point,
-  type Viewport,
-} from "./model";
+import { defaultView, formatNumber as fmt, validView } from "./model";
 import {
   implicitRegion,
   implicitSegments,
@@ -21,6 +15,7 @@ import {
 import type { GraphObject } from "./workspace";
 import { coordinateForm } from "./exact";
 import { clipAffineInequality } from "./affine";
+import type { Point, Viewport } from "@/src/types/calculator";
 
 function ticks(min: number, max: number, minor = false) {
   const rough = (max - min) / 8,

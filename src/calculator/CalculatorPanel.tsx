@@ -10,15 +10,14 @@ import {
 import { createPortal } from "react-dom";
 import { clamp } from "@/src/utils/calculator";
 import { writeJson } from "@/src/utils/storage";
-import type { CalculatorState } from "./model";
 import {
   clampGeometry,
   defaultGeometry,
   geometryKey,
   readGeometry,
-  type WindowGeometry,
 } from "./windowGeometry";
 import "./layout.scss";
+import type { CalculatorState, WindowGeometry } from "@/src/types/calculator";
 const Surface = lazy(() => import("./CalculatorSurface"));
 const viewport = () => ({
   width: Math.min(

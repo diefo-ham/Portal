@@ -1,5 +1,5 @@
 import type { MathNode } from "mathjs";
-import type { Point, Viewport } from "./model";
+import type { Point, Viewport } from "@/src/types/calculator";
 
 export type Comparator = "<" | "<=" | ">" | ">=";
 /** The original comparison is a*x + b*y + c comparator 0. */

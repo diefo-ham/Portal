@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { scalar, scalarTex } from "../src/calculator/math";
-import { emptyCalculator, type ExpressionEntry } from "../src/calculator/model";
+import { emptyCalculator } from "../src/calculator/model";
 import { calculateWorkspace } from "../src/calculator/workspace";
 import { customRegression } from "../src/calculator/regression";
+import type { ExpressionEntry } from "@/src/types/calculator";
 
 const evaluate = (text: string, angle: "radians" | "degrees" = "radians") =>
   scalar(text).value({}, {}, angle);

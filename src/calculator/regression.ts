@@ -1,22 +1,15 @@
 import { Matrix, QrDecomposition } from "ml-matrix";
-import type { FitModel, Point } from "./model";
-import { scalar, type Angle, type Scalar } from "./math";
+import { scalar } from "./math";
 import type { MathNode } from "mathjs";
-import type { ParameterBounds } from "./relations";
 import { nonlinearLeastSquares } from "./nonlinearFit";
-
-export interface Fit {
-  coefficients: number[]; // increasing powers of x; exponential: a, b in a*b^x
-  predict: (x: number) => number;
-  r2?: number;
-  rmse: number;
-  residuals: number[];
-  logSpace: boolean;
-  exponential?: boolean;
-  /** Estimated numerical resolution per coefficient, for presentation only. */
-  coefficientTolerance?: number[];
-  custom?: { formula: string; names: string[] };
-}
+import type {
+  Angle,
+  Fit,
+  FitModel,
+  ParameterBounds,
+  Point,
+  Scalar,
+} from "@/src/types/calculator";
 
 const NONLINEAR = "Calculator nonlinear list fitting is unsupported";
 /** True when the model has parameters inside functions or powers, not just a straight sum. */

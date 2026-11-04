@@ -1,4 +1,4 @@
-import type { TableEntry } from "./model";
+import type { TableEntry } from "@/src/types/calculator";
 
 export function parsePastedData(text: string): [string, string][] {
   const lines = text

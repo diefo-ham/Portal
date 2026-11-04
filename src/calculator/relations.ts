@@ -1,17 +1,15 @@
 import type { MathNode } from "mathjs";
-import { scalar, type Scalar, type Angle } from "./math";
+import { scalar } from "./math";
 import { roots } from "./numerics";
 import { restrictionSource } from "./restrictionSyntax";
 import { roundSig } from "@/src/utils/calculator";
-
-export type ParameterBound = {
-  min?: number;
-  max?: number;
-  minOpen?: boolean;
-  maxOpen?: boolean;
-};
-export type ParameterBounds = Record<string, ParameterBound>;
-export type Restriction = { left: Scalar; right: Scalar; op: string };
+import type {
+  Angle,
+  ParameterBound,
+  ParameterBounds,
+  Restriction,
+  Scalar,
+} from "@/src/types/calculator";
 
 /** Solver/regression braces are parameter bounds, never expression domains. */
 export function relationSource(source: string): {

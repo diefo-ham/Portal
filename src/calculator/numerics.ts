@@ -1,6 +1,6 @@
-import type { Point, Viewport } from "./model";
 import { clamp } from "@/src/utils/calculator";
 import type { GraphObject } from "./workspace";
+import type { Point, Viewport } from "@/src/types/calculator";
 export const safeValue = (fn: (x: number) => number, x: number) => {
   try {
     const y = fn(x);

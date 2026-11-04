@@ -5,7 +5,6 @@ import {
   newExpression,
   defaultView,
   validateCalculator,
-  type CalculatorState,
 } from "../src/calculator/model";
 import { calculateWorkspace } from "../src/calculator/workspace";
 import {
@@ -38,6 +37,7 @@ import {
   clampGeometry,
   defaultGeometry,
 } from "../src/calculator/windowGeometry";
+import type { CalculatorState } from "@/src/types/calculator";
 
 const evaluate = (s: string, angle: "radians" | "degrees" = "radians") =>
   scalar(s).value({}, {}, angle);

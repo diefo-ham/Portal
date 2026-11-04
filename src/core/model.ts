@@ -1,3 +1,4 @@
+import type { CalculatorState } from "@/src/types/calculator";
 /** Which test a question, attempt or session belongs to. Absent means SAT. */
 export type Assessment = "SAT" | "PAA";
 export type SatSection = "math" | "reading-writing";
@@ -148,7 +149,7 @@ export interface Session {
   paused: boolean;
   /** Snapshot of the timer-visibility preference for this session. */
   timerVisible?: boolean;
-  calculator?: import("../calculator/model").CalculatorState;
+  calculator?: CalculatorState;
 }
 export interface StudyData {
   /** Exposure ledger survives deletion of an individual session. */

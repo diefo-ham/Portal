@@ -1,8 +1,9 @@
 import type { MathNode } from "mathjs";
-import { scalar, scalarFromNode, type Scalar, type Angle } from "./math";
+import { scalar, scalarFromNode } from "./math";
 import { rational } from "./exact";
 import { assertAffineParameters } from "./regression";
-import { solveScalarRelation, type ParameterBounds } from "./relations";
+import { solveScalarRelation } from "./relations";
+import type { Angle, ParameterBounds, Scalar } from "@/src/types/calculator";
 
 // Small, bounded algebra for SAT relations. Rational coefficients make branch
 // decisions exact: cancellation must not turn a free scale into an isolated root.

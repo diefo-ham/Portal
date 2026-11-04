@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import type { SliderSettings } from "./model";
 import { defaultSlider, validSlider } from "./model";
 import { clamp, roundSig } from "@/src/utils/calculator";
+import type { SliderSettings } from "@/src/types/calculator";
 
 type Mode = "bounce" | "loop" | "once";
 const SPEEDS = [0.25, 0.5, 1, 2, 4];
