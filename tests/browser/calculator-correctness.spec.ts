@@ -74,13 +74,13 @@ test("scalar roots, restrictions and angle mode have coherent visible results", 
 }) => {
   await openCalculator(page);
   await enterExpression(page, 1, "52(c^3+64)(c^4-81)~0");
-  await expect(page.getByLabel("Real parameter solutions")).toHaveText(
-    "c = -4 or c = -3 or c = 3",
-  );
+  await expect(
+    page.getByLabel("Real parameter solutions").locator(".calc-solution"),
+  ).toHaveText(["c = -4", "c = -3", "c = 3"]);
   await enterExpression(page, 1, "(c+5)^2~4");
-  await expect(page.getByLabel("Real parameter solutions")).toHaveText(
-    "c = -7 or c = -3",
-  );
+  await expect(
+    page.getByLabel("Real parameter solutions").locator(".calc-solution"),
+  ).toHaveText(["c = -7", "c = -3"]);
   await enterExpression(page, 1, "n^2~4{n>0}");
   await expect(page.getByLabel("Fitted parameters")).toHaveText("n = 2");
   await expect(page.locator(".calc-error")).toHaveCount(0);

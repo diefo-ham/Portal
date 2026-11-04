@@ -36,12 +36,14 @@ import { ClearData } from "./ClearData";
 import { applyUpdate, subscribeToUpdates, updateReady } from "../updates";
 import {
   eraseAllLocalData,
+  removePdfQuestions,
   removeQuestionLibrary,
   storageErrorMessage,
 } from "../storage/localData";
 import { AppearanceSettings, useAppearance } from "./AppearanceSettings";
 import { Browse } from "./Browse";
-import { PdfPrepare } from "./PdfPrepare";
+import { AddPdfsDialog } from "./AddPdfsDialog";
+import { PdfManager } from "./PdfManager";
 import { normalizeSessionName } from "../core/sessions";
 import { AssessmentProvider, translator } from "./i18n";
 import { TimedTestRun, TimedTestSetup } from "./TimedTest";
@@ -121,6 +123,7 @@ export function App() {
         : "hide",
   }));
   const [sessionId, setSessionId] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
   const newVersion = useSyncExternalStore(subscribeToUpdates, updateReady);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -406,6 +409,7 @@ export function App() {
           mutate={mutate}
           onOpen={openSession}
           removesAnswers={deleteRemovesAnswers}
+          onAddQuestions={() => setAddOpen(true)}
         />
       ) : page === "practice" && current?.timedTest ? (
         <TimedTestRun
@@ -508,7 +512,7 @@ export function App() {
           }}
           onReview={() => setPage("review")}
           onBrowse={() => setPage("library")}
-          onAddQuestions={() => setPage("data")}
+          onAddQuestions={() => setAddOpen(true)}
         />
       ) : page === "library" ? (
         <Browse
@@ -519,7 +523,7 @@ export function App() {
           onShowMore={() => setVisible(visible + 40)}
           onChangeFilters={changeFilters}
           protectTests={protect}
-          onAddQuestions={() => setPage("data")}
+          onAddQuestions={() => setAddOpen(true)}
           mutate={mutate}
         />
       ) : page === "review" ? (
@@ -651,9 +655,23 @@ export function App() {
               {t("Nothing is uploaded, and no account is needed.")}
             </p>
             <div className="data-grid">
-              <PdfPrepare
-                key={assessment}
-                prepare={assessment === "PAA" ? preparePaaPdfs : preparePdfs}
+              <PdfManager
+                data={view}
+                busy={busy}
+                onAdd={() => setAddOpen(true)}
+                onRemove={(key) =>
+                  run(async () => {
+                    await adoptLibrary(async () => ({
+                      result: { data: await removePdfQuestions(assessment, key) },
+                    }));
+                    setSessionId("");
+                    setMessage(
+                      t(
+                        "PDF removed. Add it again whenever you like; your answers and bookmarks were kept.",
+                      ),
+                    );
+                  })
+                }
               />
             </div>
             <ResetProgress
@@ -744,6 +762,12 @@ export function App() {
           <span>{t("Personal practice · Not affiliated with College Board")}</span>
         </footer>
       )}
+      <AddPdfsDialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        prepareSat={preparePdfs}
+        preparePaa={preparePaaPdfs}
+      />
     </AssessmentProvider>
   );
 }

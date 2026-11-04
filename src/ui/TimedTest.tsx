@@ -61,11 +61,13 @@ export function TimedTestSetup({
   mutate,
   onOpen,
   removesAnswers = false,
+  onAddQuestions,
 }: {
   data: StudyData;
   mutate: Mutate;
   onOpen: (id: string) => void;
   removesAnswers?: boolean;
+  onAddQuestions?: () => void;
 }) {
   const [parts, setParts] = useState<Section[]>(ALL_PARTS);
   const [unusedOnly, setUnusedOnly] = useState(true);
@@ -189,7 +191,12 @@ export function TimedTestSetup({
       {!data.questions.length ? (
         <section className="empty-state">
           <h2>Agrega tus preguntas para empezar.</h2>
-          <p>Agrega tus PDF de preguntas en Ajustes.</p>
+          <p>Agrega tus PDF de preguntas y se preparan en este dispositivo.</p>
+          {onAddQuestions && (
+            <button className="primary" onClick={onAddQuestions}>
+              Agrega tus PDF de preguntas
+            </button>
+          )}
         </section>
       ) : (
         !unfinished && (

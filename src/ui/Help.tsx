@@ -367,11 +367,14 @@ function SatHelp() {
               Adding questions and resetting progress
             </summary>
             <p>
-              Add your questions in Settings under Add your question PDFs.
-              Choose the four PDF exports; they are read in this browser, never
-              uploaded, and the whole set takes about 5 to 10 minutes. Active
-              questions are marked automatically from the files and stay hidden
-              by default.
+              Choose Add your question PDFs and drop all your PDFs into the
+              window that opens: the four SAT exports (read_write_active,
+              read_write_inactive, math_active and math_inactive) and your PAA
+              export. They are sorted automatically, read in this browser,
+              never uploaded, and the whole set takes about 5 to 10 minutes.
+              Active questions are marked automatically from the files and stay
+              hidden by default. Settings lists every PDF you added and lets
+              you remove one.
             </p>
             <p>
               Reset study progress clears attempts, sessions, and Practice Test

@@ -9,13 +9,9 @@ test("coupled polynomial branches, rational holes, empty intersections and conic
   await open(page);
   await enterExpression(page, 1, "a^2+b^2=25");
   await enterExpression(page, 2, "ab=12");
-  await expect(page.getByLabel("Real parameter solutions").first()).toHaveText(
-    "a = -4, b = -3 or a = -3, b = -4 or a = 3, b = 4 or a = 4, b = 3",
-  );
+  await expect(solutionRows(page)).toHaveText(["a = -4, b = -3", "a = -3, b = -4", "a = 3, b = 4", "a = 4, b = 3"]);
   await enterExpression(page, 1, "(a^2+b^2-25)/(a-3)=0");
-  await expect(page.getByLabel("Real parameter solutions").first()).toHaveText(
-    "a = -4, b = -3 or a = -3, b = -4 or a = 4, b = 3",
-  );
+  await expect(solutionRows(page)).toHaveText(["a = -4, b = -3", "a = -3, b = -4", "a = 4, b = 3"]);
   await enterExpression(page, 1, "a^2+b^2=1");
   await enterExpression(page, 2, "ab=1");
   await expect(page.locator(".calc-entry").first()).toContainText(
@@ -35,9 +31,7 @@ test("coordinate systems retain graphs and expose every visible algebraic inters
   await open(page);
   await enterExpression(page, 1, "x^2+y^2=25");
   await enterExpression(page, 2, "xy=12");
-  await expect(page.getByLabel("Real parameter solutions").first()).toHaveText(
-    "x = -4, y = -3 or x = -3, y = -4 or x = 3, y = 4 or x = 4, y = 3",
-  );
+  await expect(solutionRows(page)).toHaveText(["x = -4, y = -3", "x = -3, y = -4", "x = 3, y = 4", "x = 4, y = 3"]);
   await page
     .getByRole("button", { name: "Inspect points", exact: true })
     .click();
@@ -51,8 +45,8 @@ test("coordinate systems retain graphs and expose every visible algebraic inters
   });
   await enterExpression(page, 1, "y=x+1");
   await enterExpression(page, 2, "y=x^2-3");
-  const solutions = page.getByLabel("Real parameter solutions").first();
-  await expect(solutions).toContainText(" or ");
+  const solutions = solutionRows(page);
+  await expect(solutions).toHaveCount(2);
   await expect(
     page.locator(".graph-interest[aria-label*='intersection']"),
   ).toHaveCount(2);
@@ -61,10 +55,17 @@ test("coordinate systems retain graphs and expose every visible algebraic inters
     path: "private-data/inspection/coupled-line-quadratic.png",
   });
   // Moving the graph window never changes the reported algebraic solution set.
-  const before = await solutions.textContent();
+  const before = await solutions.allTextContents();
   await page.getByRole("button", { name: "Zoom in", exact: true }).click();
-  await expect(solutions).toHaveText(before!);
+  await expect(solutions).toHaveText(before);
 });
+
+/** One row per solution, shown once under the last expression of a system. */
+function solutionRows(page: Page) {
+  return page
+    .getByLabel("Real parameter solutions")
+    .locator(".calc-solution");
+}
 
 async function open(page: Page) {
   await page.setViewportSize({ width: 1366, height: 900 });
@@ -117,21 +118,15 @@ test("percentage families, exact product/power solutions, derived quantities and
     "not uniquely determined",
   );
   await enterExpression(page, 2, "ab=6");
-  await expect(page.getByLabel("Real parameter solutions").first()).toHaveText(
-    "a = 2, b = 3 or a = 3, b = 2",
-  );
+  await expect(solutionRows(page)).toHaveText(["a = 2, b = 3", "a = 3, b = 2"]);
   await enterExpression(page, 3, "a+b");
   await expect(page.locator(".calc-numeric-result").last()).toHaveText("= 5");
   await page.screenshot({ path: "private-data/inspection/finite-product.png" });
   await enterExpression(page, 2, "a*b=6{a<2.5}");
-  await expect(page.getByLabel("Real parameter solutions").first()).toHaveText(
-    "a = 2, b = 3",
-  );
+  await expect(solutionRows(page)).toHaveText(["a = 2, b = 3"]);
   await enterExpression(page, 1, "a+b=7");
   await enterExpression(page, 2, "a^2+b^2=25");
-  await expect(page.getByLabel("Real parameter solutions").first()).toHaveText(
-    "a = 3, b = 4 or a = 4, b = 3",
-  );
+  await expect(solutionRows(page)).toHaveText(["a = 3, b = 4", "a = 4, b = 3"]);
 
   await page
     .getByRole("button", { name: "Clear calculator", exact: true })

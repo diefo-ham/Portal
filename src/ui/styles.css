@@ -2077,28 +2077,85 @@ figcaption {
 .data-card.spaced {
   margin-top: 0;
 }
-.pdf-prepare fieldset {
-  border: 0;
-  padding: 0;
-  margin: 16px 0 0;
+.add-pdfs-dialog {
+  width: min(620px, calc(100vw - 40px));
 }
-.pdf-prepare legend {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  padding: 0;
+.add-pdfs-dialog .dialog-heading {
+  margin-bottom: 10px;
 }
-.pdf-prepare .radio-row {
-  display: block;
-  font-size: 13px;
-  margin: 6px 0;
-  max-width: 58ch;
+.drop-zone {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin: 16px 0 10px;
+  padding: 26px 16px 22px;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  transition:
+    border-color var(--motion),
+    background var(--motion);
 }
-.pdf-prepare-files {
+.drop-zone.over {
+  border-color: var(--accent);
+  background: var(--surface-selected);
+}
+.drop-zone .drop-title {
+  font-size: 15px;
+  margin: 0;
+}
+.drop-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+.drop-zone .file-button.secondary {
+  margin-top: 0;
+}
+.pdf-add-files,
+.pdf-list {
   list-style: none;
   padding: 0;
   margin: 12px 0 0;
   font-size: 13px;
+}
+.pdf-add-files li,
+.pdf-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.pdf-add-files li:last-child,
+.pdf-list li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.pdf-add-files code,
+.pdf-list code {
+  overflow-wrap: anywhere;
+}
+.pdf-add-tag,
+.pdf-list-detail {
+  display: block;
+}
+.pdf-list .text-button {
+  display: inline-block;
+  margin: 0;
+  flex: none;
+}
+.pdf-manager-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.pdf-manager-head h2 {
+  margin: 0;
 }
 .pdf-prepare-advanced,
 .pdf-prepare-report details {

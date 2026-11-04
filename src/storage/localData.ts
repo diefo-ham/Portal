@@ -1,5 +1,6 @@
 import { scopeStudyData } from "../core/assessments";
 import type { Assessment } from "../core/model";
+import { removePdfFromData } from "../core/pdfLibrary";
 import { referencedAssetKeys } from "../importing/documents";
 import {
   clearAssets,
@@ -35,6 +36,17 @@ export async function removeQuestionLibrary(assessment?: Assessment) {
     if (!d.questions.length) d.imports = [];
   });
   if (assessment && data.questions.length)
+    await deleteAssetsExcept(referencedAssetKeys(data));
+  else await clearAssets();
+  return data;
+}
+
+/** Removes one PDF's questions (see `removePdfFromData`); answers and bookmarks stay. */
+export async function removePdfQuestions(assessment: Assessment, key: string) {
+  const data = await updateData((d) => {
+    removePdfFromData(d, assessment, key);
+  });
+  if (data.questions.length)
     await deleteAssetsExcept(referencedAssetKeys(data));
   else await clearAssets();
   return data;

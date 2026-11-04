@@ -69,8 +69,12 @@ such as a separate `x>0` row, filter finite coordinate solutions too.
 ## Identifiability and results
 
 - **Determined:** one verified finite solution vector; its values can be reused.
-- **Multiple:** all supported real ordered solutions are displayed. Only parameter
-  values shared by every solution are published globally.
+- **Multiple:** all supported real ordered solutions are displayed, one solution
+  per row (`x = -2, y = 3` on one line, `x = 2, y = 3` on the next), once under
+  the last expression of the system. A value shared by every solution, such as
+  `y = 3`, is not repeated on a line of its own, because beside the rows it read
+  as `y = 3x`. Only parameter values shared by every solution are published
+  globally.
 - **Partial:** a free family remains but some parameters are invariant. Only those
   invariants are published; the others are described as not uniquely determined.
 - **Underdetermined:** no individual parameter is invariant across the valid
