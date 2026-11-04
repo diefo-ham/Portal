@@ -47,10 +47,14 @@ interface Spec {
   rationale?: string[];
   /** Long readings are scaled to fit one page: the header table sits higher. */
   scaled?: boolean;
+  /** A page of some other document: no question ID, no metadata table. */
+  unrelated?: boolean;
 }
 
 /** A synthetic page in the PAA export's layout (original text, no real questions). */
 function page(spec: Spec) {
+  if (spec.unrelated)
+    return layoutPage([run("Una carta cualquiera.", 18, 40, 12)], 792, 612);
   const header = spec.scaled ? 52 : 65.3;
   const data = spec.scaled ? 71 : 90.8;
   const heading = spec.scaled ? 100 : 135.75;
@@ -144,7 +148,11 @@ describe("indexPaaExport", () => {
 
   it("assigns continuation pages to the question they follow", () => {
     const pages = [page({ id: "first001" }), page({ id: "second02" })];
-    const continuation = layoutPage([run("Sigue la explicación.", 18, 60)], 792, 612);
+    const continuation = layoutPage(
+      [run("Sigue la explicación.", 18, 60)],
+      792,
+      612,
+    );
     const found = indexPaaExport("x.pdf", [pages[0], continuation, pages[1]]);
     expect(found.map((r) => [r.id, r.pages])).toEqual([
       ["first001", [1, 2]],
@@ -406,7 +414,10 @@ describe("preparePaaLibrary", () => {
 
   it("uses the first copy of an ID seen in two files and leaves out conflicting ones", async () => {
     const { files, deps } = fixtures({
-      "a.pdf": [{ id: "dup00001", key: "Correct Answer: A" }, { id: "dup00002" }],
+      "a.pdf": [
+        { id: "dup00001", key: "Correct Answer: A" },
+        { id: "dup00002" },
+      ],
       "b.pdf": [
         { id: "dup00001", key: "Correct Answer: A" },
         { id: "dup00002", key: "Correct Answer: D" },
@@ -429,6 +440,32 @@ describe("preparePaaLibrary", () => {
       sourceId: "sat00001",
       reason: expect.stringContaining("expected PAA"),
     });
+  });
+
+  it("sets aside PDFs that are not PAA question exports and still imports the rest", async () => {
+    const { files, deps } = fixtures({
+      "carta.pdf": [
+        { id: "x", unrelated: true },
+        { id: "y", unrelated: true },
+      ],
+      "banco sat.pdf": [{ id: "sat00001", assessment: "SAT" }],
+      "banco.pdf": [{ id: "paa00001" }, { id: "paa00002" }],
+    });
+    const prepared = await preparePaaLibrary(files, {}, deps);
+    expect(prepared.report.importedQuestions).toBe(2);
+    expect(prepared.report.ignored).toEqual(["banco sat.pdf", "carta.pdf"]);
+    expect(prepared.report.quarantined).toEqual([]);
+    // Only the file that gave questions is listed as read.
+    expect(prepared.report.files.map((f) => f.filename)).toEqual(["banco.pdf"]);
+  });
+
+  it("says so when none of the chosen PDFs is a PAA export", async () => {
+    const { files, deps } = fixtures({
+      "carta.pdf": [{ id: "x", unrelated: true }],
+    });
+    await expect(preparePaaLibrary(files, {}, deps)).rejects.toThrow(
+      "Ninguno de los PDF es una exportación de preguntas de la PAA",
+    );
   });
 
   it("refuses a PDF with no usable question", async () => {

@@ -16,7 +16,12 @@
  * extensions so the local verification script can run this file directly.
  */
 import { coarsePaaSkill } from "../../core/paaTaxonomy.ts";
-import { extractAnswer, normalizedText, type Answer, type AnswerOrigin } from "./answers.ts";
+import {
+  extractAnswer,
+  normalizedText,
+  type Answer,
+  type AnswerOrigin,
+} from "./answers.ts";
 import { findPhrase, type Line, type PageLayout, type Word } from "./layout.ts";
 import type { ReviewedOverride } from "./record.ts";
 import type { SourceRecord } from "./segment.ts";
@@ -25,13 +30,13 @@ export const PAA_SOURCE = "PAA: banco de preguntas";
 
 const ID_PATTERN = /Question ID:\s*([a-zA-Z0-9]+)/;
 
+/** A page of a question export carries a "Question ID:" line; any other PDF does not. */
+export const isPaaQuestionPage = (page: PageLayout) =>
+  ID_PATTERN.test(page.text);
+
 /** Test names as printed, compared without accents or case. */
 const flat = (text: string) =>
-  text
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .toLowerCase()
-    .trim();
+  text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 const TESTS: Record<string, PaaQuestionText["section"]> = {
   lectura: "lectura",
   redaccion: "redaccion",
@@ -87,6 +92,10 @@ const DIFFICULTIES: Record<string, string> = {
   medio: "medium",
   dificil: "hard",
 };
+
+/** Only an export of PAA questions counts: an SAT export read here is left aside. */
+export const isPaaRecord = (record: PaaRecord) =>
+  flat(record.assessment) === "paa";
 
 export function indexPaaExport(
   filename: string,
@@ -302,7 +311,10 @@ export function convertPaaRecord(
   }
   if (answer.type === "choice") {
     const labels = choiceLabels(record.optionLines);
-    if (labels.slice(0, 4).join("") !== "ABCD" && !override?.choiceLabelsVerified)
+    if (
+      labels.slice(0, 4).join("") !== "ABCD" &&
+      !override?.choiceLabelsVerified
+    )
       throw new Error(
         `Expected options A-D in order, found ${JSON.stringify(labels)}`,
       );

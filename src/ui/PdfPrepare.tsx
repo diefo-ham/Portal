@@ -233,6 +233,16 @@ export function PdfPrepare({ prepare }: Props) {
                 : `${report.quarantined.length} could not be read safely and were left out.`
               : ""}
           </p>
+          {paa && !!report.ignored?.length && (
+            <p className="small">
+              {t(
+                "Set aside, because they are not PAA question exports: {files}",
+                {
+                  files: report.ignored.join(", "),
+                },
+              )}
+            </p>
+          )}
           {!paa && (
             <p className="small muted">
               {report.counts.testStatus.active ?? 0} are marked active and stay

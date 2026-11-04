@@ -205,7 +205,8 @@ export const es: Record<string, string> = {
   "Incorrect ({n})": "Incorrectas ({n})",
   "Unanswered ({n})": "Sin contestar ({n})",
   "Correct ({n})": "Correctas ({n})",
-  "No questions match this filter.": "Ninguna pregunta coincide con este filtro.",
+  "No questions match this filter.":
+    "Ninguna pregunta coincide con este filtro.",
   Correct: "Correcta",
   Incorrect: "Incorrecta",
   Question: "Pregunta",
@@ -409,6 +410,8 @@ export const es: Record<string, string> = {
     "{n} no se pudieron leer con seguridad y se dejaron fuera.",
   "How this was worked out": "Cómo se hizo",
   "Download report": "Descargar el informe",
+  "Set aside, because they are not PAA question exports: {files}":
+    "Se dejaron aparte porque no son exportaciones de preguntas de la PAA: {files}",
   "Reset study progress": "Reiniciar el progreso de estudio",
   "Clear your answers and sessions to start fresh. You can keep your bookmarks. This also restores Practice Test question eligibility.":
     "Borra tus respuestas y sesiones para empezar de cero. Puedes conservar tus marcadores.",

@@ -94,6 +94,8 @@ export interface PrepareReport {
   }[];
   comparison: ReturnType<typeof classifyExports>["comparison"];
   conflicts: ReturnType<typeof classifyExports>["conflicts"];
+  /** PDFs that were chosen but are not question exports for this test, and so were set aside. */
+  ignored?: string[];
   quarantined: QuarantinedQuestion[];
   uniqueSourceIds: number;
   importedQuestions: number;

@@ -11,6 +11,8 @@ import {
   convertPaaRecord,
   groupPassages,
   indexPaaExport,
+  isPaaQuestionPage,
+  isPaaRecord,
   paaSignature,
   type PaaRecord,
 } from "./paa.ts";
@@ -53,12 +55,27 @@ export async function preparePaaLibrary(
   if (!files.length) throw new Error("Choose at least one PDF.");
 
   const indexed: Indexed[] = [];
+  // A chosen PDF that is not an export of PAA questions (a letter, a study guide,
+  // an SAT export) is set aside instead of stopping the others.
+  const ignored: string[] = [];
   for (const [position, file] of files.entries()) {
     signal?.throwIfAborted();
     const bytes = new Uint8Array(await file.arrayBuffer());
     const sha256 = await sha256Hex(bytes);
     const reader = await deps.open(bytes);
     try {
+      // The first pages of an export are questions: look there before reading them all.
+      let looksRight = false;
+      for (
+        let page = 1;
+        page <= Math.min(3, reader.pageCount) && !looksRight;
+        page++
+      )
+        looksRight = isPaaQuestionPage(await reader.layout(page));
+      if (!looksRight) {
+        ignored.push(file.name);
+        continue;
+      }
       const layouts: PageLayout[] = [];
       for (let page = 1; page <= reader.pageCount; page++) {
         signal?.throwIfAborted();
@@ -71,16 +88,20 @@ export async function preparePaaLibrary(
             message: `Leyendo ${file.name}: página ${page} de ${reader.pageCount}`,
           });
       }
-      indexed.push({
-        file,
-        sha256,
-        pages: reader.pageCount,
-        records: indexPaaExport(file.name, layouts),
-      });
+      const records = indexPaaExport(file.name, layouts);
+      if (!records.some(isPaaRecord)) {
+        ignored.push(file.name);
+        continue;
+      }
+      indexed.push({ file, sha256, pages: reader.pageCount, records });
     } finally {
       await reader.close();
     }
   }
+  if (!indexed.length)
+    throw new Error(
+      `Ninguno de los PDF es una exportación de preguntas de la PAA, así que no se agregó nada. Se ignoraron: ${ignored.join(", ")}.`,
+    );
 
   // The ID printed on the page establishes identity; the first copy is used.
   const collected = new Map<string, { at: Indexed; record: PaaRecord }[]>();
@@ -166,7 +187,9 @@ export async function preparePaaLibrary(
   if (!questions.length)
     throw new Error(
       "No se pudo preparar ninguna pregunta. Comprueba que sean exportaciones de preguntas de la PAA." +
-        (quarantined.length ? ` Primer problema: ${quarantined[0].reason}` : ""),
+        (quarantined.length
+          ? ` Primer problema: ${quarantined[0].reason}`
+          : ""),
     );
   // Page order, whichever file a question was converted from, so questions that
   // share a reading stay next to each other.
@@ -200,6 +223,7 @@ export async function preparePaaLibrary(
     })),
     comparison: {},
     conflicts: [],
+    ...(ignored.length ? { ignored } : {}),
     quarantined,
     uniqueSourceIds: collected.size,
     importedQuestions: questions.length,
