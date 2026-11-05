@@ -52,6 +52,7 @@ import {
   timedTestRetryFilters,
 } from "./retry";
 import { SettingsPage } from "./SettingsPage";
+import type { Page } from "@/src/types/ui";
 
 /** Which test the person last used; a fresh browser starts on the SAT. */
 const LAST_KEY = "sat-last-assessment";
@@ -92,7 +93,7 @@ export const App = () => {
     () => (data ? scopeStudyData(data, assessment) : undefined),
     [data, assessment],
   );
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState<Page>("home");
   const [protectedTests, setProtectedTests] = usePersistedBoolean(
     PROTECT_KEY,
     true,

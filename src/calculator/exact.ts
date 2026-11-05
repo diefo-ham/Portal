@@ -28,6 +28,7 @@ export function rational(
     if (x === a) break;
     x = 1 / (x - a);
   }
+  return undefined;
 }
 const fraction = ([n, d]: [number, number]) => (d === 1 ? `${n}` : `${n}/${d}`);
 /** Small square-free radicals with small rational multipliers only. */
@@ -42,6 +43,7 @@ export function radicalForm(
     const [n, d] = pair;
     return `${n < 0 ? "−" : ""}${Math.abs(n) === 1 ? "" : Math.abs(n)}√${radicand}${d === 1 ? "" : `/${d}`}`;
   }
+  return undefined;
 }
 export function exactForm(value: number, source = ""): string | undefined {
   const pair = rational(value);
@@ -68,6 +70,7 @@ export function exactForm(value: number, source = ""): string | undefined {
       : `${outside === 1 ? "" : outside}√${inside}`;
   }
   if (/sqrt|sin|cos|tan|√/.test(source)) return radicalForm(value);
+  return undefined;
 }
 function piForm([n, d]: [number, number]) {
   if (n === 0) return "0";

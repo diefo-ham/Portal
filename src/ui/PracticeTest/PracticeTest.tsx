@@ -24,7 +24,7 @@ import { PracticeTestOptions, type Timing } from "./PracticeTestOptions";
 import { RenameTestDialog } from "./RenameTestDialog";
 import { TestList } from "./TestList";
 import { useBusy } from "@/src/helpers/useBusy";
-type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
+import type { Mutate, RetryKind } from "@/src/types/ui";
 export type PracticeTestSetupProps = {
   data: StudyData;
   mutate: Mutate;
@@ -180,7 +180,7 @@ export type PracticeTestRunProps = {
   session: Session;
   mutate: Mutate;
   onBack: () => void;
-  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onRetry: (ids: string[], kind: RetryKind) => void;
 };
 
 export const PracticeTestRun = ({

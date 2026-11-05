@@ -9,8 +9,8 @@ import { latestAttempt } from "../core/practice";
 import { DocumentPanels } from "./DocumentPanels";
 import { Filters, sectionName } from "./Filters";
 import { useAssessment, useT } from "./i18n";
+import type { Mutate } from "@/src/types/ui";
 
-type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
 
 export type BrowseProps = {
   data: StudyData;

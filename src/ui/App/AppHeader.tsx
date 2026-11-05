@@ -2,16 +2,17 @@ import type { AssessmentInfo } from "../../core/assessments";
 import type { Assessment } from "../../core/model";
 import { Help } from "../Help";
 import { useT } from "../i18n";
+import type { Page } from "@/src/types/ui";
 
 export type AppHeaderProps = {
   info: AssessmentInfo;
   /** The other test, which the toggle switches to. */
   other: AssessmentInfo;
-  page: string;
+  page: Page;
   /** A Practice Test or timed test is open, so "Tests" stays highlighted. */
   testOpen: boolean;
   onHome: () => void;
-  onNavigate: (page: string) => void;
+  onNavigate: (page: Page) => void;
   onSwitchAssessment: (next: Assessment) => void;
 };
 
@@ -26,7 +27,7 @@ export const AppHeader = ({
   onSwitchAssessment,
 }: AppHeaderProps) => {
   const t = useT();
-  const links = [
+  const links: [Page, string][] = [
     ["home", "Practice"],
     ["review", "Review"],
     ["library", "Browse"],

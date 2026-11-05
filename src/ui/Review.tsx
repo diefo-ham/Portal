@@ -6,14 +6,12 @@ import { sessionDisplayName } from "../core/sessions";
 import { PerformanceOverview } from "./PerformanceOverview";
 import { formatElapsed } from "./formatTime";
 import { useAssessment, useT } from "./i18n";
+import type { ReviewSource } from "@/src/types/ui";
 
 export type ReviewProps = {
   data: StudyData;
   protectTests: boolean;
-  onStart: (
-    ids: string[],
-    source?: "mistakes" | "unanswered" | "bookmarks",
-  ) => void;
+  onStart: (ids: string[], source?: ReviewSource) => void;
   onOpen: (id: string) => void;
 };
 

@@ -5,12 +5,7 @@ import {
   type Session,
 } from "../../core/model";
 import { normalizeSessionName } from "../../core/sessions";
-
-/** What to practise again from a finished session. */
-export type RetryKind = "mistakes" | "unanswered" | "entire";
-
-/** Where a Review shortcut starts from. */
-export type ReviewSource = "mistakes" | "unanswered" | "bookmarks";
+import type { RetryKind, ReviewSource } from "@/src/types/ui";
 
 /** The answer-status narrowing for "mistakes" and "unanswered"; none otherwise. */
 const narrowing = (

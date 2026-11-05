@@ -11,6 +11,7 @@ import { domainKey, skillKey } from "../core/taxonomy";
 import { PerformanceGauge } from "./PerformanceGauge";
 import { SessionResults } from "./SessionResults";
 import { formatElapsed } from "./formatTime";
+import type { Mutate, RetryKind } from "@/src/types/ui";
 
 type ResultScope = "overall" | SatSection;
 type ResultMode = "percentage" | "estimate";
@@ -169,9 +170,9 @@ function ScoreEstimate({
 export type PracticeTestResultsProps = {
   data: StudyData;
   session: Session;
-  mutate: (fn: (data: StudyData) => void) => Promise<StudyData>;
+  mutate: Mutate;
   onBack: () => void;
-  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onRetry: (ids: string[], kind: RetryKind) => void;
 };
 
 export const PracticeTestResults = ({

@@ -31,8 +31,8 @@ import { QuestionFooter } from "./QuestionFooter";
 import { QuestionHeading } from "./QuestionHeading";
 import { SessionMap } from "./SessionMap";
 import { ToolsPanel } from "./ToolsPanel";
+import type { Mutate, RetryKind } from "@/src/types/ui";
 
-type Mutate = (fn: (d: StudyData) => void) => Promise<StudyData>;
 type Panel = "overview" | "details" | "tools" | "leave" | "cancel-test";
 
 export type PracticeProps = {
@@ -46,7 +46,7 @@ export type PracticeProps = {
   mutate: Mutate;
   showCorrectExplanations: boolean;
   onBack: () => void | Promise<unknown>;
-  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onRetry: (ids: string[], kind: RetryKind) => void;
 };
 
 export const Practice = ({
