@@ -18,6 +18,7 @@ import {
 import { regression, customRegression } from "../src/calculator/regression";
 import {
   displayedCoefficients,
+  exportedExpression,
   fittedExpression,
 } from "../src/calculator/fitDisplay";
 import {
@@ -155,6 +156,58 @@ describe("Focused Calculator correctness regressions", () => {
     expect(
       scalar(latexToText(textToLatex(source))).value({ x: 3 }, {}, "radians"),
     ).toBeCloseTo(fit.predict(3), 12);
+  });
+
+  it("exports recognisable fractions exactly and leaves other coefficients decimal", () => {
+    // Slope 10/3: the decimal 3.3333333333333335 is not what a student wants.
+    const third = regression(
+      [
+        { x: 0, y: -2 },
+        { x: 3, y: 8 },
+        { x: 6, y: 18 },
+      ],
+      "linear",
+    );
+    const source = exportedExpression(third);
+    expect(source).toBe("(10/3)x-2");
+    expect(textToLatex(source)).toContain("\\frac");
+    expect(
+      scalar(latexToText(textToLatex(source))).value({ x: 3 }, {}, "radians"),
+    ).toBeCloseTo(third.predict(3), 12);
+    // Negative fractions keep their sign outside the parentheses.
+    const negative = regression(
+      [
+        { x: 0, y: 1 },
+        { x: 3, y: 0 },
+        { x: 6, y: -1 },
+      ],
+      "linear",
+    );
+    expect(exportedExpression(negative)).toBe("-(1/3)x+1");
+    // Integers and unrecognisable values are unchanged.
+    expect(
+      exportedExpression(
+        regression(
+          [
+            { x: -1, y: -8 },
+            { x: 0, y: -6 },
+            { x: 1, y: 0 },
+            { x: 2, y: 10 },
+          ],
+          "quadratic",
+        ),
+      ),
+    ).toBe("2x^2+4x-6");
+    const noisy = regression(
+      [
+        { x: 0, y: 0.1 },
+        { x: 1, y: 2.9 },
+        { x: 2, y: 6.3 },
+        { x: 3, y: 8.8 },
+      ],
+      "linear",
+    );
+    expect(exportedExpression(noisy)).toBe("2.95x+0.1");
   });
 });
 
@@ -869,6 +922,15 @@ describe("Offline relation architecture and domain correctness", () => {
     expect(last("[n,n]~[1,2,3]").error).toContain("same length");
     expect(last("[n]~[[1,2]]").error).toContain("flat list");
     expect(last("[a+b,a+b]~[1,2]").error).toContain("underdetermined");
+    // Undefined subscripted x/y are free parameters, like letters...
+    const subscripted = last("[5x_1+3y_1,x_1+3y_1]~[38,10]");
+    expect(subscripted.error).toBeUndefined();
+    expect(subscripted.parameters?.x_1).toBeCloseTo(7, 10);
+    expect(subscripted.parameters?.y_1).toBeCloseTo(1, 10);
+    // ...but a table or list that defines them keeps its meaning as data.
+    expect(
+      last("x_1=[1,2,3]", "y_1=[3,5,7]", "y_1~m x_1+b").parameters,
+    ).toMatchObject({ m: expect.closeTo(2, 10), b: expect.closeTo(1, 10) });
     // No n makes both true, so this is a least-squares compromise, not an error.
     expect(last("[sin(n),sin(n+1)]~[1,2]").error).toBeUndefined();
     const polynomial = last(

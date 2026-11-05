@@ -17,7 +17,11 @@ import { Slider } from "./Slider";
 import { MathEditor, focusMath } from "./MathEditor";
 import { calculateWorkspace } from "./workspace";
 import { formatNumber as fmt, newExpression, tableColumns } from "./model";
-import { displayedCoefficients, fittedExpression } from "./fitDisplay";
+import {
+  displayedCoefficients,
+  exportedExpression,
+  fittedExpression,
+} from "./fitDisplay";
 import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
 import { roundSig } from "@/src/utils/calculator";
@@ -477,7 +481,7 @@ export function Calculator({
                           onExport={() =>
                             add(
                               newExpression(
-                                "y=" + fittedExpression(result.fit!),
+                                "y=" + exportedExpression(result.fit!),
                               ),
                               entry.id,
                             )
@@ -559,7 +563,7 @@ export function Calculator({
                           onExport={() =>
                             add(
                               newExpression(
-                                "y=" + fittedExpression(result.fit!),
+                                "y=" + exportedExpression(result.fit!),
                               ),
                               entry.id,
                             )

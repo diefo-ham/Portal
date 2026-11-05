@@ -1,5 +1,4 @@
 import { Calculator } from "./Calculator";
-import { emptyCalculator } from "./model";
 import "./calculator.scss";
 import type { CalculatorState } from "@/src/types/calculator";
 
@@ -12,24 +11,11 @@ export function CalculatorSurface({
   onChange: (state: CalculatorState) => void;
   autoFocus?: boolean;
 }) {
-  const clear = () => {
-    onChange(emptyCalculator());
-    requestAnimationFrame(() =>
-      document
-        .querySelector<HTMLElement>(".offline-workspace textarea")
-        ?.focus(),
-    );
-  };
   return (
     <section
       className="calculator-workspace calculator-surface"
       aria-label="Calculator workspace"
     >
-      <div className="calc-provider-bar">
-        <button className="text-button" onClick={clear}>
-          Clear calculator
-        </button>
-      </div>
       <Calculator state={state} onChange={onChange} autoFocus={autoFocus} />
     </section>
   );
