@@ -20,7 +20,7 @@ import {
 } from "../../core/model";
 import { filterQuestions, selectSessionQuestionIds } from "../../core/practice";
 import { useStudy } from "../useStudy";
-import { Practice } from "../Practice";
+import { Practice } from "../Practice/Practice";
 import {
   PracticeTestSetup,
   PracticeTestRun,

@@ -16,7 +16,8 @@ import {
   testAnswerIsValid,
   timerWarning,
 } from "../../core/practiceTest";
-import { Practice, time } from "../Practice";
+import { Practice } from "../Practice/Practice";
+import { time } from "../formatTime";
 import { ConfirmTestDialog } from "./ConfirmTestDialog";
 import { HowPracticeTestsWork } from "./HowPracticeTestsWork";
 import { PracticeTestOptions, type Timing } from "./PracticeTestOptions";
