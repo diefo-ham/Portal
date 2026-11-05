@@ -43,5 +43,14 @@ test("numbers typed into the graph window survive the graph moving underneath", 
   await field("xMax").fill("-30");
   await page.getByRole("button", { name: "Apply window", exact: true }).click();
   await expect(page.getByText(/each minimum below its maximum/)).toBeVisible();
+  // The message makes the panel taller. Let that resize land before checking,
+  // so a sub-pixel change in the graph's size cannot rescale the typed window.
+  await page.evaluate(
+    () =>
+      new Promise((done) =>
+        requestAnimationFrame(() => requestAnimationFrame(done)),
+      ),
+  );
   await expect(plane).toHaveAttribute("data-y-max", "20");
+  await expect(field("yMax")).toHaveValue("20");
 });

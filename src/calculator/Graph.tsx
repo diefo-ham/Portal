@@ -68,8 +68,17 @@ export function Graph({
   const [{ width, height }, setSize] = useState({ width: 640, height: 300 });
   useEffect(() => {
     const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-      if (width > 0 && height > 0) setSize({ width, height });
+      // Whole pixels: layout often lands a fraction of a pixel off (150.34px),
+      // and an unrelated nudge, such as a message appearing below, would then
+      // rescale the equal axes and change the window the person typed.
+      const width = Math.round(entry.contentRect.width);
+      const height = Math.round(entry.contentRect.height);
+      if (width > 0 && height > 0)
+        setSize((size) =>
+          size.width === width && size.height === height
+            ? size
+            : { width, height },
+        );
     });
     if (svg.current) observer.observe(svg.current);
     return () => observer.disconnect();

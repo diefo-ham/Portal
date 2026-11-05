@@ -143,6 +143,8 @@ export const App = () => {
       const linked = routeOf();
       if (linked) setAssessment(linked);
     };
+    // The address may have changed between the first render and now.
+    sync();
     window.addEventListener("hashchange", sync);
     return () => window.removeEventListener("hashchange", sync);
   }, []);
