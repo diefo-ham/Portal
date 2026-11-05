@@ -61,6 +61,7 @@ export function affineCoefficients(
     // Non-affine/domain-restricted expressions retain the explicit graph path
     // where supported; implicit ones receive a scope-specific error.
   }
+  return undefined;
 }
 
 /** Clip one half-plane to the viewport rectangle, independently per expression.

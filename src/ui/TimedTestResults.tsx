@@ -10,6 +10,7 @@ import {
 } from "./PracticeTestResults";
 import { SessionResults } from "./SessionResults";
 import { formatElapsed } from "./formatTime";
+import type { Mutate, RetryKind } from "@/src/types/ui";
 
 /**
  * The results of a PAA test, laid out like the SAT Practice Test's: a gauge with
@@ -22,9 +23,9 @@ type Scope = "overall" | Section;
 export type TimedTestResultsProps = {
   data: StudyData;
   session: Session;
-  mutate: (fn: (data: StudyData) => void) => Promise<StudyData>;
+  mutate: Mutate;
   onBack: () => void;
-  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onRetry: (ids: string[], kind: RetryKind) => void;
 };
 
 export const TimedTestResults = ({

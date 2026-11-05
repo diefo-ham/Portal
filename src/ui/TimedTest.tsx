@@ -32,6 +32,7 @@ import { ConfirmTestDialog } from "./PracticeTest/ConfirmTestDialog";
 import { RenameTestDialog } from "./PracticeTest/RenameTestDialog";
 import { TestList } from "./PracticeTest/TestList";
 import { useBusy } from "@/src/helpers/useBusy";
+import type { Mutate, RetryKind } from "@/src/types/ui";
 
 /**
  * PAA test mode, as close to the real test as the sources allow: the parts in
@@ -40,7 +41,6 @@ import { useBusy } from "@/src/helpers/useBusy";
  * Spanish, so this screen is written in Spanish directly instead of going
  * through the translation table.
  */
-type Mutate = (fn: (data: StudyData) => void) => Promise<StudyData>;
 
 const clock = (ms: number) => {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
@@ -423,7 +423,7 @@ export type TimedTestRunProps = {
   session: Session;
   mutate: Mutate;
   onBack: () => void;
-  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onRetry: (ids: string[], kind: RetryKind) => void;
 };
 
 export const TimedTestRun = ({

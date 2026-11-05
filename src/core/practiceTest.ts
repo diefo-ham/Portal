@@ -150,6 +150,7 @@ export function availability(
         return `${sectionLabel(section)} needs more unused active questions with a different difficulty mix. A Module 2 cannot contain only Easy or only Hard questions. Import more eligible material, or open Settings → Reset study progress.`;
     }
   }
+  return undefined;
 }
 /** Greedy deficit balancing. Targets are approximate, never proprietary SAT blueprints.
  * Difficulty targets: first 30/40/30, lower 50/35/15, higher 15/35/50.

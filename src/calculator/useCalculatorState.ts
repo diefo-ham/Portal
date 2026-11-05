@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { emptyCalculator, withBlankExpression, tableColumns } from "./model";
-import type { StudyData } from "../core/model";
 import type { CalculatorState } from "@/src/types/calculator";
+import type { Mutate } from "@/src/types/ui";
 
 /** Session-owned state; immediate editing, debounced local writes, explicit
  * flush on close/exit/finish and cleanup. Other questions never clear this work.
@@ -9,7 +9,7 @@ import type { CalculatorState } from "@/src/types/calculator";
 export function useCalculatorState(
   sessionId: string,
   saved: CalculatorState | undefined,
-  mutate: (fn: (d: StudyData) => void) => Promise<StudyData>,
+  mutate: Mutate,
 ) {
   const [state, setState] = useState(() => {
     const initial = saved ?? emptyCalculator();

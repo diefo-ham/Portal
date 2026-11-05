@@ -6,6 +6,7 @@ import { segmentLabel } from "../core/timedTest";
 import { DocumentPanels } from "./DocumentPanels";
 import { formatElapsed } from "./formatTime";
 import { useT, type Translate } from "./i18n";
+import type { Mutate, RetryKind } from "@/src/types/ui";
 export const displayAnswer = (q: Question, value: string) =>
   q.document
     ? value
@@ -21,9 +22,9 @@ export type SessionResultsProps = {
   testSummary?: ReactNode;
   data: StudyData;
   session: Session;
-  mutate?: (fn: (data: StudyData) => void) => Promise<StudyData>;
+  mutate?: Mutate;
   onBack: () => void;
-  onRetry: (ids: string[], kind: "mistakes" | "unanswered" | "entire") => void;
+  onRetry: (ids: string[], kind: RetryKind) => void;
   onCalculator?: () => void;
 };
 

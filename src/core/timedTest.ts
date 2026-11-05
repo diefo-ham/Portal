@@ -97,7 +97,7 @@ export function allocateCounts(
   const share = parts.map(() => 0);
   let remaining = goal;
   while (remaining > 0) {
-    const room = share.map((n, i) => i).filter((i) => share[i] < available[i]);
+    const room = share.map((_, i) => i).filter((i) => share[i] < available[i]);
     if (!room.length) break;
     const weights = room.reduce((n, i) => n + weight[i], 0) || room.length;
     const quota = room.map((i) => (remaining * (weight[i] || 1)) / weights);
