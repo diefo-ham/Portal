@@ -15,12 +15,19 @@ export type ReviewSource = "mistakes" | "unanswered" | "bookmarks";
 /** The answer-status narrowing for "mistakes" and "unanswered"; none otherwise. */
 const narrowing = (
   kind: RetryKind | ReviewSource | undefined,
-): { status: string; statuses: AnswerStatus[] } =>
-  kind === "mistakes"
-    ? { status: "incorrect", statuses: ["incorrect"] }
-    : kind === "unanswered"
-      ? { status: "unanswered", statuses: ["unanswered"] }
-      : { status: "", statuses: [] };
+): { status: string; statuses: AnswerStatus[] } => {
+  if (kind === "mistakes")
+    return { status: "incorrect", statuses: ["incorrect"] };
+  if (kind === "unanswered")
+    return { status: "unanswered", statuses: ["unanswered"] };
+  return { status: "", statuses: [] };
+};
+
+const retryLabel: Record<RetryKind, string> = {
+  entire: "Repractice",
+  mistakes: "Mistakes",
+  unanswered: "Unanswered",
+};
 
 /** A timed (PAA) test's retry draws from any question, used or not. */
 export const timedTestRetryFilters = (kind: RetryKind): Filters => ({
@@ -45,19 +52,13 @@ export const sessionRetry = (
   session: Pick<Session, "filters" | "name">,
   kind: RetryKind,
 ): { filters: Filters; name?: string } => {
-  const label =
-    kind === "entire"
-      ? "Repractice"
-      : kind === "mistakes"
-        ? "Mistakes"
-        : "Unanswered";
   return {
     filters: {
       ...session.filters,
       ...(kind === "entire" ? {} : narrowing(kind)),
     },
     name: session.name
-      ? normalizeSessionName(`${session.name} — ${label}`)
+      ? normalizeSessionName(`${session.name} — ${retryLabel[kind]}`)
       : undefined,
   };
 };
