@@ -466,6 +466,8 @@ export const es: Record<string, string> = {
   "PDF removed. Add it again whenever you like; your answers and bookmarks were kept.":
     "Se quitó el PDF. Puedes agregarlo otra vez cuando quieras; tus respuestas y marcadores se conservaron.",
   Close: "Cerrar",
+  "These are {test} questions. Use the switch at the top to open them.":
+    "Estas son preguntas de {test}. Usa el interruptor de arriba para abrirlas.",
   "Close window": "Cerrar la ventana",
   "Drop all your PDFs, or the folder that holds them, together: the four SAT exports and your PAA export. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.":
     "Suelta juntos todos tus PDF, o la carpeta que los contiene: las cuatro exportaciones de la SAT y tu exportación de la PAA. Se ordenan solos, se leen en este navegador y nunca se envían. Todo el conjunto puede tardar de 5 a 10 minutos; mantén esta pestaña abierta mientras trabaja.",
