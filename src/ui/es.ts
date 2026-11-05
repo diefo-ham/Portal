@@ -470,8 +470,6 @@ export const es: Record<string, string> = {
   "Drop all your PDFs, or the folder that holds them, together: the four SAT exports and your PAA export. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.":
     "Suelta juntos todos tus PDF, o la carpeta que los contiene: las cuatro exportaciones de la SAT y tu exportación de la PAA. Se ordenan solos, se leen en este navegador y nunca se envían. Todo el conjunto puede tardar de 5 a 10 minutos; mantén esta pestaña abierta mientras trabaja.",
   "Drop PDFs here": "Suelta los PDF aquí",
-  "Choose a folder": "Elegir una carpeta",
-  "PDF folder": "Carpeta de PDF",
   "SAT exports are recognised by name: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf and math_inactive.pdf. Any other PDF is read as a PAA export, or set aside if it is not one.":
     "Las exportaciones de la SAT se reconocen por el nombre: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf y math_inactive.pdf. Cualquier otro PDF se lee como exportación de la PAA, o se deja aparte si no lo es.",
   "PAA export, or set aside (checked when reading)":

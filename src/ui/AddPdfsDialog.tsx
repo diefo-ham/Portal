@@ -260,20 +260,6 @@ function OpenDialog({
               }}
             />
           </label>
-          <label className="file-button secondary">
-            {t("Choose a folder")}
-            <input
-              aria-label={t("PDF folder")}
-              type="file"
-              // Takes every file in the folder and its subfolders; the PDFs are kept.
-              {...{ webkitdirectory: "" }}
-              disabled={running}
-              onChange={(e) => {
-                add(Array.from(e.target.files ?? []));
-                e.target.value = "";
-              }}
-            />
-          </label>
         </div>
       </div>
       <p className="small muted">

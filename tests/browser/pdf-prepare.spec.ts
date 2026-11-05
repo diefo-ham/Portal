@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -157,42 +157,6 @@ test("dropping every PDF at once sorts the SAT exports and sets the rest aside",
   await expect(dialog).toContainText(
     "None of these PDFs is a question export, so nothing was added. Set aside: carta.pdf",
   );
-});
-
-test("choosing a folder of exports sorts the PDFs inside it and ignores the rest", async ({
-  page,
-}) => {
-  const remote: string[] = [];
-  page.on("request", (request) => {
-    const url = request.url();
-    if (!url.startsWith("http://127.0.0.1:4318") && !/^(data|blob):/.test(url))
-      remote.push(url);
-  });
-  const dir = mkdtempSync(join(tmpdir(), "sat-study-folder-"));
-  const folder = join(dir, "exports");
-  mkdirSync(join(folder, "more"), { recursive: true });
-  for (const [name, base64] of Object.entries(fixtures))
-    writeFileSync(join(folder, name), Buffer.from(base64, "base64"));
-  writeFileSync(
-    join(folder, "more", "carta.pdf"),
-    Buffer.from(fixtures["math_active.pdf"], "base64"),
-  );
-  writeFileSync(join(folder, "notes.txt"), "not a PDF");
-
-  const dialog = await openPreparation(page);
-  await dialog.getByLabel("PDF folder").setInputFiles(folder);
-  const chosen = dialog.getByLabel("Chosen exports");
-  await expect(chosen).toContainText("read_write_active.pdf");
-  await expect(chosen).toContainText("SAT · Math · inactive");
-  await expect(chosen).toContainText("carta.pdf");
-  await expect(dialog).toContainText(
-    "Ignored, because they are not PDFs: notes.txt",
-  );
-  await dialog.getByRole("button", { name: "Add questions" }).click();
-  await expect(dialog.getByText("Added 8 questions.")).toBeVisible({
-    timeout: 90_000,
-  });
-  expect(remote).toEqual([]);
 });
 
 test("Escape closes the pop-up and returns focus to the button", async ({
