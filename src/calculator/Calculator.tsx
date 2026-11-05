@@ -26,6 +26,7 @@ import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
 import { roundSig } from "@/src/utils/calculator";
 import type { CalculatorState, Entry, Fit } from "@/src/types/calculator";
+import { useClickOutside } from "@/src/helpers/useClickOutside";
 
 /** Long lists show their ends and can be opened up, so a range like [-10...10] stays readable. */
 function ListResult({ values }: { values: number[] }) {
@@ -225,14 +226,7 @@ export function Calculator({
   const [error, setError] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const addMenu = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!addOpen) return;
-    const outside = (e: PointerEvent) => {
-      if (!addMenu.current?.contains(e.target as Node)) setAddOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [addOpen]);
+  useClickOutside(addMenu, addOpen, () => setAddOpen(false));
   useEffect(() => {
     if (!autoFocus) return;
     if (document.querySelector('dialog[open],[aria-modal="true"]')) return;
