@@ -254,16 +254,6 @@ export function TableEditor({
           </tbody>
         </table>
       </div>
-      <button
-        className="text-button"
-        disabled={entry.rows.length >= 200}
-        onClick={() => {
-          onChange({ ...entry, rows: [...entry.rows, ["", ""]] });
-          focusCell(entry.rows.length, 0);
-        }}
-      >
-        Add data row
-      </button>
       <label className="calc-fit-label">
         Fit model
         <select

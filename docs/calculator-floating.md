@@ -39,6 +39,8 @@ There is no backdrop and clicking Practice does not close Calculator.
 - Keyboard: Tab to **Move calculator** or a resize handle; arrows change position
   or dimensions by 10 px, Shift+arrows by 40 px. Focus remains visible.
 - **Reset window** restores useful default geometry without clearing math.
+  **Clear calculator** sits beside it in the title bar, so the workspace has no
+  toolbar row of its own.
 - Expand/Reduce and modal focus trapping were removed. Tab can return to Practice;
   keyboard events inside the window remain isolated. Closing restores the question
   or completed-results trigger's focus. Official Desmos keeps its native keyboard

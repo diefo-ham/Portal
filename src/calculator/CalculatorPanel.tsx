@@ -16,6 +16,7 @@ import {
   geometryKey,
   readGeometry,
 } from "./windowGeometry";
+import { emptyCalculator } from "./model";
 import "./layout.scss";
 import type { CalculatorState, WindowGeometry } from "@/src/types/calculator";
 const Surface = lazy(() => import("./CalculatorSurface"));
@@ -106,6 +107,14 @@ export function CalculatorPanel({
     drag.current = null;
     setMoving(false);
   };
+  const clear = () => {
+    onChange(emptyCalculator());
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLElement>(".offline-workspace textarea")
+        ?.focus(),
+    );
+  };
   const keyboardGeometry = (event: KeyboardEvent, kind: string) => {
     if (!event.key.startsWith("Arrow") || narrow) return;
     event.preventDefault();
@@ -165,6 +174,9 @@ export function CalculatorPanel({
           <h2>Calculator</h2>
           <span className="calc-shortcut-note">{"\\  Toggle calculator"}</span>
         </div>
+        <button className="text-button" onClick={clear}>
+          Clear calculator
+        </button>
         <button
           className="text-button"
           aria-label="Reset calculator window"

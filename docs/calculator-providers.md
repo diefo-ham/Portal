@@ -97,6 +97,10 @@ y_1 ~ a x_1^3 + b x_1^2 + c x_1 + d
 y_1 ~ a b^x_1
 ```
 
+In a list relation such as `[5x_1+3y_1,x_1+3y_1]~[38,10]`, a subscripted `x_n` or
+`y_n` that no table or list defines is a free parameter, exactly like a letter.
+Once a table or list defines it, it means that data again.
+
 Fitted parameters become available to other expressions. These templates and the
 existing Fit model selector use the same engine. Polynomial fits retain centered/
 scaled QR least squares from ml-matrix, conditioning checks and stable evaluation.

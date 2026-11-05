@@ -73,6 +73,11 @@ Raw fitted coefficients, predictions and residuals retain their full values.
 Displayed equations use ten significant digits for remaining nonzero values.
 Export uses the cleaned coefficients at full remaining precision; it is an
 ordinary editable approximation. The original fitted model is unchanged.
+A coefficient that is a small fraction (denominator up to 1000) within its own
+numerical resolution is exported as that fraction, e.g. `y=(10/3)x-2` rather
+than `3.3333333333333335x-2`. Short terminating decimals (up to four places,
+such as `0.5` or `2.95`) and values that are not recognisable fractions stay
+decimal. The on-screen `y ≈ …` line is unchanged.
 
 ## Graph rendering and inspection
 

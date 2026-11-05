@@ -743,15 +743,19 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             !columns.has(name) &&
             !Object.hasOwn(values, name),
         );
+        // A subscripted x_1 or y_1 that no table or list defines is as free as
+        // a letter; once a table or list defines it, it means that data.
+        const unusable = (name: string) =>
+          isBuiltin(name) || !/^([a-z]|[xy]_\d+)$/i.test(name);
         if (
           !names.length ||
           names.length > 5 ||
           new Set(names).size !== names.length ||
-          names.some((name) => isBuiltin(name) || !/^[a-z]$/i.test(name))
+          names.some(unusable)
         )
           throw new Error(
-            names.some((name) => !/^[a-z]$/i.test(name) || isBuiltin(name))
-              ? `Define ${names.find((name) => !/^[a-z]$/i.test(name) || isBuiltin(name))} first.`
+            names.some(unusable)
+              ? `Define ${names.find(unusable)} first.`
               : "Use one to five free scalar parameters in a relation.",
           );
         const bounds = parameterBounds(restrictions, names, expand, evaluate);

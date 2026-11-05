@@ -137,8 +137,10 @@ test("narrow graphs, minor grid and multiple pi-aware POI labels", async ({
       /M/,
     );
   }
+  // Five minor divisions per major one, whatever the graph's height happens to be.
+  const major = await page.locator(".graph-grid line").count();
   expect(await page.locator(".graph-minor-grid line").count()).toBeGreaterThan(
-    40,
+    major * 3,
   );
   await enterExpression(page, 1, "y=sinx");
   await page
