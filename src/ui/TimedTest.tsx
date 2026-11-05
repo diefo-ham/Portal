@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sectionLabel } from "../core/assessments";
 import { deleteSession, renameSession } from "../core/commands";
-import type { SegmentKey, Section, Session, StudyData } from "../core/model";
+import {
+  isTimedTestSession,
+  type SegmentKey,
+  type Section,
+  type Session,
+  type StudyData,
+  type TimedTestSession,
+} from "../core/model";
 import { numericValue } from "../core/practice";
 import { timerWarning } from "../core/practiceTest";
 import {
@@ -33,6 +40,7 @@ import { RenameTestDialog } from "./PracticeTest/RenameTestDialog";
 import { TestList } from "./PracticeTest/TestList";
 import { useBusy } from "@/src/helpers/useBusy";
 import type { Mutate, RetryKind } from "@/src/types/ui";
+import { defined } from "@/src/utils/defined";
 
 /**
  * PAA test mode, as close to the real test as the sources allow: the parts in
@@ -105,7 +113,7 @@ export const TimedTestSetup = ({
       /^\d+$/.test(minutesOf(segment)) && Number(minutesOf(segment)) >= 1,
   );
   const unfinished = data.sessions.find((s) => s.timedTest && !s.finishedAt);
-  const tests = data.sessions.filter((s) => s.timedTest).toReversed();
+  const tests = data.sessions.filter(isTimedTestSession).toReversed();
   const saveRename = (name: string) =>
     run(async () => {
       if (!renameTarget) return;
@@ -118,12 +126,12 @@ export const TimedTestSetup = ({
       await mutate((d) => deleteSession(d, deleteTarget.id, removesAnswers));
       setDeleteTarget(undefined);
     });
-  const testMeta = (session: Session) => {
+  const testMeta = (session: TimedTestSession) => {
     const summary = session.finishedAt
       ? timedSummary(data, session)
       : undefined;
     return summary
-      ? `${summary.correct} de ${summary.total} correctas (${summary.percent}%) · ${formatElapsed(session.timedTest!.durationMs ?? 0)}`
+      ? `${summary.correct} de ${summary.total} correctas (${summary.percent}%) · ${formatElapsed(session.timedTest.durationMs ?? 0)}`
       : "en curso";
   };
   const preset = (next: Section[]) => {
@@ -420,7 +428,7 @@ export const TimedTestSetup = ({
 
 export type TimedTestRunProps = {
   data: StudyData;
-  session: Session;
+  session: TimedTestSession;
   mutate: Mutate;
   onBack: () => void;
   onRetry: (ids: string[], kind: RetryKind) => void;
@@ -443,7 +451,7 @@ export const TimedTestRun = ({
         onRetry={onRetry}
       />
     );
-  return session.timedTest!.phase === "break" ? (
+  return session.timedTest.phase === "break" ? (
     <BreakScreen session={session} mutate={mutate} onBack={onBack} />
   ) : (
     <LiveTest data={data} session={session} mutate={mutate} onBack={onBack} />
@@ -456,11 +464,11 @@ function BreakScreen({
   mutate,
   onBack,
 }: {
-  session: Session;
+  session: TimedTestSession;
   mutate: Mutate;
   onBack: () => void;
 }) {
-  const test = session.timedTest!;
+  const test = session.timedTest;
   const done = currentSegment(test);
   const next = test.segments[test.current + 1];
   const [pending, setPending] = useState(false);
@@ -512,17 +520,20 @@ function LiveTest({
   onBack,
 }: {
   data: StudyData;
-  session: Session;
+  session: TimedTestSession;
   mutate: Mutate;
   onBack: () => void;
 }) {
-  const test = session.timedTest!;
+  const test = session.timedTest;
   const segment = currentSegment(test);
   const ids = segment.questionIds;
   const lastPart = test.current === test.segments.length - 1;
   // An earlier part is locked: a stored position outside this part is moved to its first question.
   const position = Math.max(0, ids.indexOf(session.questionIds[session.index]));
-  const question = data.questions.find((q) => q.id === ids[position])!;
+  const question = defined(
+    data.questions.find((q) => q.id === ids[position]),
+    "This question",
+  );
   const [now, setNow] = useState(() => Date.now());
   const [pending, setPending] = useState(false);
   const [panel, setPanel] = useState<"finish" | null>(null);
@@ -846,7 +857,7 @@ function LiveTest({
               >
                 <legend className="sr-only">Tu respuesta</legend>
                 {question.answer.type === "choice" ? (
-                  question.choices!.map((c) => (
+                  (question.choices ?? []).map((c) => (
                     <label
                       className={`answer-choice ${answer === c.id ? "chosen" : ""}`}
                       key={c.id}

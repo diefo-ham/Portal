@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type {
+  PracticeTestSession,
   Section,
   SatSection,
   Session,
@@ -125,14 +126,15 @@ function ScoreEstimate({
   percentage,
 }: {
   data: StudyData;
-  session: Session;
+  session: PracticeTestSession;
   scope: ResultScope;
   percentage: string;
 }) {
-  const allModules = session.practiceTest!.modules;
+  const allModules = session.practiceTest.modules;
   const rw = estimatedRange(data, session, "reading-writing", allModules);
   const math = estimatedRange(data, session, "math", allModules);
-  const total = rw && math ? ([rw[0] + math[0], rw[1] + math[1]] as const) : undefined;
+  const both = rw && math ? { rw, math } : undefined;
+  const total = both ? ([both.rw[0] + both.math[0], both.rw[1] + both.math[1]] as const) : undefined;
   const primary = scope === "math" ? math : scope === "reading-writing" ? rw : total || rw || math;
   const denominator = scope === "overall" && total ? 1600 : 800;
   const primaryLabel =
@@ -147,10 +149,10 @@ function ScoreEstimate({
       ) : (
         <p className="muted">A score range is not available for this scope.</p>
       )}
-      {total && (
+      {both && (
         <div className="estimate-sections">
-          <span><strong>{rw!.join("–")}</strong> R&amp;W / 800</span>
-          <span><strong>{math!.join("–")}</strong> Math / 800</span>
+          <span><strong>{both.rw.join("–")}</strong> R&amp;W / 800</span>
+          <span><strong>{both.math.join("–")}</strong> Math / 800</span>
         </div>
       )}
       <p className="estimate-accuracy">Actual scored accuracy: <strong>{percentage}</strong></p>
@@ -169,7 +171,7 @@ function ScoreEstimate({
 
 export type PracticeTestResultsProps = {
   data: StudyData;
-  session: Session;
+  session: PracticeTestSession;
   mutate: Mutate;
   onBack: () => void;
   onRetry: (ids: string[], kind: RetryKind) => void;
@@ -187,7 +189,7 @@ export const PracticeTestResults = ({
   const [openDomain, setOpenDomain] = useState<
     Partial<Record<SatSection, string>>
   >({});
-  const modules = session.practiceTest!.modules;
+  const modules = session.practiceTest.modules;
   const availableSections = (["math", "reading-writing"] as const).filter((section) =>
     modules.some((module) => module.section === section),
   );

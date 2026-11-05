@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { finishSession, submitAnswer } from "../../core/commands";
-import type { Session, StudyData } from "../../core/model";
+import {
+  isPracticeTestSession,
+  type Session,
+  type StudyData,
+} from "../../core/model";
 import { numericValue } from "../../core/practice";
 import {
   deadlinePassed,
@@ -32,6 +36,7 @@ import { QuestionHeading } from "./QuestionHeading";
 import { SessionMap } from "./SessionMap";
 import { ToolsPanel } from "./ToolsPanel";
 import type { Mutate, RetryKind } from "@/src/types/ui";
+import { defined } from "@/src/utils/defined";
 
 type Panel = "overview" | "details" | "tools" | "leave" | "cancel-test";
 
@@ -76,9 +81,10 @@ export const Practice = ({
         ),
       }
     : storedSession;
-  const question = data.questions.find(
-    (q) => q.id === session.questionIds[session.index],
-  )!;
+  const question = defined(
+    data.questions.find((q) => q.id === session.questionIds[session.index]),
+    "This question",
+  );
   const attempt = data.attempts.find(
     (a) => a.questionId === question.id && a.sessionId === session.id,
   );
@@ -150,7 +156,10 @@ export const Practice = ({
       if (session.paused) return;
       await timer.flush();
       await mutate((d) => {
-        const current = d.sessions.find((s) => s.id === session.id)!;
+        const current = defined(
+          d.sessions.find((s) => s.id === session.id),
+          "This session",
+        );
         if (
           isTest &&
           (current.paused ||
@@ -185,7 +194,10 @@ export const Practice = ({
     // Keep radio focus while its draft saves; transaction ordering still ensures
     // the draft is committed before a subsequent submission.
     void mutate((d) => {
-      const current = d.sessions.find((s) => s.id === session.id)!;
+      const current = defined(
+        d.sessions.find((s) => s.id === session.id),
+        "This session",
+      );
       if (isTest) saveTestDraft(d, session.id, question.id, value);
       else current.drafts[question.id] = value;
     }).catch(() => {});
@@ -227,7 +239,10 @@ export const Practice = ({
     run(async () => {
       await timer.flush();
       await mutate((d) => {
-        const s = d.sessions.find((s) => s.id === session.id)!;
+        const s = defined(
+          d.sessions.find((s) => s.id === session.id),
+          "This session",
+        );
         s.paused = !s.paused;
       });
     });
@@ -252,7 +267,7 @@ export const Practice = ({
   if (session.finishedAt)
     return (
       <div className="completed-calculator-context">
-        {storedSession.practiceTest ? (
+        {isPracticeTestSession(storedSession) ? (
           <PracticeTestResults
             data={data}
             session={storedSession}

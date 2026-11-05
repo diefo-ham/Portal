@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { TaxonomyOption } from "../core/taxonomy";
 import { useT } from "./i18n";
+import { useClickOutside } from "@/src/helpers/useClickOutside";
+import { containsTarget } from "@/src/utils/dom";
 export type MultiSelectProps = {
   label: string;
   options: Pick<TaxonomyOption, "value" | "label">[];
@@ -24,14 +26,7 @@ export const MultiSelect = ({
   const button = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  useEffect(() => {
-    if (!open) return;
-    const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
+  useClickOutside(root, open, () => setOpen(false));
   const names = options
     .filter((option) => value.includes(option.value))
     .map((option) => option.label);
@@ -48,7 +43,7 @@ export const MultiSelect = ({
       onBlur={(event) => {
         if (
           event.relatedTarget &&
-          !root.current?.contains(event.relatedTarget as Node)
+          !containsTarget(root.current, event.relatedTarget)
         )
           setOpen(false);
       }}

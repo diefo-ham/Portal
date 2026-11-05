@@ -3,6 +3,7 @@ import type { Session, StudyData } from "../core/model";
 import { sessionOutcomes } from "../core/review";
 import { SESSION_NAME_MAX_LENGTH, sessionDisplayName } from "../core/sessions";
 import { useT } from "./i18n";
+import { useClickOutside } from "@/src/helpers/useClickOutside";
 
 export type SessionRowProps = {
   data: StudyData;
@@ -38,14 +39,7 @@ export const SessionRow = ({
   const deleteDialog = useRef<HTMLDialogElement>(null);
   const deleteCancel = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-    const close = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setMenuOpen(false);
-    };
-    document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
-  }, [menuOpen]);
+  useClickOutside(root, menuOpen, () => setMenuOpen(false));
 
   useEffect(() => {
     if (renaming) renameInput.current?.select();

@@ -7,6 +7,7 @@ import {
   type Theme,
 } from "./appearance";
 import { useT } from "./i18n";
+import { Select, type SelectOption } from "./Select";
 
 export function useAppearance() {
   const [theme, setTheme] = useState<Theme>(readTheme);
@@ -27,6 +28,11 @@ export type AppearanceSettingsProps = {
 
 export const AppearanceSettings = ({ appearance }: AppearanceSettingsProps) => {
   const t = useT();
+  const themes: SelectOption<Theme>[] = [
+    { value: "auto", label: t("Auto · follow system") },
+    { value: "light", label: t("Light · paper & matcha") },
+    { value: "dark", label: t("Dark · earth & parchment") },
+  ];
   return (
     <section
       className="appearance-settings"
@@ -35,15 +41,12 @@ export const AppearanceSettings = ({ appearance }: AppearanceSettingsProps) => {
       <h2 id="appearance-heading">{t("Appearance")}</h2>
       <label className="theme-control">
         {t("Theme")}
-        <select
+        <Select
           aria-label={t("Theme")}
           value={appearance.theme}
-          onChange={(event) => appearance.setTheme(event.target.value as Theme)}
-        >
-          <option value="auto">{t("Auto · follow system")}</option>
-          <option value="light">{t("Light · paper & matcha")}</option>
-          <option value="dark">{t("Dark · earth & parchment")}</option>
-        </select>
+          options={themes}
+          onChange={appearance.setTheme}
+        />
       </label>
       <label className="pdf-preference">
         <input

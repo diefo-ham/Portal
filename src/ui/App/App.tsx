@@ -14,6 +14,8 @@ import {
 } from "../../core/commands";
 import {
   defaultFilters,
+  isPracticeTestSession,
+  isTimedTestSession,
   type Assessment,
   type Filters as FilterValues,
   type Session,
@@ -53,6 +55,7 @@ import {
 } from "./retry";
 import { SettingsPage } from "./SettingsPage";
 import type { Page } from "@/src/types/ui";
+import { defined } from "@/src/utils/defined";
 
 /** Which test the person last used; a fresh browser starts on the SAT. */
 const LAST_KEY = "sat-last-assessment";
@@ -77,7 +80,10 @@ export const App = () => {
   );
   const info = assessmentInfo(assessment);
   const otherAssessment = assessmentInfo(
-    ASSESSMENTS.find((id) => id !== assessment)!,
+    defined(
+      ASSESSMENTS.find((id) => id !== assessment),
+      "The other test",
+    ),
   );
   const t = useMemo(() => translator(assessment), [assessment]);
   const {
@@ -357,7 +363,7 @@ export const App = () => {
           removesAnswers={deleteRemovesAnswers}
           onAddQuestions={() => setAddOpen(true)}
         />
-      ) : page === "practice" && current?.timedTest ? (
+      ) : page === "practice" && current && isTimedTestSession(current) ? (
         <TimedTestRun
           data={view}
           session={current}
@@ -374,7 +380,7 @@ export const App = () => {
           onOpen={openSession}
           onSettings={() => setPage("data")}
         />
-      ) : page === "practice" && current?.practiceTest ? (
+      ) : page === "practice" && current && isPracticeTestSession(current) ? (
         <PracticeTestRun
           data={view}
           session={current}
