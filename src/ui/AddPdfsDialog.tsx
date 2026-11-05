@@ -7,7 +7,7 @@ import {
   type Progress,
 } from "../importing/pdf/prepare";
 import { readDrop } from "./droppedFiles";
-import { useT } from "./i18n";
+import { useAssessment, useT } from "./i18n";
 import { PdfReport } from "./PdfReport";
 
 export type PrepareFiles = (
@@ -60,6 +60,7 @@ function OpenDialog({
   preparePaa,
 }: Omit<AddPdfsDialogProps, "open">) {
   const t = useT();
+  const assessment = useAssessment();
   const dialog = useRef<HTMLDialogElement>(null);
   const controller = useRef<AbortController | undefined>(undefined);
   const [files, setFiles] = useState<File[]>([]);
@@ -260,20 +261,6 @@ function OpenDialog({
               }}
             />
           </label>
-          <label className="file-button secondary">
-            {t("Choose a folder")}
-            <input
-              aria-label={t("PDF folder")}
-              type="file"
-              // Takes every file in the folder and its subfolders; the PDFs are kept.
-              {...{ webkitdirectory: "" }}
-              disabled={running}
-              onChange={(e) => {
-                add(Array.from(e.target.files ?? []));
-                e.target.value = "";
-              }}
-            />
-          </label>
         </div>
       </div>
       <p className="small muted">
@@ -358,20 +345,30 @@ function OpenDialog({
         </div>
       )}
       {error && <p role="alert">{error}</p>}
-      {outcomes.map((outcome) =>
-        outcome.report ? (
-          <PdfReport
-            key={outcome.kind}
-            kind={outcome.kind}
-            report={outcome.report}
-            unchanged={outcome.unchanged === true}
-          />
-        ) : (
-          <p key={outcome.kind} role="alert">
-            {outcome.error}
-          </p>
-        ),
-      )}
+      {outcomes.map((outcome) => (
+        <section key={outcome.kind} className="pdf-outcome">
+          <h3>{outcome.kind}</h3>
+          {outcome.report ? (
+            <>
+              <PdfReport
+                kind={outcome.kind}
+                report={outcome.report}
+                unchanged={outcome.unchanged === true}
+              />
+              {outcome.kind !== assessment && (
+                <p className="small muted">
+                  {t(
+                    "These are {test} questions. Use the switch at the top to open them.",
+                    { test: outcome.kind },
+                  )}
+                </p>
+              )}
+            </>
+          ) : (
+            <p role="alert">{outcome.error}</p>
+          )}
+        </section>
+      ))}
     </dialog>
   );
 }
