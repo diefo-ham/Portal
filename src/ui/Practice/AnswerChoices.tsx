@@ -28,7 +28,7 @@ export const AnswerChoices = ({
     <fieldset className="answers" disabled={disabled}>
       <legend className="sr-only">{t("Your answer")}</legend>
       {question.answer.type === "choice" ? (
-        question.choices!.map((c) => (
+        (question.choices ?? []).map((c) => (
           <label
             className={`answer-choice ${answer === c.id ? "chosen" : ""} ${attempt && !attempt.correct && answer === c.id ? "wrong-answer" : ""} ${attempt && question.answer.type === "choice" && question.answer.value === c.id ? "right-answer" : ""}`}
             key={c.id}

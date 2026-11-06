@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import type { Session, StudyData, TestSelection } from "../../core/model";
+import {
+  isPracticeTestSession,
+  type PracticeTestSession,
+  type Session,
+  type StudyData,
+  type TestSelection,
+} from "../../core/model";
 import { renameSession } from "../../core/commands";
 import {
   availability,
@@ -25,6 +31,7 @@ import { RenameTestDialog } from "./RenameTestDialog";
 import { TestList } from "./TestList";
 import { useBusy } from "@/src/helpers/useBusy";
 import type { Mutate, RetryKind } from "@/src/types/ui";
+import { defined } from "@/src/utils/defined";
 export type PracticeTestSetupProps = {
   data: StudyData;
   mutate: Mutate;
@@ -45,10 +52,7 @@ export const PracticeTestSetup = ({
   const [cancelTarget, setCancelTarget] = useState<Session>();
   const [deleteTarget, setDeleteTarget] = useState<Session>();
   const error = availability(data, selection);
-  const tests = data.sessions
-    .filter((s) => s.practiceTest)
-    .slice()
-    .reverse();
+  const tests = data.sessions.filter(isPracticeTestSession).reverse();
   const start = () =>
     run(async () => {
       try {
@@ -103,7 +107,7 @@ export const PracticeTestSetup = ({
       <TestList
         title="Your Practice Tests"
         tests={tests}
-        meta={(s) => s.practiceTest!.timing}
+        meta={(s) => s.practiceTest.timing}
         openLabel={(s) => (s.finishedAt ? "View results" : "Resume test")}
         actionsLabel={(s) => `Practice Test actions for ${s.name}`}
         menuItems={(s) => [
@@ -177,7 +181,7 @@ export const PracticeTestSetup = ({
 };
 export type PracticeTestRunProps = {
   data: StudyData;
-  session: Session;
+  session: PracticeTestSession;
   mutate: Mutate;
   onBack: () => void;
   onRetry: (ids: string[], kind: RetryKind) => void;
@@ -193,7 +197,7 @@ export const PracticeTestRun = ({
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const test = session.practiceTest!;
+  const test = session.practiceTest;
   const module = test.modules[test.currentModule];
   const elapsed = moduleElapsed(module, now, test.timing === "timed");
   const remaining = Math.max(0, moduleLimit(module.section) - elapsed);
@@ -211,9 +215,10 @@ export const PracticeTestRun = ({
     if (!expired) return;
     const index = test.currentModule;
     void mutate((d) => {
-      const current = d.sessions.find(
-        (candidate) => candidate.id === session.id,
-      )!;
+      const current = defined(
+        d.sessions.find((candidate) => candidate.id === session.id),
+        "This Practice Test",
+      );
       if (
         current.practiceTest?.currentModule === index &&
         current.practiceTest.phase === "module" &&
@@ -231,17 +236,19 @@ export const PracticeTestRun = ({
     mutate((d) => cancelPracticeTest(d, session.id)).then(() => onBack());
   const openOverview = () =>
     mutate((d) => {
-      const current = d.sessions.find(
-        (candidate) => candidate.id === session.id,
-      )!;
+      const current = defined(
+        d.sessions.find((candidate) => candidate.id === session.id),
+        "This Practice Test",
+      );
       if (current.practiceTest?.phase === "module" && !current.paused)
         current.practiceTest.reviewingModule = true;
     });
   const openQuestion = (questionId: string) =>
     mutate((d) => {
-      const current = d.sessions.find(
-        (candidate) => candidate.id === session.id,
-      )!;
+      const current = defined(
+        d.sessions.find((candidate) => candidate.id === session.id),
+        "This Practice Test",
+      );
       if (!current.practiceTest || current.paused) return;
       current.index = current.questionIds.indexOf(questionId);
       current.practiceTest.reviewingModule = false;
@@ -295,15 +302,15 @@ export const PracticeTestRun = ({
     );
   }
 
-  const moduleQuestions = module.questionIds.map((id) =>
-    data.questions.find((question) => question.id === id)!,
-  );
+  const questionById = (id: string) =>
+    defined(
+      data.questions.find((question) => question.id === id),
+      "A question in this module",
+    );
+  const moduleQuestions = module.questionIds.map(questionById);
   const marked = new Set(test.markedForReview || []);
   const isAnswered = (id: string) =>
-    testAnswerIsValid(
-      data.questions.find((question) => question.id === id)!,
-      session.drafts[id],
-    );
+    testAnswerIsValid(questionById(id), session.drafts[id]);
   const unanswered = module.questionIds.filter((id) => !isAnswered(id)).length;
   const clock = {
     label:

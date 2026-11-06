@@ -7,21 +7,21 @@ export type TestMenuItem = {
   onSelect: () => void;
 };
 
-export type TestListProps = {
+export type TestListProps<S extends Session = Session> = {
   title: string;
   /** Already in the order to show. Renders nothing when empty. */
-  tests: Session[];
+  tests: S[];
   /** Text after the start date, e.g. "timed" or "3 de 5 correctas". */
-  meta: (session: Session) => string;
-  openLabel: (session: Session) => string;
+  meta: (session: S) => string;
+  openLabel: (session: S) => string;
   /** Accessible name of the ••• button. */
-  actionsLabel: (session: Session) => string;
-  menuItems: (session: Session) => TestMenuItem[];
+  actionsLabel: (session: S) => string;
+  menuItems: (session: S) => TestMenuItem[];
   onOpen: (id: string) => void;
 };
 
 /** Practice Tests or timed tests, each with an open button and an actions menu. */
-export const TestList = ({
+export const TestList = <S extends Session>({
   title,
   tests,
   meta,
@@ -29,7 +29,7 @@ export const TestList = ({
   actionsLabel,
   menuItems,
   onOpen,
-}: TestListProps) => {
+}: TestListProps<S>) => {
   const [menuId, setMenuId] = useState("");
   if (!tests.length) return null;
   return (

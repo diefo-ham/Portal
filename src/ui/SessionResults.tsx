@@ -7,12 +7,15 @@ import { DocumentPanels } from "./DocumentPanels";
 import { formatElapsed } from "./formatTime";
 import { useT, type Translate } from "./i18n";
 import type { Mutate, RetryKind } from "@/src/types/ui";
-export const displayAnswer = (q: Question, value: string) =>
-  q.document
-    ? value
-    : q.choices?.find((c) => c.id === value)
-      ? `${value}. ${q.choices.find((c) => c.id === value)!.text}`
-      : value;
+import { Select } from "./Select";
+import { defined } from "@/src/utils/defined";
+
+type ResultView = "all" | "incorrect" | "unanswered" | "correct" | "unscored";
+export const displayAnswer = (q: Question, value: string) => {
+  // A PDF question's choice text is in its image, so only the letter is shown.
+  const choice = q.document ? undefined : q.choices?.find((c) => c.id === value);
+  return choice ? `${value}. ${choice.text}` : value;
+};
 export const correctAnswer = (q: Question, t?: Translate) =>
   q.answer.type === "choice"
     ? displayAnswer(q, q.answer.value)
@@ -40,7 +43,7 @@ export const SessionResults = ({
   const t = useT();
   const result = sessionOutcomes(data, session);
   const timing = sessionTiming(data, session);
-  const [view, setView] = useState("all");
+  const [view, setView] = useState<ResultView>("all");
   const [expandedModule, setExpandedModule] = useState(0);
   const answered = result.correct.length + result.incorrect.length;
   const test = session.practiceTest;
@@ -95,7 +98,7 @@ export const SessionResults = ({
     correct: result.correct.length,
     unscored: session.questionIds.filter((id) => unscored.has(id)).length,
   };
-  const matchesView = (id: string, selectedView = view) =>
+  const matchesView = (id: string, selectedView: ResultView = view) =>
     selectedView === "all" ||
     (selectedView === "unscored" && unscored.has(id)) ||
     result[selectedView as "correct" | "incorrect" | "unanswered"]?.includes(id);
@@ -237,10 +240,18 @@ export const SessionResults = ({
         )}
         <label className="result-filter">
           {t("Show")}
-          <select
+          <Select
             value={view}
-            onChange={(e) => {
-              const nextView = e.target.value;
+            options={[
+              { value: "all", label: t("All ({n})", { n: counts.all }) },
+              { value: "incorrect", label: t("Incorrect ({n})", { n: counts.incorrect }), disabled: !counts.incorrect },
+              { value: "unanswered", label: t("Unanswered ({n})", { n: counts.unanswered }), disabled: !counts.unanswered },
+              { value: "correct", label: t("Correct ({n})", { n: counts.correct }), disabled: !counts.correct },
+              ...(test
+                ? [{ value: "unscored" as const, label: `Simulated unscored (${counts.unscored})`, disabled: !counts.unscored }]
+                : []),
+            ]}
+            onChange={(nextView) => {
               setView(nextView);
               const firstMatchingModule = groups?.findIndex((module) =>
                 module.questionIds.some((id) => matchesView(id, nextView)),
@@ -248,13 +259,7 @@ export const SessionResults = ({
               if (firstMatchingModule !== undefined && firstMatchingModule >= 0)
                 setExpandedModule(firstMatchingModule);
             }}
-          >
-            <option value="all">{t("All ({n})", { n: counts.all })}</option>
-            <option value="incorrect" disabled={!counts.incorrect}>{t("Incorrect ({n})", { n: counts.incorrect })}</option>
-            <option value="unanswered" disabled={!counts.unanswered}>{t("Unanswered ({n})", { n: counts.unanswered })}</option>
-            <option value="correct" disabled={!counts.correct}>{t("Correct ({n})", { n: counts.correct })}</option>
-            {test && <option value="unscored" disabled={!counts.unscored}>Simulated unscored ({counts.unscored})</option>}
-          </select>
+          />
         </label>
         {!filteredIds.length && <p className="muted empty-result-filter">{t("No questions match this filter.")}</p>}
         {(groups ?? [{ questionIds: session.questionIds, title: undefined as string | undefined }]).map((module, moduleIndex) => {
@@ -291,7 +296,7 @@ export const SessionResults = ({
                   </p>
                 )}
                 {ids.map((id) => {
-            const q = data.questions.find((q) => q.id === id)!;
+            const q = defined(data.questions.find((q) => q.id === id), "A question in this session");
             const attempt = result.attempts.get(id);
             const elapsedMs = attempt?.durationMs || session.elapsed[id];
             const modulePosition = module.questionIds.indexOf(id) + 1;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useClickOutside } from "@/src/helpers/useClickOutside";
 const colors = [
   "Moss",
   "Blue",
@@ -30,14 +31,7 @@ export function GraphColor({
     clearTimeout(timer.current);
     timer.current = undefined;
   };
-  useEffect(() => {
-    if (!open) return;
-    const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
+  useClickOutside(root, open, () => setOpen(false));
   useEffect(() => clear, []);
   return (
     <span

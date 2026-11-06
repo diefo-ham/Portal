@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { sectionLabel } from "../core/assessments";
-import type { Section, Session, StudyData } from "../core/model";
+import type { Section, StudyData, TimedTestSession } from "../core/model";
 import { PART_ORDER, segmentLabel } from "../core/timedTest";
 import { PerformanceGauge } from "./PerformanceGauge";
 import {
@@ -22,7 +22,7 @@ type Scope = "overall" | Section;
 
 export type TimedTestResultsProps = {
   data: StudyData;
-  session: Session;
+  session: TimedTestSession;
   mutate: Mutate;
   onBack: () => void;
   onRetry: (ids: string[], kind: RetryKind) => void;
@@ -35,7 +35,7 @@ export const TimedTestResults = ({
   onBack,
   onRetry,
 }: TimedTestResultsProps) => {
-  const test = session.timedTest!;
+  const test = session.timedTest;
   const [scope, setScope] = useState<Scope>("overall");
   const [openDomain, setOpenDomain] = useState<
     Partial<Record<Section, string>>

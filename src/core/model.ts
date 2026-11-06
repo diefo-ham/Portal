@@ -207,3 +207,15 @@ export const emptyData = (): StudyData => ({
   sessions: [],
   imports: [],
 });
+
+/** A session that is a module-style SAT Practice Test. */
+export type PracticeTestSession = Session & { practiceTest: PracticeTest };
+/** A session that is a PAA timed test. */
+export type TimedTestSession = Session & { timedTest: TimedTest };
+
+export const isPracticeTestSession = (
+  session: Session,
+): session is PracticeTestSession => !!session.practiceTest;
+export const isTimedTestSession = (
+  session: Session,
+): session is TimedTestSession => !!session.timedTest;

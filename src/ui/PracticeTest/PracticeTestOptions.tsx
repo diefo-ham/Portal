@@ -1,7 +1,13 @@
 import type { TestSelection } from "../../core/model";
 import { selections } from "../../core/practiceTest";
+import { Select, type SelectOption } from "../Select";
 
 export type Timing = "timed" | "untimed";
+
+const timings: SelectOption<Timing>[] = [
+  { value: "timed", label: "Timed" },
+  { value: "untimed", label: "Untimed" },
+];
 
 export type PracticeTestOptionsProps = {
   selection: TestSelection;
@@ -41,26 +47,11 @@ export const PracticeTestOptions = ({
   <section className="utility test-setup-fields">
     <label>
       Test selection
-      <select
-        value={selection}
-        onChange={(e) => onSelection(e.target.value as TestSelection)}
-      >
-        {selections.map((s) => (
-          <option key={s.value} value={s.value}>
-            {s.label}
-          </option>
-        ))}
-      </select>
+      <Select value={selection} options={selections} onChange={onSelection} />
     </label>
     <label>
       Timing
-      <select
-        value={timing}
-        onChange={(e) => onTiming(e.target.value as Timing)}
-      >
-        <option value="timed">Timed</option>
-        <option value="untimed">Untimed</option>
-      </select>
+      <Select value={timing} options={timings} onChange={onTiming} />
     </label>
     <p className="small muted">{describeTest(selection, timing)}</p>
     {error && (

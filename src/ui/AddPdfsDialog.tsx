@@ -9,6 +9,7 @@ import {
 import { readDrop } from "./droppedFiles";
 import { useAssessment, useT } from "./i18n";
 import { PdfReport } from "./PdfReport";
+import { containsTarget } from "@/src/utils/dom";
 
 export type PrepareFiles = (
   files: File[],
@@ -217,7 +218,7 @@ function OpenDialog({
         if (!running) setOver(true);
       }}
       onDragLeave={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+        if (!containsTarget(event.currentTarget, event.relatedTarget))
           setOver(false);
       }}
       onDrop={(event) => {
