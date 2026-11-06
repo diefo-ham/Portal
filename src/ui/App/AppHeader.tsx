@@ -6,8 +6,8 @@ import type { Page } from "@/src/types/ui";
 
 export type AppHeaderProps = {
   info: AssessmentInfo;
-  /** The other test, which the toggle switches to. */
-  other: AssessmentInfo;
+  /** Every test, in the order the switch lists them. */
+  assessments: readonly AssessmentInfo[];
   page: Page;
   /** A Practice Test or timed test is open, so "Tests" stays highlighted. */
   testOpen: boolean;
@@ -16,10 +16,10 @@ export type AppHeaderProps = {
   onSwitchAssessment: (next: Assessment) => void;
 };
 
-/** The brand, the SAT/PAA switch, the main navigation, Help and Settings. */
+/** The brand, the test switch (SAT, PAA, TSI), the main navigation, Help and Settings. */
 export const AppHeader = ({
   info,
-  other,
+  assessments,
   page,
   testOpen,
   onHome,
@@ -43,17 +43,32 @@ export const AppHeader = ({
           {info.name} <b>Study</b>
         </span>
       </button>
-      <button
-        className="assessment-toggle"
-        aria-label={t("Test: {name}. Switch to {other}", {
-          name: info.name,
-          other: other.name,
-        })}
-        title={t("Switch to {other}", { other: other.name })}
-        onClick={() => onSwitchAssessment(other.id)}
+      <div
+        className="assessment-switch"
+        role="group"
+        aria-label={t("Choose a test")}
       >
-        {info.name} ⇄
-      </button>
+        {assessments.map((test) => (
+          <button
+            key={test.id}
+            className={test.id === info.id ? "active" : ""}
+            aria-pressed={test.id === info.id}
+            aria-label={
+              test.id === info.id
+                ? t("Test: {name}", { name: test.name })
+                : t("Switch to {other}", { other: test.name })
+            }
+            title={
+              test.id === info.id
+                ? undefined
+                : t("Switch to {other}", { other: test.name })
+            }
+            onClick={() => test.id !== info.id && onSwitchAssessment(test.id)}
+          >
+            {test.name}
+          </button>
+        ))}
+      </div>
       <nav aria-label={t("Main navigation")}>
         {links.map(([id, label]) => {
           const current =

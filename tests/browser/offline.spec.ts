@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadSample } from "./seed";
+import { parseQuestions } from "../../src/importing/json";
+import { loadSample, seedStudyData } from "./seed";
 
 // Unlike the other specs, this one lets the service worker run.
 test.use({ serviceWorkers: "allow" });
@@ -42,6 +43,69 @@ test("the app reopens, practices and opens the calculator with no network", asyn
     page.getByRole("textbox", { name: "Expression 1", exact: true }),
   ).toBeFocused();
   // Only the optional local-library and calculator-config probes may fail.
+  expect(
+    failures.filter(
+      (url) => !/\/(local-library\/|calculator-config\.json)/.test(url),
+    ),
+  ).toEqual([]);
+});
+
+test("the TSI portal opens, practices and offers its keypad calculator with no network", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/#/tsi");
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+  });
+  await expect
+    .poll(() => page.evaluate(() => !!navigator.serviceWorker.controller))
+    .toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(async () =>
+        (await caches.keys()).some((key) => key.startsWith("sat-study-")),
+      ),
+    )
+    .toBe(true);
+
+  await context.setOffline(true);
+  const failures: string[] = [];
+  page.on("requestfailed", (request) => failures.push(request.url()));
+  await page.reload();
+  await seedStudyData(page, {
+    questions: parseQuestions({
+      schemaVersion: 1,
+      questions: [
+        {
+          id: "tsi-offline1",
+          assessment: "TSI",
+          source: "TSI practice bank (TSIA2)",
+          sourceId: "offline1",
+          section: "tsi-math",
+          domain: "Algebraic Reasoning",
+          skill: "Linear equations",
+          difficulty: "easy",
+          origin: "original",
+          calculator: "sqrt",
+          stem: "Synthetic offline question.",
+          choices: ["A", "B", "C", "D"].map((id) => ({
+            id,
+            text: `Choice ${id}`,
+          })),
+          answer: { type: "choice", value: "A" },
+          testStatus: "unknown",
+        },
+      ],
+    }),
+  });
+  await expect(page.getByRole("button", { name: /TSI Study/ })).toBeVisible();
+  await page.getByRole("button", { name: /Start practice/ }).click();
+  await page.getByRole("button", { name: "Calculator", exact: true }).click();
+  const keypad = page.getByRole("group", { name: "Square root calculator" });
+  await keypad.getByRole("button", { name: "9" }).click();
+  await keypad.getByRole("button", { name: "Square root" }).click();
+  await expect(keypad.locator("output")).toHaveText("3");
   expect(
     failures.filter(
       (url) => !/\/(local-library\/|calculator-config\.json)/.test(url),

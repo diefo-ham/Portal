@@ -1,4 +1,4 @@
-import { scopeStudyData } from "./assessments";
+import { assessmentOfId, scopeStudyData } from "./assessments";
 import type { Assessment, Question, StudyData, TestStatus } from "./model";
 
 /** What the person added, one entry per PDF, read from the questions' own provenance. */
@@ -20,7 +20,7 @@ const keyOf = (item: { sha256: string; filename: string }) =>
   item.sha256 || item.filename;
 
 const questionAssessment = (question: Question): Assessment =>
-  question.assessment ?? (question.id.startsWith("paa-") ? "PAA" : "SAT");
+  question.assessment ?? assessmentOfId(question.id);
 
 /** The PDFs behind one test's stored questions, most recently added first. */
 export function summarizePdfs(
@@ -110,6 +110,43 @@ export function removePdfFromData(
     if (attempt.sessionId && endedSessions.has(attempt.sessionId))
       delete attempt.sessionId;
   // Import receipts only record what was added; with nothing left they mean nothing.
+  if (!data.questions.length) data.imports = [];
+  return removed.size;
+}
+
+/**
+ * Takes every TSI item labelled Official (a College Board sample) out of the
+ * library, in place. Original items stay. As with removing a PDF, answers and
+ * bookmarks are kept and saved sessions that used a removed item end. Returns the
+ * number of questions removed; adding the PDFs again brings them back.
+ */
+export function removeOfficialFromData(data: StudyData): number {
+  const removed = new Set(
+    data.questions
+      .filter(
+        (question) =>
+          questionAssessment(question) === "TSI" &&
+          question.origin === "official",
+      )
+      .map((question) => question.id),
+  );
+  if (!removed.size) return 0;
+  const endedSessions = new Set(
+    scopeStudyData(data, "TSI")
+      .sessions.filter((session) =>
+        session.questionIds.some((id) => removed.has(id)),
+      )
+      .map((session) => session.id),
+  );
+  data.questions = data.questions.filter(
+    (question) => !removed.has(question.id),
+  );
+  data.sessions = data.sessions.filter(
+    (session) => !endedSessions.has(session.id),
+  );
+  for (const attempt of data.attempts)
+    if (attempt.sessionId && endedSessions.has(attempt.sessionId))
+      delete attempt.sessionId;
   if (!data.questions.length) data.imports = [];
   return removed.size;
 }

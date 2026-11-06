@@ -1,5 +1,7 @@
 import type { Question } from "../../core/model";
+import { assessmentInfo } from "../../core/assessments";
 import { useT } from "../i18n";
+import { OriginBadge } from "../QuestionBadges";
 
 export type QuestionDetailsProps = { question: Question };
 
@@ -23,7 +25,12 @@ export const QuestionDetails = ({ question }: QuestionDetailsProps) => {
         {question.source || t("Source unspecified")}
         {question.sourceId ? ` · ${question.sourceId}` : ""}
       </p>
-      {question.assessment !== "PAA" && (
+      {question.origin && (
+        <p>
+          <OriginBadge question={question} />
+        </p>
+      )}
+      {assessmentInfo(question.assessment ?? "SAT").protectedTests && (
         <p>Practice-test status: {question.testStatus}</p>
       )}
       {question.document && (

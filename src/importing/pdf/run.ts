@@ -18,7 +18,8 @@ import {
   type PreparedLibrary,
   type Progress,
 } from "./prepare.ts";
-import { preparePaaLibrary } from "./preparePaa.ts";
+import { flat, isPaaQuestionPage, peekAssessment } from "./paa.ts";
+import { preparePaaLibrary, prepareTsiLibrary } from "./preparePaa.ts";
 
 export interface RunOptions {
   /** Defaults to reading the relationship from the files themselves. */
@@ -84,6 +85,21 @@ export async function prepareFromPaaPdfs(files: File[], options: RunOptions) {
   );
 }
 
+/** TSIA2 exports: two PDFs (ELAR, Mathematics) or any number, any file names. */
+export async function prepareFromTsiPdfs(files: File[], options: RunOptions) {
+  const overrides = options.overridesFile
+    ? parseOverrides(JSON.parse(await options.overridesFile.text()))
+    : undefined;
+  return adopt(
+    await prepareTsiLibrary(
+      files,
+      { overrides, signal: options.signal, progress: options.progress },
+      deps,
+    ),
+    options,
+  );
+}
+
 async function adopt(prepared: PreparedLibrary, options: RunOptions) {
   const result = await ingestLibrary(
     memorySource(prepared.manifest, prepared.questionsJson),
@@ -93,4 +109,31 @@ async function adopt(prepared: PreparedLibrary, options: RunOptions) {
   // Questions this replaced no longer need their old images.
   await deleteAssetsExcept(referencedAssetKeys(result.data));
   return { result, report: prepared.report as PrepareReport };
+}
+
+/**
+ * Which test a PDF is an export of, from the Assessment column of its first
+ * question page; undefined when it is neither (a letter, a study guide, an SAT export).
+ */
+export async function detectBankKind(
+  file: File,
+): Promise<"PAA" | "TSI" | undefined> {
+  const reader = await openExport(new Uint8Array(await file.arrayBuffer()));
+  try {
+    for (let page = 1; page <= Math.min(3, reader.pageCount); page++) {
+      const layout = await reader.layout(page);
+      if (!isPaaQuestionPage(layout)) continue;
+      const assessment = flat(peekAssessment(layout));
+      return assessment === "paa"
+        ? "PAA"
+        : assessment === "tsia2" || assessment === "tsi"
+          ? "TSI"
+          : undefined;
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  } finally {
+    await reader.close();
+  }
 }

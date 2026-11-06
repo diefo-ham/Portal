@@ -1,4 +1,8 @@
-import { assessmentOfQuestions, scopeStudyData } from "./assessments";
+import {
+  assessmentOfQuestions,
+  otherAssessments,
+  scopeStudyData,
+} from "./assessments";
 import type { Assessment, Filters, Session, StudyData } from "./model";
 import { createSession, isCorrect, numericValue } from "./practice";
 import { normalizeSessionName } from "./sessions";
@@ -141,9 +145,15 @@ export function resetStudyProgress(
     return;
   }
   const mine = scopeStudyData(data, assessment);
-  const theirs = scopeStudyData(data, assessment === "SAT" ? "PAA" : "SAT");
-  data.attempts = theirs.attempts;
-  data.sessions = theirs.sessions;
-  data.practiceTestUsedIds = theirs.practiceTestUsedIds;
-  data.annotations = { ...theirs.annotations, ...kept(mine.annotations) };
+  const theirs = otherAssessments(assessment).map((id) =>
+    scopeStudyData(data, id),
+  );
+  data.attempts = theirs.flatMap((t) => t.attempts);
+  data.sessions = theirs.flatMap((t) => t.sessions);
+  data.practiceTestUsedIds = theirs.flatMap((t) => t.practiceTestUsedIds ?? []);
+  data.annotations = Object.assign(
+    {},
+    ...theirs.map((t) => t.annotations),
+    kept(mine.annotations),
+  );
 }

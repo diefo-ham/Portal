@@ -12,6 +12,8 @@ export type StudyPreferencesProps = {
   offerProtection: boolean;
   protectedTests: boolean;
   onProtectedTests: (value: boolean) => void;
+  /** TSI only, and only in builds that may carry College Board sample items. */
+  officialItems?: { checked: boolean; onChange: (value: boolean) => void };
 };
 
 /** The study checkboxes on the Settings page. */
@@ -25,6 +27,7 @@ export const StudyPreferences = ({
   offerProtection,
   protectedTests,
   onProtectedTests,
+  officialItems,
 }: StudyPreferencesProps) => {
   const t = useT();
   return (
@@ -54,6 +57,16 @@ export const StudyPreferences = ({
           "Off by default: a deleted session leaves your answers, mistakes and accuracy as they are. On: its answers are removed from your progress, and those questions become unanswered again.",
         )}
       />
+      {officialItems && (
+        <PreferenceToggle
+          checked={officialItems.checked}
+          onChange={officialItems.onChange}
+          label={t("Include College Board sample items")}
+          hint={t(
+            "When off, the items labelled Official are hidden everywhere (practice, Browse, Review and your progress) and nothing is deleted. Turn it on to bring them back.",
+          )}
+        />
+      )}
       {offerProtection && (
         <PreferenceToggle
           checked={protectedTests}

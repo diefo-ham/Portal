@@ -96,3 +96,45 @@ export function pixelBounds(
   const y1 = Math.min(limit.height, Math.ceil(rect.y1 * scale));
   return { x0, y0, x1, y1 };
 }
+
+/**
+ * Paints boxes (in points) white, returning a new image. `rect` is the area in
+ * points that the image shows; it is how the boxes are placed on the pixels.
+ * The left edge gets no margin, because the character before a tag (a "?" or a
+ * ".") can sit a fraction of a point away; the other edges get a little.
+ */
+export function paintOver(
+  image: RasterImage,
+  rect: { x0: number; y0: number; x1: number; y1: number },
+  boxes: readonly { x0: number; y0: number; x1: number; y1: number }[],
+  padding = { left: 0, right: 1.5, vertical: 1 },
+): RasterImage {
+  if (!boxes.length) return image;
+  const scaleX = image.width / (rect.x1 - rect.x0);
+  const scaleY = image.height / (rect.y1 - rect.y0);
+  const data = new Uint8ClampedArray(image.data);
+  for (const box of boxes) {
+    const x0 = Math.max(
+      0,
+      Math.round((box.x0 - padding.left - rect.x0) * scaleX),
+    );
+    const x1 = Math.min(
+      image.width,
+      Math.ceil((box.x1 + padding.right - rect.x0) * scaleX),
+    );
+    const y0 = Math.max(
+      0,
+      Math.floor((box.y0 - padding.vertical - rect.y0) * scaleY),
+    );
+    const y1 = Math.min(
+      image.height,
+      Math.ceil((box.y1 + padding.vertical - rect.y0) * scaleY),
+    );
+    for (let y = y0; y < y1; y++)
+      for (let x = x0; x < x1; x++) {
+        const at = (y * image.width + x) * 4;
+        data[at] = data[at + 1] = data[at + 2] = data[at + 3] = 255;
+      }
+  }
+  return { width: image.width, height: image.height, data };
+}

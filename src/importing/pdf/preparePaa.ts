@@ -14,8 +14,18 @@ import {
   isPaaQuestionPage,
   isPaaRecord,
   paaSignature,
+  peekAssessment,
   type PaaRecord,
+  type PassageGroup,
 } from "./paa.ts";
+import type { ReviewedOverride } from "./record.ts";
+import {
+  CALCULATOR_TAG_PHRASES,
+  convertTsiRecord,
+  groupTsiPassages,
+  isTsiRecord,
+  tsiSignature,
+} from "./tsi.ts";
 import type { PageLayout } from "./layout.ts";
 import { buildPanels, sha256Hex } from "./panels.ts";
 import {
@@ -28,7 +38,90 @@ import {
   type ReadableFile,
 } from "./prepare.ts";
 
-const PARSER = "paa-pdf-browser-v1";
+/**
+ * What differs between exports that share the Educator Question Bank layout:
+ * who they are for, how a page becomes a question, and what is said to the
+ * person (the PAA's messages are Spanish, the TSI's English).
+ */
+export interface BankProfile {
+  parser: string;
+  label: string;
+  /** Internal ids are `${idPrefix}${source id}`. */
+  idPrefix: string;
+  language: "en" | "es";
+  /** Whether a page's Assessment column names this test. */
+  accepts(record: PaaRecord): boolean;
+  group(records: readonly PaaRecord[]): Map<string, PassageGroup>;
+  signature(record: PaaRecord): string;
+  /** Text fields of one question, plus short notes for the import report. */
+  convert(
+    record: PaaRecord,
+    group: PassageGroup | undefined,
+    override: ReviewedOverride | undefined,
+  ): { text: Record<string, unknown>; notes: string[] };
+  /** Phrases painted over in question images. */
+  maskPhrases?: readonly string[];
+  say: {
+    reading(file: string, page: number, pages: number): string;
+    converting(done: number, total: number): string;
+    checking: string;
+    noneQualified(ignored: string[]): string;
+    nothingPrepared(firstProblem: string | undefined): string;
+  };
+}
+
+export const PAA_PROFILE: BankProfile = {
+  parser: "paa-pdf-browser-v1",
+  label: "PAA: preguntas preparadas desde PDF",
+  idPrefix: "paa-",
+  language: "es",
+  accepts: isPaaRecord,
+  group: (records) => groupPassages(records),
+  signature: paaSignature,
+  convert: (record, group, override) => ({
+    text: convertPaaRecord(record, group, override) as unknown as Record<
+      string,
+      unknown
+    >,
+    notes: [],
+  }),
+  say: {
+    reading: (file, page, pages) =>
+      `Leyendo ${file}: página ${page} de ${pages}`,
+    converting: (done, total) => `Preparando preguntas: ${done} de ${total}`,
+    checking: "Comprobando la biblioteca preparada…",
+    noneQualified: (ignored) =>
+      `Ninguno de los PDF es una exportación de preguntas de la PAA, así que no se agregó nada. Se ignoraron: ${ignored.join(", ")}.`,
+    nothingPrepared: (first) =>
+      "No se pudo preparar ninguna pregunta. Comprueba que sean exportaciones de preguntas de la PAA." +
+      (first ? ` Primer problema: ${first}` : ""),
+  },
+};
+
+export const TSI_PROFILE: BankProfile = {
+  parser: "tsi-pdf-browser-v1",
+  label: "TSI: questions prepared from PDF",
+  idPrefix: "tsi-",
+  language: "en",
+  accepts: isTsiRecord,
+  group: groupTsiPassages,
+  signature: tsiSignature,
+  convert: (record, group, override) => {
+    const { text, notes } = convertTsiRecord(record, group, override);
+    return { text: text as unknown as Record<string, unknown>, notes };
+  },
+  maskPhrases: CALCULATOR_TAG_PHRASES,
+  say: {
+    reading: (file, page, pages) => `Reading ${file}: page ${page} of ${pages}`,
+    converting: (done, total) => `Preparing questions: ${done} of ${total}`,
+    checking: "Checking the prepared library…",
+    noneQualified: (ignored) =>
+      `None of the PDFs is a TSIA2 question export, so nothing was added. Set aside: ${ignored.join(", ")}.`,
+    nothingPrepared: (first) =>
+      "No question could be prepared. Check that these are TSIA2 question exports." +
+      (first ? ` First problem: ${first}` : ""),
+  },
+};
 
 const tally = (values: readonly string[]) => {
   const counts: Record<string, number> = {};
@@ -43,10 +136,23 @@ interface Indexed {
   records: PaaRecord[];
 }
 
-export async function preparePaaLibrary(
+export const preparePaaLibrary = (
   chosen: readonly ReadableFile[],
   options: PrepareOptions,
   deps: PrepareDeps,
+) => prepareBankLibrary(chosen, options, deps, PAA_PROFILE);
+
+export const prepareTsiLibrary = (
+  chosen: readonly ReadableFile[],
+  options: PrepareOptions,
+  deps: PrepareDeps,
+) => prepareBankLibrary(chosen, options, deps, TSI_PROFILE);
+
+export async function prepareBankLibrary(
+  chosen: readonly ReadableFile[],
+  options: PrepareOptions,
+  deps: PrepareDeps,
+  profile: BankProfile,
 ): Promise<PreparedLibrary> {
   const { signal, progress } = options;
   const overrides = options.overrides ?? {};
@@ -70,8 +176,13 @@ export async function preparePaaLibrary(
         let page = 1;
         page <= Math.min(3, reader.pageCount) && !looksRight;
         page++
-      )
-        looksRight = isPaaQuestionPage(await reader.layout(page));
+      ) {
+        const layout = await reader.layout(page);
+        // Question pages whose Assessment column names another test are not ours.
+        looksRight =
+          isPaaQuestionPage(layout) &&
+          profile.accepts({ assessment: peekAssessment(layout) } as PaaRecord);
+      }
       if (!looksRight) {
         ignored.push(file.name);
         continue;
@@ -85,11 +196,11 @@ export async function preparePaaLibrary(
             phase: "index",
             done: position * 100 + Math.round((page / reader.pageCount) * 100),
             total: files.length * 100,
-            message: `Leyendo ${file.name}: página ${page} de ${reader.pageCount}`,
+            message: profile.say.reading(file.name, page, reader.pageCount),
           });
       }
       const records = indexPaaExport(file.name, layouts);
-      if (!records.some(isPaaRecord)) {
+      if (!records.some(profile.accepts)) {
         ignored.push(file.name);
         continue;
       }
@@ -98,10 +209,7 @@ export async function preparePaaLibrary(
       await reader.close();
     }
   }
-  if (!indexed.length)
-    throw new Error(
-      `Ninguno de los PDF es una exportación de preguntas de la PAA, así que no se agregó nada. Se ignoraron: ${ignored.join(", ")}.`,
-    );
+  if (!indexed.length) throw new Error(profile.say.noneQualified(ignored));
 
   // The ID printed on the page establishes identity; the first copy is used.
   const collected = new Map<string, { at: Indexed; record: PaaRecord }[]>();
@@ -112,9 +220,10 @@ export async function preparePaaLibrary(
       collected.set(record.id, list);
     }
   const ordered = [...collected.values()].map((list) => list[0].record);
-  const groups = groupPassages(ordered);
+  const groups = profile.group(ordered);
 
   const quarantined: QuarantinedQuestion[] = [];
+  const warnings: string[] = [];
   const questions: Record<string, unknown>[] = [];
   const usedAssets = new Set<string>();
   const total = collected.size;
@@ -130,15 +239,22 @@ export async function preparePaaLibrary(
         signal?.throwIfAborted();
         const { record } = list[0];
         try {
-          if (new Set(list.map((o) => paaSignature(o.record))).size > 1)
+          if (new Set(list.map((o) => profile.signature(o.record))).size > 1)
             throw new Error(
               "Same source ID has conflicting metadata or answer keys",
             );
-          const text = convertPaaRecord(record, groups.get(id), overrides[id]);
+          const { text, notes } = profile.convert(
+            record,
+            groups.get(id),
+            overrides[id],
+          );
+          for (const note of notes) warnings.push(`${id}: ${note}`);
           const layouts: PageLayout[] = [];
           for (const page of record.pages)
             layouts.push(await reader.layout(page));
-          const plans = planCrops(record, layouts, "es");
+          const plans = planCrops(record, layouts, profile.language, {
+            maskPhrases: profile.maskPhrases,
+          });
           const panels = await buildPanels(plans, reader.renderer, deps.store);
           for (const panel of [...panels.question, ...panels.rationale])
             usedAssets.add(panel.src.slice("asset:".length));
@@ -177,7 +293,7 @@ export async function preparePaaLibrary(
             phase: "convert",
             done: handled,
             total,
-            message: `Preparando preguntas: ${handled} de ${total}`,
+            message: profile.say.converting(handled, total),
           });
       }
     } finally {
@@ -185,15 +301,12 @@ export async function preparePaaLibrary(
     }
   }
   if (!questions.length)
-    throw new Error(
-      "No se pudo preparar ninguna pregunta. Comprueba que sean exportaciones de preguntas de la PAA." +
-        (quarantined.length
-          ? ` Primer problema: ${quarantined[0].reason}`
-          : ""),
-    );
+    throw new Error(profile.say.nothingPrepared(quarantined[0]?.reason));
   // Page order, whichever file a question was converted from, so questions that
   // share a reading stay next to each other.
-  const position = new Map(ordered.map((record, i) => [`paa-${record.id}`, i]));
+  const position = new Map(
+    ordered.map((record, i) => [`${profile.idPrefix}${record.id}`, i]),
+  );
   questions.sort(
     (a, b) => position.get(String(a.id))! - position.get(String(b.id))!,
   );
@@ -202,7 +315,7 @@ export async function preparePaaLibrary(
     phase: "finish",
     done: 1,
     total: 1,
-    message: "Comprobando la biblioteca preparada…",
+    message: profile.say.checking,
   });
   const questionsJson = JSON.stringify({ schemaVersion: 1, questions });
   const counts = {
@@ -211,7 +324,7 @@ export async function preparePaaLibrary(
     difficulty: tally(questions.map((q) => String(q.difficulty))),
   };
   const report: PrepareReport = {
-    parser: PARSER,
+    parser: profile.parser,
     createdAt: new Date().toISOString(),
     activeMode: "unknown",
     interpretation: {},
@@ -224,16 +337,25 @@ export async function preparePaaLibrary(
     comparison: {},
     conflicts: [],
     ...(ignored.length ? { ignored } : {}),
+    ...(warnings.length ? { warnings } : {}),
     quarantined,
     uniqueSourceIds: collected.size,
     importedQuestions: questions.length,
-    counts,
+    counts: {
+      ...counts,
+      ...(profile.idPrefix === "tsi-"
+        ? {
+            origin: tally(questions.map((q) => String(q.origin))),
+            calculator: tally(questions.map((q) => String(q.calculator))),
+          }
+        : {}),
+    },
   };
   return {
     manifest: {
       format: PREPARE_FORMAT,
       revision: await sha256Hex(new TextEncoder().encode(questionsJson)),
-      label: "PAA: preguntas preparadas desde PDF",
+      label: profile.label,
       questionCount: questions.length,
       assets: [...usedAssets].sort(),
       summary: counts,

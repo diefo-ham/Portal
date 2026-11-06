@@ -9,7 +9,7 @@ import {
 import { groupPaaSkill } from "./paaTaxonomy";
 
 /** Everything that differs between the tests lives here, not in the UI. */
-export const ASSESSMENTS: readonly Assessment[] = ["SAT", "PAA"];
+export const ASSESSMENTS: readonly Assessment[] = ["SAT", "PAA", "TSI"];
 
 export interface PartInfo {
   id: Section;
@@ -36,6 +36,8 @@ export interface AssessmentInfo {
   protectedTests: boolean;
   /** Internal question IDs start with this, so IDs never collide across tests. */
   idPrefix: string;
+  /** Items carry an Official / Original label (TSI). */
+  hasOrigins: boolean;
 }
 
 const SAT: AssessmentInfo = {
@@ -66,6 +68,7 @@ const SAT: AssessmentInfo = {
   testMode: false,
   protectedTests: true,
   idPrefix: "",
+  hasOrigins: false,
 };
 
 const PAA: AssessmentInfo = {
@@ -112,14 +115,56 @@ const PAA: AssessmentInfo = {
   testMode: true,
   protectedTests: false,
   idPrefix: "paa-",
+  hasOrigins: false,
 };
 
-const INFO: Record<Assessment, AssessmentInfo> = { SAT, PAA };
+/**
+ * TSIA2 practice: fixed-order sets with no clock, no modules and no score (the
+ * real test is adaptive and College Board publishes no conversion). Every item
+ * is "unknown" for spoiler purposes, so nothing is hidden.
+ */
+const TSI: AssessmentInfo = {
+  id: "TSI",
+  name: "TSI",
+  language: "en",
+  parts: [
+    { id: "tsi-elar", label: "ELAR" },
+    { id: "tsi-math", label: "Mathematics" },
+  ],
+  performanceOrder: ["tsi-elar", "tsi-math"],
+  domains: {
+    "tsi-elar": [
+      "Literary Text Analysis",
+      "Informational Text Analysis and Synthesis",
+      "Essay Revision and Editing",
+      "Sentence Revision, Editing, and Completion",
+    ],
+    "tsi-math": [
+      "Quantitative Reasoning",
+      "Algebraic Reasoning",
+      "Geometric and Spatial Reasoning",
+      "Probabilistic and Statistical Reasoning",
+    ],
+  },
+  // Which calculator opens depends on the item (see Question.calculator).
+  calculator: true,
+  practiceTests: false,
+  testMode: false,
+  protectedTests: false,
+  idPrefix: "tsi-",
+  hasOrigins: true,
+};
+
+const INFO: Record<Assessment, AssessmentInfo> = { SAT, PAA, TSI };
 
 export const assessmentInfo = (assessment: Assessment) => INFO[assessment];
 
 export const isAssessment = (value: unknown): value is Assessment =>
-  value === "SAT" || value === "PAA";
+  value === "SAT" || value === "PAA" || value === "TSI";
+
+/** Every test except the given one. */
+export const otherAssessments = (assessment: Assessment): Assessment[] =>
+  ASSESSMENTS.filter((id) => id !== assessment);
 
 /** The assessment a part belongs to; part ids are unique across assessments. */
 export const assessmentOfSection = (section: string): Assessment | undefined =>
@@ -132,7 +177,11 @@ export const sectionLabel = (section: string) =>
 
 /** Internal IDs carry their test, so an orphaned answer still belongs somewhere. */
 export const assessmentOfId = (id: string): Assessment =>
-  id.startsWith(PAA.idPrefix) ? "PAA" : "SAT";
+  id.startsWith(PAA.idPrefix)
+    ? "PAA"
+    : id.startsWith(TSI.idPrefix)
+      ? "TSI"
+      : "SAT";
 
 export function questionIdMatchesAssessment(
   id: string,
@@ -238,6 +287,14 @@ const ownerOf = (data: StudyData) => {
   return (id: string) => byId.get(id) ?? assessmentOfId(id);
 };
 
+export interface ScopeOptions {
+  /**
+   * Leave out TSI items labelled Official, with their answers, bookmarks and the
+   * sessions that contain them. Nothing is deleted: turning it off brings them back.
+   */
+  hideOfficial?: boolean;
+}
+
 /**
  * A view of the study data for one assessment. Everything the study screens
  * show (questions, answers, sessions, bookmarks) is separated; writes still go
@@ -246,31 +303,46 @@ const ownerOf = (data: StudyData) => {
 export function scopeStudyData(
   data: StudyData,
   assessment: Assessment,
+  options: ScopeOptions = {},
 ): StudyData {
   const owner = ownerOf(data);
+  const hidden = new Set(
+    options.hideOfficial
+      ? data.questions
+          .filter(
+            (question) =>
+              question.origin === "official" &&
+              questionAssessment(question) === assessment,
+          )
+          .map((question) => question.id)
+      : [],
+  );
   return {
     ...data,
     questions: data.questions.filter(
-      (question) => questionAssessment(question) === assessment,
+      (question) =>
+        questionAssessment(question) === assessment && !hidden.has(question.id),
     ),
     attempts: data.attempts.filter(
       (attempt) =>
-        (attempt.assessment ?? owner(attempt.questionId)) === assessment,
+        (attempt.assessment ?? owner(attempt.questionId)) === assessment &&
+        !hidden.has(attempt.questionId),
     ),
     sessions: data.sessions.filter(
       (session) =>
         (session.assessment ??
           (session.questionIds[0] !== undefined
             ? owner(session.questionIds[0])
-            : "SAT")) === assessment,
+            : "SAT")) === assessment &&
+        !session.questionIds.some((id) => hidden.has(id)),
     ),
     annotations: Object.fromEntries(
       Object.entries(data.annotations).filter(
-        ([id]) => owner(id) === assessment,
+        ([id]) => owner(id) === assessment && !hidden.has(id),
       ),
     ),
     practiceTestUsedIds: (data.practiceTestUsedIds ?? []).filter(
-      (id) => owner(id) === assessment,
+      (id) => owner(id) === assessment && !hidden.has(id),
     ),
   };
 }
@@ -296,14 +368,18 @@ export function replaceSlice(
   assessment: Assessment,
   slice: StudySlice,
 ) {
-  const other = {
-    ...scopeStudyData(data, assessment === "SAT" ? "PAA" : "SAT"),
-  };
-  data.attempts = [...other.attempts, ...slice.attempts];
-  data.sessions = [...other.sessions, ...slice.sessions];
-  data.annotations = { ...other.annotations, ...slice.annotations };
+  const others = otherAssessments(assessment).map((id) =>
+    scopeStudyData(data, id),
+  );
+  data.attempts = [...others.flatMap((o) => o.attempts), ...slice.attempts];
+  data.sessions = [...others.flatMap((o) => o.sessions), ...slice.sessions];
+  data.annotations = Object.assign(
+    {},
+    ...others.map((o) => o.annotations),
+    slice.annotations,
+  );
   data.practiceTestUsedIds = [
-    ...(other.practiceTestUsedIds ?? []),
+    ...others.flatMap((o) => o.practiceTestUsedIds ?? []),
     ...(slice.practiceTestUsedIds ?? []),
   ];
 }

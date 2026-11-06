@@ -13,6 +13,7 @@ import {
 } from "../../core/practiceTest";
 import "../../calculator/layout.scss";
 import { CalculatorPanel } from "../../calculator/CalculatorPanel";
+import { calculatorTierOf, strongestTier } from "../../core/calculators";
 import { useCalculatorState } from "../../calculator/useCalculatorState";
 import { useCalculatorToggle } from "@/src/helpers/useCalculatorToggle";
 import { useModalPanel } from "@/src/helpers/useModalPanel";
@@ -99,13 +100,15 @@ export const Practice = ({
     session.calculator,
     mutate,
   );
-  const calculatorAvailable = session.finishedAt
-    ? session.questionIds.some((id) =>
-        data.questions.some(
-          (candidate) => candidate.id === id && candidate.section === "math",
+  // Which calculator opens depends on the question (TSI Math names its own).
+  const calculatorTier = session.finishedAt
+    ? strongestTier(
+        data.questions.filter((candidate) =>
+          session.questionIds.includes(candidate.id),
         ),
       )
-    : question.section === "math";
+    : calculatorTierOf(question);
+  const calculatorAvailable = calculatorTier !== undefined;
   const calculator = useCalculatorToggle({
     available: calculatorAvailable,
     blocked: !!panel || pending || !!session.paused,
@@ -258,6 +261,8 @@ export const Practice = ({
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
   const calculatorPanel = (
     <CalculatorPanel
+      key={calculatorTier}
+      tier={calculatorTier}
       state={calculatorWork.state}
       onChange={calculatorWork.change}
       onClose={calculator.close}
@@ -352,7 +357,7 @@ export const Practice = ({
             : undefined
         }
         calculator={
-          question.section === "math"
+          calculatorAvailable
             ? {
                 open: calculator.open,
                 expanded: calculator.visible,
@@ -440,7 +445,7 @@ export const Practice = ({
           />
         </article>
         {calculator.visible &&
-          question.section === "math" &&
+          calculatorAvailable &&
           !session.paused &&
           calculatorPanel}
       </div>
