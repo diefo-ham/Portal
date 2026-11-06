@@ -32,7 +32,14 @@ What changed in Offline:
 - Piecewise functions: `f(x)={x<0:-x,x}`, `y={x<0:1,0<=x<5:2,3}`. Without a final value the function is
   undefined elsewhere. Shown as a cases brace.
 - Summation and products: `sum(n^2,n,1,4)`, `prod(n,n,1,5)` (up to 10,000 terms).
-- Lists of points: `[(1,2),(3,4)]`.
+- Points and lists of points are values, as in Desmos: `a=(3,4)`, `a=[(3,4),(4,3)]`. Results show as chips
+  (`(3, 4)` `(4, 3)`), and a point value plots. Supported: `a.x`, `a.y`, `a[2]`, `a[[2,1]]`, `a+(1,1)`, `2a`,
+  `a/2`, `-a`, `mean(a)` (a point), `total(a)`, `length(a)`, `count(a)`, `join(a,(5,5))`, `distance(P,Q)` and
+  `midpoint(P,Q)` (also against lists). `min`, `max`, `median`, `sort` and `stdev` of points are reported as
+  not defined for points; `sort` is left out until it is confirmed against Desmos. Point variables plot but
+  are not draggable yet.
+- Regression in subscripted parameters: `[x_1^2+y_1+7,20x_1+100-y_1]~[7,0]` solves to `x_1=-10, y_1=-100`
+  with `RMSE = 0`, as in Desmos. A unique exact solution of a `~` system is reported as a zero-residual fit.
 - Regression models that are not linear in their parameters (`a*x^b`, `a*sin(b*x)`, `a*b^x+c`, ...), fitted by
   Levenberg-Marquardt from a fixed set of starting points, so the same data always gives the same answer.
   Equally good mirror solutions are shown with positive parameters and the smaller frequency.

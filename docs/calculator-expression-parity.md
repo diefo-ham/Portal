@@ -79,7 +79,7 @@ engine-remount effects from overwriting an immediately typed expression.
 
 ## Limits
 
-This does not add list comprehensions, indexing, nested lists, a full symbolic
+This does not add list comprehensions, filters such as `L[L>1]`, nested lists, a full symbolic
 algebra system, or advanced custom-color expressions. List-valued outputs keep
 the previously supported contexts: numeric list arithmetic/function evaluation,
 paired point plotting, tables and regressions. General nonlinear custom fitting

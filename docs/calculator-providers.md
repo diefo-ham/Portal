@@ -87,7 +87,9 @@ is preserved. Incomplete rows report errors rather than silently dropping data.
 
 Lists support `L=[1,2,3]`, `x_1=[1,2,3]`, `y_1=[4,7,10]`, scalar/list arithmetic,
 elementwise functions, and `f(x_1)` for a defined scalar function. Paired lists
-`(x_1,y_1)` plot points. Lists need compatible lengths. Lists or table columns can
+`(x_1,y_1)` plot points. Lists need compatible lengths. Points and lists of points are
+values (`a=(3,4)`, `a=[(3,4),(4,3)]`, `mean(a)`, `distance(P,Q)`, `midpoint(P,Q)`); their logic lives in
+`src/calculator/points.ts`, apart from the UI. Lists or table columns can
 feed these regression templates, using distinct unassigned single-letter parameters:
 
 ```text

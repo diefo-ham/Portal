@@ -16,7 +16,13 @@ import { TableEditor } from "./TableEditor";
 import { Slider } from "./Slider";
 import { MathEditor, focusMath } from "./MathEditor";
 import { calculateWorkspace } from "./workspace";
-import { formatNumber as fmt, newExpression, tableColumns } from "./model";
+import {
+  formatNumber as fmt,
+  formatPoint,
+  newExpression,
+  tableColumns,
+} from "./model";
+import { pointsOf } from "./points";
 import {
   displayedCoefficients,
   exportedExpression,
@@ -25,7 +31,12 @@ import {
 import { exactForm, radicalForm } from "./exact";
 import { textToLatex } from "./latex";
 import { roundSig } from "@/src/utils/calculator";
-import type { CalculatorState, Entry, Fit } from "@/src/types/calculator";
+import type {
+  CalculatorState,
+  Entry,
+  Fit,
+  PointValue,
+} from "@/src/types/calculator";
 import { useClickOutside } from "@/src/helpers/useClickOutside";
 
 /** Long lists show their ends and can be opened up, so a range like [-10...10] stays readable. */
@@ -50,6 +61,44 @@ function ListResult({ values }: { values: number[] }) {
         </button>
       )}
     </>
+  );
+}
+
+/** A point reads as one chip, a list of points as a row of chips, like Desmos. */
+function PointResult({ value }: { value: PointValue }) {
+  const [open, setOpen] = useState(false);
+  const points = pointsOf(value);
+  const long = points.length > 12;
+  const chip = (p: { x: number; y: number }, i: number) => (
+    <span className="calc-point-chip" key={i}>
+      {formatPoint(p.x, p.y)}
+    </span>
+  );
+  return (
+    <div className="calc-point-result">
+      <output>
+        <span aria-hidden="true">=</span>
+        {!long || open ? (
+          points.map(chip)
+        ) : (
+          <>
+            {points.slice(0, 5).map(chip)}
+            <span aria-hidden="true">…</span>
+            {points.slice(-3).map((p, i) => chip(p, points.length - 3 + i))}
+          </>
+        )}
+      </output>
+      {long && (
+        <button
+          type="button"
+          className="text-button calc-list-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? "Show fewer" : `Show all ${points.length} points`}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -160,7 +209,7 @@ function CalculatorHelp() {
   const topics = [
     [
       "Expressions",
-      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list. 5! is a factorial, sum(n^2,n,1,4) adds up terms, {x<0:-x,x} gives a piecewise value, and L[2] picks an item from a list.",
+      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list. 5! is a factorial, sum(n^2,n,1,4) adds up terms, {x<0:-x,x} gives a piecewise value, and L[2] picks an item from a list. Points work like Desmos: a=(3,4) or a=[(3,4),(4,3)], then a.x, a[1], mean(a), distance(P,Q) and midpoint(P,Q).",
     ],
     [
       "Tables & regressions",
@@ -469,6 +518,9 @@ export function Calculator({
                         />
                       )}
                       {result?.values && <ListResult values={result.values} />}
+                      {result?.pointValue && (
+                        <PointResult value={result.pointValue} />
+                      )}
                       {result?.fit && (
                         <FitResult
                           fit={result.fit}

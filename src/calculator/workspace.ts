@@ -36,9 +36,12 @@ import type {
   Fit,
   Numeric,
   Point,
+  PointValue,
   Restriction,
   Scalar,
+  Value,
 } from "@/src/types/calculator";
+import { isPoint, pointsOf } from "./points";
 
 export type Relation = "<" | "<=" | ">" | ">=";
 export type GraphObject = {
@@ -84,6 +87,8 @@ export interface EntryResult {
   error?: string;
   value?: number;
   values?: number[];
+  /** A point, or a list of points, as shown in the result chips. */
+  pointValue?: PointValue;
   parameters?: Record<string, number>;
   tex?: string;
   fit?: Fit;
@@ -113,6 +118,16 @@ type Parsed =
       relation: string;
     }
   | { type: "point"; a: Scalar; b: Scalar };
+
+/** True when the first bracket of `text` closes at its last character. */
+function wrapsWhole(text: string): boolean {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    if ("([".includes(text[i])) depth++;
+    if (")]".includes(text[i]) && --depth === 0) return i === text.length - 1;
+  }
+  return false;
+}
 
 function parseEntry(text: string): Parsed {
   text = normalize(text);
@@ -159,7 +174,7 @@ function parseEntry(text: string): Parsed {
     };
   }
   // [(1,2),(3,4)] is a list of points: lists of x and of y coordinates.
-  if (text.startsWith("[(") && text.endsWith(")]")) {
+  if (text.startsWith("[(") && text.endsWith(")]") && wrapsWhole(text)) {
     const pairs: [string, string][] = [];
     let depth = 0,
       start = 1;
@@ -195,7 +210,7 @@ function parseEntry(text: string): Parsed {
         b: scalar(`[${pairs.map((pair) => pair[1]).join(",")}]`),
       };
   }
-  if (text.startsWith("(") && text.endsWith(")")) {
+  if (text.startsWith("(") && text.endsWith(")") && wrapsWhole(text)) {
     const body = text.slice(1, -1);
     let depth = 0;
     for (let i = 0; i < body.length; i++) {
@@ -406,7 +421,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       fail(entry.id, e);
     }
   }
-  const values: Record<string, Numeric> = Object.create(null),
+  const values: Record<string, Value> = Object.create(null),
     functions: Record<string, (x: number) => number> = Object.create(null);
   const columns = new Map<string, { id: string; cells: string[] }>();
   for (const entry of state.entries) {
@@ -538,16 +553,16 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     }
   }
   let depth = 0;
-  const evaluateAny = (
+  const evaluateValue = (
     s: Scalar,
-    locals: Record<string, Numeric> = {},
-  ): Numeric => {
+    locals: Record<string, Value> = {},
+  ): Value => {
     if (++depth > 24) {
       depth--;
       throw new Error("Circular or excessively deep definitions.");
     }
     try {
-      const scope: Record<string, Numeric> = { ...locals };
+      const scope: Record<string, Value> = { ...locals };
       for (const name of s.symbols)
         if (!Object.hasOwn(scope, name)) {
           if (
@@ -575,17 +590,27 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             }
             if (results[def.id]?.error)
               throw new Error(`Fix the definition of ${name}.`);
-            const value = evaluateAny(def.parsed.a, locals);
+            const value = evaluateValue(def.parsed.a, locals);
             scope[name] = value;
             const deps = dependencies(def.parsed.a);
             if (!deps.has("x") && !deps.has("y") && !Object.keys(locals).length)
               values[name] = value;
           }
         }
-      return s.evaluate(scope, functions, state.angle);
+      return s.evaluateValue(scope, functions, state.angle);
     } finally {
       depth--;
     }
+  };
+  /** Numbers and number lists; a point result is an error here. */
+  const evaluateAny = (
+    s: Scalar,
+    locals: Record<string, Value> = {},
+  ): Numeric => {
+    const value = evaluateValue(s, locals);
+    if (isPoint(value))
+      throw new Error("A point can't be used where a number is needed.");
+    return value;
   };
   const evaluate = (s: Scalar, locals: Record<string, number> = {}): number => {
     const value = evaluateAny(s, locals);
@@ -627,6 +652,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     ids: string[],
     systemNames: string[],
     solved: FiniteSystemResult,
+    fit?: EntryResult["fit"],
   ) => {
     Object.assign(values, solved.parameters);
     systemNames.forEach((name) => missing.delete(name));
@@ -642,7 +668,8 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         solutions: solved.solutions,
         scalarRelation: true,
         relationKind: "values",
-        systemKind: solved.kind,
+        // A fit already prints the parameter values, so no system kind then.
+        ...(fit ? { fit } : { systemKind: solved.kind }),
         message: solved.message,
       };
     }
@@ -828,7 +855,31 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
               },
               message: "Representative fit; parameters are not unique.",
             };
-          } else storeSystem([id], names, solved);
+          } else {
+            // A unique exact solution of a `~` vector is a zero-residual fit,
+            // reported with RMSE like Desmos' regression parameters.
+            let fit: EntryResult["fit"];
+            if (
+              solved.kind === "determined" &&
+              solved.solutions?.length === 1
+            ) {
+              const raw = evaluateAny(relation, solved.parameters);
+              const residuals = (Array.isArray(raw) ? raw : [raw]).map(
+                (value) => (Math.abs(value) <= 1e-12 ? 0 : value),
+              );
+              fit = {
+                coefficients: names.map((name) => solved.parameters[name]),
+                predict: () => NaN,
+                residuals,
+                rmse: Math.sqrt(
+                  residuals.reduce((sum, r) => sum + r * r, 0) /
+                    residuals.length,
+                ),
+                logSpace: false,
+              };
+            }
+            storeSystem([id], names, solved, fit);
+          }
           continue;
         }
         const sampleParameters = Object.fromEntries(
@@ -1022,6 +1073,14 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         results[entry.id].graphable = true;
         if (!entry.hidden) graphs.push(g);
       };
+      // Defined points plot like the bare `(a,b)` row; undefined ones don't.
+      const addPoints = (value: PointValue) => {
+        const found = pointsOf(value).filter(
+          (q) => Number.isFinite(q.x) && Number.isFinite(q.y),
+        );
+        if (found.length)
+          add({ kind: "points", id: entry.id, color, points: found });
+      };
       if (p.type === "variable") {
         const expanded = expand(p.a);
         const system = systemQuantities.find(
@@ -1074,7 +1133,16 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
           });
           return;
         }
-        const value = evaluateAny(p.a);
+        const value = evaluateValue(p.a);
+        if (isPoint(value)) {
+          values[p.name] = value;
+          results[entry.id] = {
+            pointValue: value,
+            tex: `${p.name} = ${tex(p.a)}`,
+          };
+          addPoints(value);
+          return;
+        }
         if (Array.isArray(value)) {
           if (value.some((n) => !Number.isFinite(n)))
             throw new Error("A list contains an undefined value.");
@@ -1188,7 +1256,12 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             fn: (x) => evaluate(p.a, { x }),
           });
         } else {
-          const value = evaluateAny(p.a);
+          const value = evaluateValue(p.a);
+          if (isPoint(value)) {
+            results[entry.id].pointValue = value;
+            addPoints(value);
+            return;
+          }
           if (Array.isArray(value)) {
             results[entry.id].values = value;
             return;
