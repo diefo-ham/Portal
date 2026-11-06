@@ -629,6 +629,25 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         return evaluate(p.a, { [p.argument]: x });
       };
     }
+  /**
+   * Desmos' `~` always yields one parameter set, found by a local fit that
+   * starts every parameter at 1. When exact solving finds several, every
+   * solution is still listed, but dependent rows use the one closest to that
+   * starting point (so `x_1^2~5` gives +√5), ties going to the larger value.
+   */
+  const fitBranch = (solutions: Record<string, number>[]) => {
+    const distance = (s: Record<string, number>) =>
+      Object.values(s).reduce((sum, v) => sum + Math.abs(v - 1), 0);
+    const total = (s: Record<string, number>) =>
+      Object.values(s).reduce((sum, v) => sum + v, 0);
+    return solutions.reduce((best, s) =>
+      distance(s) < distance(best) - 1e-12 ||
+      (Math.abs(distance(s) - distance(best)) <= 1e-12 &&
+        total(s) > total(best))
+        ? s
+        : best,
+    );
+  };
   const systemQuantities: { names: string[]; solved: FiniteSystemResult }[] =
     [];
   const solvedEquationIds = new Set<string>();
@@ -879,6 +898,8 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
               };
             }
             storeSystem([id], names, solved, fit);
+            if (solved.kind === "multiple" && solved.solutions?.length)
+              Object.assign(values, fitBranch(solved.solutions));
           }
           continue;
         }
@@ -902,6 +923,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             [names[0]]: value,
           }));
           if (solutions.length > 1) {
+            Object.assign(values, fitBranch(solutions));
             results[id] = {
               solutions,
               scalarRelation: true,
