@@ -385,6 +385,42 @@ describe("Offline expression domain restrictions", () => {
     ).toContainEqual(expect.objectContaining({ x: 0, y: 0 }));
   });
 
+  it("lets other rows use a parameter fitted by a regression with several solutions", () => {
+    // Desmos fits one parameter set (+√5 here); the row still lists both roots.
+    const w = workspace(
+      "a=3",
+      "b=2",
+      "c=4",
+      "x_1^2~a+b",
+      "y_1^2~a+c",
+      "(x_1^2-y_1^2)^2",
+      "x_1+1",
+    );
+    const rows = Object.values(w.results);
+    expect(rows.filter((r) => r.error)).toEqual([]);
+    expect(rows[3].solutions).toEqual([
+      { x_1: -Math.sqrt(5) },
+      { x_1: Math.sqrt(5) },
+    ]);
+    expect(rows[5].value).toBeCloseTo(4, 10);
+    expect(rows[6].value).toBeCloseTo(Math.sqrt(5) + 1, 10);
+    // The chosen branch follows the sliders, like a Desmos regression would.
+    expect(
+      Object.values(workspace("a=5", "b=3", "x_1^2~a+b", "x_1").results)[3]
+        .value,
+    ).toBeCloseTo(Math.sqrt(8), 10);
+    // Restrictions still pick the branch, and `=` equations assign none.
+    expect(Object.values(workspace("n^2~4{n<0}", "n").results)[1].value).toBe(
+      -2,
+    );
+    expect(
+      Object.values(workspace("m^2=4", "m+1").results)[1].error,
+    ).toBeUndefined();
+    expect(
+      Object.values(workspace("m^2=4", "m+1").results)[1].value,
+    ).toBeUndefined();
+  });
+
   it("keeps solver and regression braces as parameter bounds alongside domain expressions", () => {
     const w = workspace(
       "f(x)=x{x>2}",

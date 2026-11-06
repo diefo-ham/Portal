@@ -12,7 +12,11 @@ each function's argument scope. Relation analysis expands definitions as bounded
 ASTs, preserving multiplication, arguments, circular-definition checks and free
 coefficients. Definitions with pending parameters display them without evaluating
 a made-up graph. Unique solutions become available to dependent expressions;
-multiple solutions are shown together and do not silently assign one branch.
+multiple solutions are shown together and an `=` equation does not silently
+assign one branch. A `~` regression always yields one parameter set in Desmos, so
+when it has several solutions all of them are still listed, but other rows use the
+one closest to Desmos' starting guess of 1 (`x_1^2~5` gives `x_1 = +√5`; ties go
+to the larger value). Restrictions such as `{n<0}` narrow the choice first.
 
 Scalar relations with one free parameter use bounded rational-polynomial algebra
 (linear/quadratic equations solve directly), followed by original-expression
