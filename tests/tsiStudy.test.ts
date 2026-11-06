@@ -20,8 +20,6 @@ import {
   type Question,
   type StudyData,
 } from "../src/core/model";
-import { filterQuestions } from "../src/core/practice";
-import { removeOfficialFromData } from "../src/core/pdfLibrary";
 import { parseQuestions } from "../src/importing/json";
 import sample from "./fixtures/synthetic.json";
 
@@ -181,98 +179,87 @@ describe("TSI progress stays apart", () => {
   });
 });
 
-describe("hiding the College Board sample items", () => {
-  it("leaves official items, their answers, bookmarks and sessions out of the view, without deleting them", () => {
+describe("hiding the original questions", () => {
+  /** A session over two original and one official question, one answered. */
+  const withSessions = () => {
     const data = everything();
-    const official = data.questions.find((q) => q.id === "tsi-o1")!;
-    const original = data.questions.find((q) => q.id === "tsi-n1")!;
-    const withOfficial = beginSession(
+    const mixed = beginSession(
       data,
-      [official.id],
+      ["tsi-n1", "tsi-o1", "tsi-n2"],
       defaultFilters,
       undefined,
       true,
     );
-    submitAnswer(data, withOfficial.id, official.id, "B");
-    const withOriginal = beginSession(
+    submitAnswer(data, mixed.id, "tsi-n1", "B");
+    submitAnswer(data, mixed.id, "tsi-o1", "B");
+    const onlyOriginal = beginSession(
       data,
-      [original.id],
+      ["tsi-n1", "tsi-n2"],
       defaultFilters,
       undefined,
       true,
     );
-    submitAnswer(data, withOriginal.id, original.id, "B");
-    data.annotations[official.id] = { bookmarked: true, note: "" };
+    data.annotations["tsi-n1"] = { bookmarked: true, note: "" };
+    data.annotations["tsi-o1"] = { bookmarked: true, note: "" };
+    return { data, mixed, onlyOriginal };
+  };
 
-    const hidden = scopeStudyData(data, "TSI", { hideOfficial: true });
-    expect(hidden.questions.map((q) => q.id)).toEqual(["tsi-n1", "tsi-n2"]);
-    expect(hidden.attempts.map((a) => a.questionId)).toEqual(["tsi-n1"]);
-    expect(hidden.sessions.map((s) => s.id)).toEqual([withOriginal.id]);
-    expect(Object.keys(hidden.annotations)).toEqual([]);
+  it("leaves original questions, their answers and bookmarks out of the view, without deleting them", () => {
+    const { data } = withSessions();
+    const hidden = scopeStudyData(data, "TSI", { hideOrigin: "original" });
+    expect(hidden.questions.map((q) => q.id)).toEqual(["tsi-o1", "tsi-o2"]);
+    expect(hidden.attempts.map((a) => a.questionId)).toEqual(["tsi-o1"]);
+    expect(Object.keys(hidden.annotations)).toEqual(["tsi-o1"]);
     // Nothing was deleted: the full view still has everything.
     const shown = scopeStudyData(data, "TSI");
     expect(shown.questions).toHaveLength(4);
     expect(shown.attempts).toHaveLength(2);
-    expect(shown.sessions).toHaveLength(2);
-    expect(data.annotations[official.id]).toBeDefined();
+    expect(Object.keys(shown.annotations)).toHaveLength(2);
   });
 
-  it("does not hide anything on the SAT", () => {
+  it("keeps a session that contains hidden questions, without those questions", () => {
+    const { data, mixed, onlyOriginal } = withSessions();
+    const hidden = scopeStudyData(data, "TSI", { hideOrigin: "original" });
+    const seen = hidden.sessions.find((s) => s.id === mixed.id)!;
+    expect(seen.questionIds).toEqual(["tsi-o1"]);
+    expect(seen.index).toBe(0);
+    // A session with nothing else in it has nothing to show, so it is left out.
+    expect(hidden.sessions.some((s) => s.id === onlyOriginal.id)).toBe(false);
+    // The stored session is untouched, so turning the setting off restores it.
+    const stored = scopeStudyData(data, "TSI").sessions.find(
+      (s) => s.id === mixed.id,
+    )!;
+    expect(stored.questionIds).toEqual(["tsi-n1", "tsi-o1", "tsi-n2"]);
+  });
+
+  it("keeps the position: the question it was on, or the next one still shown", () => {
     const data = everything();
+    const session = beginSession(
+      data,
+      ["tsi-o1", "tsi-n1", "tsi-o2", "tsi-n2"],
+      defaultFilters,
+      undefined,
+      true,
+    );
+    const at = (index: number) => {
+      session.index = index;
+      return scopeStudyData(data, "TSI", { hideOrigin: "original" })
+        .sessions[0];
+    };
+    expect(at(0).index).toBe(0);
+    // On a hidden question: the next shown one.
+    expect(at(1).questionIds[at(1).index]).toBe("tsi-o2");
+    expect(at(3).questionIds[at(3).index]).toBe("tsi-o2");
+    expect(at(2).questionIds[at(2).index]).toBe("tsi-o2");
+  });
+
+  it("can hide the official ones instead, and does nothing on the SAT", () => {
+    const { data } = withSessions();
+    const view = scopeStudyData(data, "TSI", { hideOrigin: "official" });
+    expect(view.questions.map((q) => q.id)).toEqual(["tsi-n1", "tsi-n2"]);
     expect(
-      scopeStudyData(data, "SAT", { hideOfficial: true }).questions,
+      scopeStudyData(data, "SAT", { hideOrigin: "original" }).questions,
     ).toEqual(scopeStudyData(data, "SAT").questions);
-  });
-});
-
-describe("removing the official items", () => {
-  it("removes only official items, keeps answers and bookmarks, and ends sessions that used them", () => {
-    const data = everything();
-    const official = "tsi-o1";
-    const original = "tsi-n1";
-    const ended = beginSession(
-      data,
-      [official, original],
-      defaultFilters,
-      undefined,
-      true,
-    );
-    submitAnswer(data, ended.id, official, "B");
-    const kept = beginSession(
-      data,
-      [original],
-      defaultFilters,
-      undefined,
-      true,
-    );
-    data.annotations[official] = { bookmarked: true, note: "" };
-    const removed = removeOfficialFromData(data);
-    expect(removed).toBe(2);
-    expect(data.questions.filter((q) => q.origin === "official")).toEqual([]);
-    expect(scopeStudyData(data, "TSI").questions).toHaveLength(2);
-    expect(data.sessions.map((s) => s.id)).toEqual([kept.id]);
-    expect(data.attempts).toHaveLength(1);
-    expect(data.attempts[0].sessionId).toBeUndefined();
-    expect(data.annotations[official]?.bookmarked).toBe(true);
-    // SAT questions are untouched.
-    expect(data.questions.some((q) => q.assessment === "SAT")).toBe(true);
-    expect(removeOfficialFromData(data)).toBe(0);
-  });
-});
-
-describe("the Source filter", () => {
-  it("selects official, original or both", () => {
-    const data = scopeStudyData(everything(), "TSI");
-    const ids = (origins: Question["origin"][]) =>
-      filterQuestions(data, {
-        ...defaultFilters,
-        statuses: [],
-        origins: origins as never,
-      }).map((q) => q.id);
-    expect(ids([])).toHaveLength(4);
-    expect(ids(["official"])).toEqual(["tsi-o1", "tsi-o2"]);
-    expect(ids(["original"])).toEqual(["tsi-n1", "tsi-n2"]);
-    expect(ids(["official", "original"])).toHaveLength(4);
   });
 });
 

@@ -54,6 +54,9 @@ export function SimpleCalculator({
     event.preventDefault();
     send(mapped);
   };
+  // One four-column keypad. The operators stay in the right-hand column on both
+  // calculators; the Square-root one adds its key beside the decimal point, and
+  // on the Basic one Equals takes that place's last two cells.
   const keys: { label: string; name: string; key: CalcKey; wide?: boolean }[] =
     [
       { label: "C", name: "Clear", key: { type: "clear" } },
@@ -74,7 +77,21 @@ export function SimpleCalculator({
       { label: "+", name: "Add", key: operator("+") },
       { label: "0", name: "0", key: digit("0") },
       { label: ".", name: "Decimal point", key: { type: "point" } },
-      { label: "=", name: "Equals", key: { type: "equals" }, wide: true },
+      ...(tier === "sqrt"
+        ? [
+            {
+              label: "√",
+              name: "Square root",
+              key: { type: "sqrt" } as CalcKey,
+            },
+          ]
+        : []),
+      {
+        label: "=",
+        name: "Equals",
+        key: { type: "equals" },
+        wide: tier !== "sqrt",
+      },
     ];
   return (
     <div
@@ -91,16 +108,6 @@ export function SimpleCalculator({
         {state.display}
       </output>
       <div className="simple-calculator-keys">
-        {tier === "sqrt" && (
-          <button
-            type="button"
-            className="wide"
-            aria-label="Square root"
-            onClick={() => send({ type: "sqrt" })}
-          >
-            √
-          </button>
-        )}
         {keys.map(({ label, name, key, wide }) => (
           <button
             type="button"

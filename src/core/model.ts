@@ -85,8 +85,6 @@ export interface Filters {
   statuses?: AnswerStatus[];
   /** Empty means unrestricted. The legacy single difficulty remains readable. */
   difficulties?: Difficulty[];
-  /** TSI only. Empty means both Official and Original items. */
-  origins?: QuestionOrigin[];
   difficulty: string;
   status: string;
   bookmark: string;
@@ -105,7 +103,6 @@ export const defaultFilters: Filters = {
   search: "",
   statuses: ["unanswered"],
   difficulties: [],
-  origins: [],
 };
 /** The separately timed parts of the PAA: Lectura y Redacción, Matemáticas, Inglés. */
 export type SegmentKey = "lectura-redaccion" | "matematicas" | "ingles";

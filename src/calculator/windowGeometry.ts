@@ -31,9 +31,9 @@ export function defaultGeometry(
   if (compact)
     return clampGeometry(
       {
-        x: viewport.width - 440 - 24,
+        x: viewport.width - 520 - 24,
         y: 92,
-        width: 440,
+        width: 520,
         height: Math.min(520, viewport.height - 120),
       },
       viewport,

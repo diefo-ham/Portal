@@ -73,64 +73,61 @@ test("the switch reaches the TSI, and the TSI keeps its own questions", async ({
   await expect(page.getByRole("button", { name: /TSI Study/ })).toBeVisible();
 });
 
-test("the Source filter selects Official or Original, and Browse shows the label", async ({
+test("there is no Source filter, and a session shows no Official or Original tag", async ({
   page,
 }) => {
   await seed(page);
-  await page.getByText("Refine selection").click();
-  await page.getByRole("button", { name: /Official and original/ }).click();
-  await page.getByRole("checkbox", { name: "Official" }).check();
-  await expect(page.getByText("Max 2")).toBeVisible();
-  await page.getByRole("checkbox", { name: "Official" }).uncheck();
-  await page.getByRole("checkbox", { name: "Original" }).check();
-  await expect(page.getByText("Max 3")).toBeVisible();
-  await page.getByRole("button", { name: "Browse", exact: true }).click();
-  await expect(page.locator(".origin-badge.official")).toHaveCount(0);
-  await expect(page.locator(".origin-badge.original").first()).toBeVisible();
-});
-
-test("the Settings switch hides the official items and brings them back", async ({
-  page,
-}) => {
-  await seed(page);
-  await page.getByRole("button", { name: "Settings" }).click();
-  const include = page.getByLabel("Include College Board sample items");
-  await expect(include).toBeChecked();
-  await expect(page.getByText(/^5 questions · 0 attempts/)).toBeVisible();
-  await include.uncheck();
-  await expect(page.getByText(/^3 questions · 0 attempts/)).toBeVisible();
-  await page.getByRole("button", { name: "Practice", exact: true }).click();
-  await expect(page.getByText("Max 3")).toBeVisible();
-  // The Source filter has nothing to choose between, so it is not shown.
   await page.getByText("Refine selection").click();
   await expect(page.getByText("Source", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Mathematics" }).first().click();
+  await page.getByRole("button", { name: /Start practice/ }).click();
+  await expect(page.locator(".calculator-chip")).toBeVisible();
+  await expect(page.locator(".origin-badge")).toHaveCount(0);
+});
+
+test("the Settings switch hides the original questions and brings them back", async ({
+  page,
+}) => {
+  await seed(page);
+  await page.getByRole("button", { name: "Settings" }).click();
+  const include = page.getByLabel("Include original questions");
+  await expect(include).toBeChecked();
+  // No switch for the College Board sample items, and no button to remove them.
+  await expect(
+    page.getByText("Include College Board sample items"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Remove official items/ }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/^5 questions · 0 attempts/)).toBeVisible();
+  await include.uncheck();
+  await expect(page.getByText(/^2 questions · 0 attempts/)).toBeVisible();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await expect(page.getByText("Max 2")).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(
-    page.getByLabel("Include College Board sample items"),
-  ).not.toBeChecked();
-  await page.getByLabel("Include College Board sample items").check();
+  await expect(page.getByLabel("Include original questions")).not.toBeChecked();
+  await page.getByLabel("Include original questions").check();
   await expect(page.getByText(/^5 questions · 0 attempts/)).toBeVisible();
 });
 
-test("removing the official items keeps the originals", async ({ page }) => {
+test("hiding the original questions keeps a session, without those questions", async ({
+  page,
+}) => {
   await seed(page);
+  // A session over the whole TSI bank.
+  await page.getByRole("button", { name: /Start practice/ }).click();
+  await page.getByRole("button", { name: "Exit" }).click();
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Remove official items" }).click();
+  await page.getByLabel("Include original questions").uncheck();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  // The session is still there to continue, now over the two official questions.
   await page
-    .getByRole("button", { name: "Yes, remove 2 official items" })
+    .getByRole("button", { name: /Continue|Resume/ })
+    .first()
     .click();
-  await expect(page.getByText(/^3 questions · 0 attempts/)).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Remove official items" }),
-  ).toHaveCount(0);
-  // The SAT's questions are untouched.
-  await page
-    .getByRole("group", { name: "Choose a test" })
-    .getByRole("button", { name: "Switch to SAT" })
-    .click();
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByText(/^12 questions · 0 attempts/)).toBeVisible();
+  await expect(page.getByText(/Question \d of 2/)).toBeVisible();
+  await expect(page.locator(".calculator-chip, h1").first()).toBeVisible();
 });
 
 test("each Math question opens the calculator its tag names", async ({
