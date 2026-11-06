@@ -627,6 +627,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
     ids: string[],
     systemNames: string[],
     solved: FiniteSystemResult,
+    fit?: EntryResult["fit"],
   ) => {
     Object.assign(values, solved.parameters);
     systemNames.forEach((name) => missing.delete(name));
@@ -642,7 +643,8 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
         solutions: solved.solutions,
         scalarRelation: true,
         relationKind: "values",
-        systemKind: solved.kind,
+        // A fit already prints the parameter values, so no system kind then.
+        ...(fit ? { fit } : { systemKind: solved.kind }),
         message: solved.message,
       };
     }
@@ -828,7 +830,28 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
               },
               message: "Representative fit; parameters are not unique.",
             };
-          } else storeSystem([id], names, solved);
+          } else {
+            // A unique exact solution of a `~` vector is a zero-residual fit,
+            // reported with RMSE like Desmos' regression parameters.
+            let fit: EntryResult["fit"];
+            if (solved.kind === "determined" && solved.solutions?.length === 1) {
+              const raw = evaluateAny(relation, solved.parameters);
+              const residuals = (Array.isArray(raw) ? raw : [raw]).map(
+                (value) => (Math.abs(value) <= 1e-12 ? 0 : value),
+              );
+              fit = {
+                coefficients: names.map((name) => solved.parameters[name]),
+                predict: () => NaN,
+                residuals,
+                rmse: Math.sqrt(
+                  residuals.reduce((sum, r) => sum + r * r, 0) /
+                    residuals.length,
+                ),
+                logSpace: false,
+              };
+            }
+            storeSystem([id], names, solved, fit);
+          }
           continue;
         }
         const sampleParameters = Object.fromEntries(

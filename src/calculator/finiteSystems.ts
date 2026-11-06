@@ -318,7 +318,7 @@ export interface FiniteSystemResult {
  * root isolator. No multivariable local minimum is accepted as a solution.
  * Unsupported coupled polynomials fail explicitly rather than guessing a family.
  */
-export function solveFiniteSystem(
+function solveFiniteSystemCore(
   relations: { left: Scalar; right: Scalar }[],
   names: string[],
   bounds: ParameterBounds,
@@ -854,6 +854,66 @@ export function solveFiniteSystem(
     message: hasFamily
       ? `${free.join(", ")} not uniquely determined; free solution family${branches.length > 1 ? " (including degenerate branches)" : ""}.`
       : undefined,
+  };
+}
+
+const isLetter = (name: string) => /^[A-Za-z]$/.test(name);
+
+/** `Poly` keys are strings of single-letter factors, so a multi-character
+ * unknown such as `x_1` is aliased to one unused letter on the way in and
+ * restored on the way out. Single-letter systems take the core path unchanged.
+ */
+export function solveFiniteSystem(
+  relations: { left: Scalar; right: Scalar }[],
+  names: string[],
+  bounds: ParameterBounds,
+  angle: Angle,
+): FiniteSystemResult {
+  if (names.every(isLetter))
+    return solveFiniteSystemCore(relations, names, bounds, angle);
+  const used = new Set<string>(names);
+  for (const { left, right } of relations)
+    for (const n of [...left.symbols, ...right.symbols]) used.add(n);
+  used.add("e");
+  const pool = [
+    ..."abcdfghjklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  ].filter((c) => !used.has(c));
+  const toInner = new Map<string, string>(),
+    toOuter = new Map<string, string>();
+  for (const name of [...names].sort()) {
+    const alias = isLetter(name) ? name : pool.shift();
+    if (!alias) throw complex();
+    toInner.set(name, alias);
+    toOuter.set(alias, name);
+  }
+  const rename = (s: Scalar): Scalar =>
+    scalarFromNode(
+      s.node.transform((node: MathNode) => {
+        const name = node.type === "SymbolNode" ? node.toString() : "";
+        return toInner.has(name) ? scalar(toInner.get(name)!).node : node;
+      }),
+    );
+  const back = <T>(record: Record<string, T>) =>
+    Object.fromEntries(
+      Object.entries(record).map(([k, v]) => [toOuter.get(k) ?? k, v]),
+    );
+  const inner = solveFiniteSystemCore(
+    relations.map((r) => ({ left: rename(r.left), right: rename(r.right) })),
+    names.map((n) => toInner.get(n)!),
+    Object.fromEntries(
+      Object.entries(bounds).map(([k, v]) => [toInner.get(k) ?? k, v]),
+    ),
+    angle,
+  );
+  const free = inner.free.map((n) => toOuter.get(n) ?? n).sort();
+  return {
+    ...inner,
+    parameters: back(inner.parameters),
+    solutions: inner.solutions?.map((solution) => back(solution)),
+    free,
+    representative: inner.representative && back(inner.representative),
+    message: inner.message?.replace(/^.*?(?= not uniquely)/, free.join(", ")),
+    quantity: (s) => inner.quantity(rename(s)),
   };
 }
 

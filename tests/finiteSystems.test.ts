@@ -475,3 +475,30 @@ describe("finite-system regression compatibility", () => {
     expect(nonlinearData.systemKind).toBeUndefined();
   });
 });
+
+describe("subscripted unknowns", () => {
+  const run = workspace;
+  it("solves the repeated-root Desmos regression with x_1 and y_1", () => {
+    const [a, b, c] = run(
+      "x^2+y+7=7",
+      "20x+100-y=0",
+      "[x_1^2+y_1+7,20x_1+100-y_1]~[7,0]",
+    );
+    expect(a.error).toBeUndefined();
+    expect(b.parameters).toEqual({ x: -10, y: -100 });
+    expect(c.error).toBeUndefined();
+    expect(c.parameters).toEqual({ x_1: -10, y_1: -100 });
+    expect(c.fit?.rmse).toBe(0);
+    expect(c.fit?.residuals).toEqual([0, 0]);
+  });
+  it("solves it alone and keeps multiple solutions as a system", () => {
+    const [alone] = run("[x_1^2+y_1+7,20x_1+100-y_1]~[7,0]");
+    expect(alone.parameters).toEqual({ x_1: -10, y_1: -100 });
+    const [two] = run("[x_1*y_1,x_1+y_1]~[6,5]");
+    expect(two.solutions).toEqual([
+      { x_1: 2, y_1: 3 },
+      { x_1: 3, y_1: 2 },
+    ]);
+    expect(two.fit).toBeUndefined();
+  });
+});
