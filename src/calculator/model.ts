@@ -144,3 +144,8 @@ export function tableColumns(
 }
 export const formatNumber = (n: number) =>
   Number.isFinite(n) ? roundSig(n, 10).toString() : "Undefined";
+/** "(3, 4)", or "Undefined" when either coordinate is not a number. */
+export const formatPoint = (x: number, y: number) =>
+  Number.isFinite(x) && Number.isFinite(y)
+    ? `(${formatNumber(x)}, ${formatNumber(y)})`
+    : "Undefined";

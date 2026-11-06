@@ -2,6 +2,14 @@ import type { MathNode } from "mathjs";
 
 export type Angle = "radians" | "degrees";
 export type Numeric = number | number[];
+/** A point, or a list of points stored as equal-length coordinate lists. */
+export interface PointValue {
+  kind: "point";
+  x: number | number[];
+  y: number | number[];
+}
+/** What an expression can evaluate to: numbers, lists, points, point lists. */
+export type Value = Numeric | PointValue;
 export interface Scalar {
   node: MathNode;
   symbols: Set<string>;
@@ -11,11 +19,18 @@ export interface Scalar {
     functions: Record<string, (x: number) => number>,
     angle: Angle,
   ) => number;
+  /** Numbers and number lists only; a point result throws. */
   evaluate: (
-    scope: Record<string, Numeric>,
+    scope: Record<string, Value>,
     functions: Record<string, (x: number) => number>,
     angle: Angle,
   ) => Numeric;
+  /** Like `evaluate`, but may also return a point or a list of points. */
+  evaluateValue: (
+    scope: Record<string, Value>,
+    functions: Record<string, (x: number) => number>,
+    angle: Angle,
+  ) => Value;
 }
 export interface Point {
   x: number;

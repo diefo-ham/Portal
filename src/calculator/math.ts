@@ -7,7 +7,17 @@ import type { MathNode } from "mathjs";
 import { parseListRanges, rangeValues } from "./listRanges";
 import { restrictionSource } from "./restrictionSyntax";
 import { piecewiseSource } from "./piecewise";
-import type { Numeric, Scalar } from "@/src/types/calculator";
+import {
+  isPoint,
+  lowerPoints,
+  makePoint,
+  pickPoints,
+  pointComponent,
+  pointFunction,
+  pointListOf,
+  pointOperator,
+} from "./points";
+import type { Numeric, Scalar, Value } from "@/src/types/calculator";
 const { parse, ConditionalNode } = create({
   parseDependencies,
   ConditionalNodeDependencies,
@@ -19,6 +29,9 @@ const constants: Record<string, number> = {
   tau: 2 * Math.PI,
 };
 const builtin = new Set([
+  "point",
+  "distance",
+  "midpoint",
   "sqrt",
   "cbrt",
   "nthroot",
@@ -193,6 +206,8 @@ export const normalize = (text: string) => {
  * interpreter executes numeric operations: no eval, assignments, properties,
  * arbitrary calls, units, matrices, or unbounded recursion enter evaluation.
  */
+/** Text grammar lowering shared by every parse site: points, then list ranges. */
+const lower = (source: string) => parseListRanges(lowerPoints(source));
 export function scalar(text: string): Scalar {
   if (text.length > 1200)
     throw new Error("Keep expressions under 1,200 characters.");
@@ -209,29 +224,28 @@ export function scalar(text: string): Scalar {
     const condition = (list: { left: string; op: string; right: string }[]) =>
       list
         .map(
-          ({ left, op, right }) =>
-            `((${parseListRanges(left)})${op}(${parseListRanges(right)}))`,
+          ({ left, op, right }) => `((${lower(left)})${op}(${lower(right)}))`,
         )
         .join("*");
     let node = parse(
-      piecewise.fallback ? parseListRanges(piecewise.fallback) : "0/0",
+      piecewise.fallback ? lower(piecewise.fallback) : "0/0",
     ) as MathNode;
     for (const clause of [...piecewise.clauses].reverse())
       node = new ConditionalNode(
         parse(condition(clause.conditions)),
-        parse(parseListRanges(clause.value)),
+        parse(lower(clause.value)),
         node,
       );
     return scalarFromNode(node);
   }
   const { body, comparisons } = restrictionSource(normalized, "domain");
-  let node = parse(parseListRanges(body)) as MathNode;
+  let node = parse(lower(body)) as MathNode;
   try {
     // Each comparison guards the entire expression. Conditional AST nodes
     // preserve the domain through structural substitution of named functions.
     for (const { left, op, right } of [...comparisons].reverse())
       node = new ConditionalNode(
-        parse(`(${parseListRanges(left)})${op}(${parseListRanges(right)})`),
+        parse(`(${lower(left)})${op}(${lower(right)})`),
         node,
         parse("0/0"),
       );
@@ -244,6 +258,9 @@ export function scalar(text: string): Scalar {
     throw error;
   }
 }
+
+const isAxis = (n: any): boolean =>
+  n?.type === "ConstantNode" && (n.value === "x" || n.value === "y");
 
 /** Revalidate expanded ASTs without serializing domain nodes back to text. */
 export function scalarFromNode(node: MathNode): Scalar {
@@ -287,7 +304,9 @@ export function scalarFromNode(node: MathNode): Scalar {
         if (!a.index || a.index.dimensions.length !== 1)
           throw new Error("Use one index, like L[2].");
         check(a.object, depth + 1);
-        check(a.index.dimensions[0], depth + 1);
+        // P.x and P.y parse as an index with a string constant.
+        if (!isAxis(a.index.dimensions[0]))
+          check(a.index.dimensions[0], depth + 1);
         break;
       case "RangeNode":
         check(a.start, depth + 1);
@@ -341,6 +360,9 @@ export function scalarFromNode(node: MathNode): Scalar {
           throw new Error("Use a supported numeric function.");
         if (!builtin.has(a.fn.name)) calls.add(a.fn.name);
         const acceptsTwo = [
+          "point",
+          "distance",
+          "midpoint",
           "corr",
           "join",
           "log",
@@ -360,6 +382,9 @@ export function scalarFromNode(node: MathNode): Scalar {
           throw new Error("This function takes one argument.");
         if (
           [
+            "point",
+            "distance",
+            "midpoint",
             "corr",
             "gcd",
             "lcm",
@@ -382,13 +407,13 @@ export function scalarFromNode(node: MathNode): Scalar {
     }
   };
   check(node);
-  const evaluate: Scalar["evaluate"] = (scope, functions, angle) => {
+  const evaluate: Scalar["evaluateValue"] = (scope, functions, angle) => {
     const inputAngle = angle === "degrees" ? Math.PI / 180 : 1;
     const inverseAngle = angle === "degrees" ? 180 / Math.PI : 1;
-    const visit = (n: any): Numeric => {
+    const visit = (n: any): Value => {
       if (n.type === "ConditionalNode") {
         const condition = visit(n.condition);
-        if (Array.isArray(condition))
+        if (typeof condition !== "number")
           throw new Error(
             "Domain restriction comparisons must use scalar numbers.",
           );
@@ -399,16 +424,26 @@ export function scalarFromNode(node: MathNode): Scalar {
         const v = Object.hasOwn(constants, n.name)
           ? constants[n.name]
           : scope[n.name];
-        if (typeof v !== "number" && !Array.isArray(v))
+        if (typeof v !== "number" && !Array.isArray(v) && !isPoint(v))
           throw new Error(`Define ${n.name} first.`);
         return v;
       }
       if (n.type === "ParenthesisNode") return visit(n.content);
       if (n.type === "AccessorNode") {
         const list = visit(n.object);
+        if (isAxis(n.index.dimensions[0])) {
+          if (!isPoint(list)) throw new Error("Only a point can use .x or .y.");
+          return pointComponent(list, n.index.dimensions[0].value);
+        }
+        if (isPoint(list)) {
+          const at = visit(n.index.dimensions[0]);
+          if (isPoint(at)) throw new Error("Index a list with numbers.");
+          return pickPoints(list, at);
+        }
         if (!Array.isArray(list))
           throw new Error("Only a list can be indexed.");
         const index = visit(n.index.dimensions[0]);
+        if (isPoint(index)) throw new Error("Index a list with numbers.");
         const pick = (i: number) =>
           Number.isInteger(i) && i >= 1 && i <= list.length ? list[i - 1] : NaN;
         return Array.isArray(index) ? index.map(pick) : pick(index);
@@ -421,24 +456,26 @@ export function scalarFromNode(node: MathNode): Scalar {
           n.step ? visit(n.step) : Number(last) >= Number(first) ? 1 : -1,
           last,
         ];
-        if (values.some(Array.isArray))
+        if (values.some((v) => typeof v !== "number"))
           throw new Error("Range endpoints must be scalar numbers.");
         return rangeValues(...(values as [number, number, number]));
       }
-      if (n.type === "ArrayNode")
-        return n.items.map((item: MathNode) => {
-          const value = visit(item);
+      if (n.type === "ArrayNode") {
+        const items = n.items.map((item: MathNode) => visit(item));
+        if (items.some(isPoint)) return pointListOf(items);
+        return items.map((value: Value) => {
           if (Array.isArray(value))
             throw new Error("Nested lists are not supported.");
-          return value;
+          return value as number;
         });
+      }
       if (
         n.type === "FunctionNode" &&
         (n.fn.name === "sum" || n.fn.name === "prod")
       ) {
         const first = visit(n.args[2]),
           last = visit(n.args[3]);
-        if (Array.isArray(first) || Array.isArray(last))
+        if (typeof first !== "number" || typeof last !== "number")
           throw new Error("Sum limits must be single numbers.");
         if (!Number.isInteger(first) || !Number.isInteger(last)) return NaN;
         if (last - first > 10000)
@@ -451,7 +488,7 @@ export function scalarFromNode(node: MathNode): Scalar {
           for (let i = first; i <= last; i++) {
             scope[index] = i;
             const term = visit(n.args[0]);
-            if (Array.isArray(term))
+            if (typeof term !== "number")
               throw new Error("Sum terms must be single numbers.");
             total = n.fn.name === "sum" ? total + term : total * term;
             if (!Number.isFinite(total)) return NaN;
@@ -462,7 +499,23 @@ export function scalarFromNode(node: MathNode): Scalar {
         }
         return total;
       }
-      const args = n.args.map(visit) as Numeric[];
+      const rawArgs = n.args.map(visit);
+      const callName: string | undefined =
+        n.type === "FunctionNode" ? n.fn.name : undefined;
+      if (callName === "point") {
+        if (rawArgs.some(isPoint))
+          throw new Error("A point's coordinates must be numbers.");
+        return makePoint(rawArgs[0] as Numeric, rawArgs[1] as Numeric);
+      }
+      if (
+        rawArgs.some(isPoint) ||
+        callName === "distance" ||
+        callName === "midpoint"
+      )
+        return n.type === "OperatorNode"
+          ? pointOperator(n.op, rawArgs)
+          : pointFunction(callName!, rawArgs);
+      const args = rawArgs as Numeric[];
       const operation = (args: number[]): number => {
         if (args.some((n) => !Number.isFinite(n))) return NaN;
         if (n.type === "OperatorNode") {
@@ -705,19 +758,31 @@ export function scalarFromNode(node: MathNode): Scalar {
       );
     };
     const result = visit(node);
-    return Array.isArray(result)
+    return isPoint(result) || Array.isArray(result)
       ? result
       : Number.isFinite(result)
         ? result
         : NaN;
   };
-  const value: Scalar["value"] = (scope, functions, angle) => {
+  const numeric: Scalar["evaluate"] = (scope, functions, angle) => {
     const result = evaluate(scope, functions, angle);
+    if (isPoint(result)) throw new Error("This expression produces a point.");
+    return result;
+  };
+  const value: Scalar["value"] = (scope, functions, angle) => {
+    const result = numeric(scope, functions, angle);
     if (Array.isArray(result))
       throw new Error("This expression produces a list.");
     return result;
   };
-  return { node, symbols, calls, value, evaluate };
+  return {
+    node,
+    symbols,
+    calls,
+    value,
+    evaluate: numeric,
+    evaluateValue: evaluate,
+  };
 }
 export const isBuiltin = (name: string) =>
   builtin.has(name) ||
@@ -794,6 +859,8 @@ export function scalarTex(s: Scalar): string {
               : `${n.start.toTex(options)}+${n.step?.toTex(options) ?? "1"}`;
         return `\\left[${unbox(n.start).toTex(options)}${second ? `,${second}` : ""}\\ldots ${unbox(n.end).toTex(options)}\\right]`;
       }
+      if (n.type === "FunctionNode" && n.fn.name === "point")
+        return `\\left(${n.args.map((arg: MathNode) => arg.toTex(options)).join(",")}\\right)`;
       if (n.type === "ArrayNode")
         return `\\left[${n.items.map((item: MathNode) => item.toTex(options)).join(",")}\\right]`;
       if (
@@ -827,6 +894,8 @@ export function scalarTex(s: Scalar): string {
           "count",
           "total",
           "stats",
+          "distance",
+          "midpoint",
         ].includes(n.fn.name)
       )
         return `\\operatorname{${n.fn.name === "ncr" ? "nCr" : n.fn.name === "npr" ? "nPr" : n.fn.name}}\\left(${n.args.map((arg: MathNode) => arg.toTex(options)).join(",")}\\right)`;

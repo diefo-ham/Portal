@@ -9,7 +9,7 @@ and graph inspection.
 
 `finiteSystems.ts` supplies bounded rational-polynomial elimination, separate
 from `regression.ts` and the UI. `workspace.ts` routes connected scalar `=`
-equations in unknown single-letter parameters to it. Ordinary acyclic named
+equations in unknown single-letter parameters (or subscripted `x_n`/`y_n`) to it. Ordinary acyclic named
 definitions and functions are expanded using the existing dependency machinery.
 Repeated symbolic assignments and nonlinear cyclic assignments can form systems;
 ordinary circular affine definitions continue to report their existing errors.
@@ -138,6 +138,16 @@ and line/quadratic captures were visually checked against their reported pairs.
 Synthetic browser
 captures stay in ignored `private-data/inspection/`; no real question exports or
 browser profiles are added.
+
+## Subscripted unknowns
+
+The polynomial algebra keys terms by single letters, so `solveFiniteSystem` aliases
+every multi-character unknown such as `x_1` to an unused letter before eliminating,
+and maps solutions, bounds, free parameters and derived quantities back afterwards.
+`[x_1^2+y_1+7,20x_1+100-y_1]~[7,0]` therefore solves like the same system in `a`
+and `b`, including its repeated root. When a `~` system has exactly one exact
+solution it is reported as a fit with `RMSE = 0` and its residuals, matching
+Desmos' regression parameters; systems with several solutions still list them all.
 
 ## Concrete limits
 
