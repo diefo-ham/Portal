@@ -96,6 +96,8 @@ export interface PrepareReport {
   conflicts: ReturnType<typeof classifyExports>["conflicts"];
   /** PDFs that were chosen but are not question exports for this test, and so were set aside. */
   ignored?: string[];
+  /** Things worth a look that did not stop a question being imported (e.g. an item with no Source line). */
+  warnings?: string[];
   quarantined: QuarantinedQuestion[];
   uniqueSourceIds: number;
   importedQuestions: number;
@@ -103,6 +105,9 @@ export interface PrepareReport {
     section: Record<string, number>;
     testStatus: Record<string, number>;
     difficulty: Record<string, number>;
+    /** TSI only: Official / Original, and the calculator tier of each question. */
+    origin?: Record<string, number>;
+    calculator?: Record<string, number>;
   };
 }
 

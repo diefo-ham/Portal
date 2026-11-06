@@ -12,11 +12,15 @@ import { clamp } from "@/src/utils/calculator";
 import { writeJson } from "@/src/utils/storage";
 import {
   clampGeometry,
+  compactGeometryKey,
   defaultGeometry,
   geometryKey,
   readGeometry,
 } from "./windowGeometry";
 import { emptyCalculator } from "./model";
+import { SimpleCalculator } from "./SimpleCalculator";
+import { emptyCalc, type CalcState } from "../core/simpleCalculator";
+import type { CalculatorTier } from "../core/model";
 import "./layout.scss";
 import type { CalculatorState, WindowGeometry } from "@/src/types/calculator";
 const Surface = lazy(() => import("./CalculatorSurface"));
@@ -33,13 +37,21 @@ export function CalculatorPanel({
   onChange,
   onClose,
   autoFocus = true,
+  tier = "graphing",
 }: {
   state: CalculatorState;
   onChange: (state: CalculatorState) => void;
   onClose: () => void;
   autoFocus?: boolean;
+  /** Which calculator this question offers; the Basic and Square-root ones are small keypads. */
+  tier?: CalculatorTier;
 }) {
-  const [geometry, setGeometry] = useState(() => readGeometry(viewport()));
+  // The keypad calculators keep their little state here: it is not saved with the session.
+  const [simple, setSimple] = useState<CalcState>(emptyCalc);
+  const compact = tier !== "graphing";
+  const [geometry, setGeometry] = useState(() =>
+    readGeometry(viewport(), compact),
+  );
   const [narrow, setNarrow] = useState(() => innerWidth < 620);
   const [moving, setMoving] = useState(false);
   const drag = useRef<{
@@ -62,8 +74,8 @@ export function CalculatorPanel({
   }, []);
   useEffect(() => {
     if (narrow || moving) return;
-    writeJson(geometryKey, geometry);
-  }, [geometry, narrow, moving]);
+    writeJson(compact ? compactGeometryKey : geometryKey, geometry);
+  }, [geometry, narrow, moving, compact]);
   const start = (e: PointerEvent<HTMLElement>, kind: string) => {
     if (narrow || e.button !== 0) return;
     e.preventDefault();
@@ -108,6 +120,10 @@ export function CalculatorPanel({
     setMoving(false);
   };
   const clear = () => {
+    if (tier !== "graphing") {
+      setSimple(emptyCalc());
+      return;
+    }
     onChange(emptyCalculator());
     requestAnimationFrame(() =>
       document
@@ -171,7 +187,13 @@ export function CalculatorPanel({
           onLostPointerCapture={stop}
           onKeyDown={(e) => keyboardGeometry(e, "move")}
         >
-          <h2>Calculator</h2>
+          <h2>
+            {tier === "basic"
+              ? "Basic calculator"
+              : tier === "sqrt"
+                ? "Square root calculator"
+                : "Calculator"}
+          </h2>
           <span className="calc-shortcut-note">{"\\  Toggle calculator"}</span>
         </div>
         <button className="text-button" onClick={clear}>
@@ -181,7 +203,7 @@ export function CalculatorPanel({
           className="text-button"
           aria-label="Reset calculator window"
           title="Restore default size and position"
-          onClick={() => set(defaultGeometry(viewport()))}
+          onClick={() => set(defaultGeometry(viewport(), compact))}
         >
           Reset window
         </button>
@@ -194,9 +216,18 @@ export function CalculatorPanel({
         hold Shift for larger steps. Reset window restores the size and
         position.
       </span>
-      <Suspense fallback={<p className="small muted">Opening calculator…</p>}>
-        <Surface state={state} onChange={onChange} autoFocus={autoFocus} />
-      </Suspense>
+      {tier === "graphing" ? (
+        <Suspense fallback={<p className="small muted">Opening calculator…</p>}>
+          <Surface state={state} onChange={onChange} autoFocus={autoFocus} />
+        </Suspense>
+      ) : (
+        <SimpleCalculator
+          tier={tier}
+          state={simple}
+          onChange={setSimple}
+          autoFocus={autoFocus}
+        />
+      )}
       {!narrow &&
         (
           [

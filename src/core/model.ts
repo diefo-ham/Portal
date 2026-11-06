@@ -1,10 +1,15 @@
 import type { CalculatorState } from "@/src/types/calculator";
 /** Which test a question, attempt or session belongs to. Absent means SAT. */
-export type Assessment = "SAT" | "PAA";
+export type Assessment = "SAT" | "PAA" | "TSI";
 export type SatSection = "math" | "reading-writing";
 export type PaaSection = "lectura" | "redaccion" | "matematicas" | "ingles";
+export type TsiSection = "tsi-elar" | "tsi-math";
 /** A part of a test. Ids are unique across assessments. */
-export type Section = SatSection | PaaSection;
+export type Section = SatSection | PaaSection | TsiSection;
+/** Whether a TSI item is a College Board sample item or an original practice item. */
+export type QuestionOrigin = "official" | "original";
+/** The on-screen calculator the real TSIA2 offers for an item. */
+export type CalculatorTier = "basic" | "sqrt" | "graphing";
 export type TestStatus = "active" | "inactive" | "unknown";
 export type AnswerStatus = "incorrect" | "unanswered" | "completed";
 export type Difficulty = "easy" | "medium" | "hard";
@@ -26,6 +31,10 @@ export interface Question {
   /** The skill as the source printed it, when `skill` is a grouped label (PAA). */
   skillDetail?: string;
   difficulty?: Difficulty;
+  /** TSI only: College Board sample item or original practice item. */
+  origin?: QuestionOrigin;
+  /** TSI Math only: which on-screen calculator the item allows. Absent means none. */
+  calculator?: CalculatorTier;
   passage?: string;
   /** Questions that share one reading carry the same group id; sessions keep them together. */
   passageGroup?: string;
@@ -76,6 +85,8 @@ export interface Filters {
   statuses?: AnswerStatus[];
   /** Empty means unrestricted. The legacy single difficulty remains readable. */
   difficulties?: Difficulty[];
+  /** TSI only. Empty means both Official and Original items. */
+  origins?: QuestionOrigin[];
   difficulty: string;
   status: string;
   bookmark: string;
@@ -94,6 +105,7 @@ export const defaultFilters: Filters = {
   search: "",
   statuses: ["unanswered"],
   difficulties: [],
+  origins: [],
 };
 /** The separately timed parts of the PAA: Lectura y Redacción, Matemáticas, Inglés. */
 export type SegmentKey = "lectura-redaccion" | "matematicas" | "ingles";

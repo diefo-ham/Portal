@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { assessmentInfo } from "../../core/assessments";
+import { ASSESSMENTS, assessmentInfo } from "../../core/assessments";
 import type { Assessment } from "../../core/model";
 import { AssessmentProvider, translator } from "../i18n";
 import { AppHeader, type AppHeaderProps } from "./AppHeader";
@@ -13,10 +13,9 @@ const setup = (
   overrides: Partial<AppHeaderProps> = {},
   assessment: Assessment = "SAT",
 ) => {
-  const other: Assessment = assessment === "SAT" ? "PAA" : "SAT";
   const props: AppHeaderProps = {
     info: assessmentInfo(assessment),
-    other: assessmentInfo(other),
+    assessments: ASSESSMENTS.map(assessmentInfo),
     page: "home",
     testOpen: false,
     onHome: vi.fn(),
@@ -49,24 +48,39 @@ describe("AppHeader", () => {
     expect(props.onHome).toHaveBeenCalledOnce();
   });
 
-  it("offers a switch to the other test", async () => {
+  it("lists every test, marks the current one and switches to another", async () => {
     const { props, user } = setup();
-    const toggle = screen.getByRole("button", {
-      name: "Test: SAT. Switch to PAA",
-    });
-    expect(toggle.getAttribute("title")).toBe("Switch to PAA");
-    expect(toggle.textContent).toBe("SAT ⇄");
-    await user.click(toggle);
+    const group = screen.getByRole("group", { name: "Choose a test" });
+    expect(
+      within(group)
+        .getAllByRole("button")
+        .map((b) => b.textContent),
+    ).toEqual(["SAT", "PAA", "TSI"]);
+    expect(
+      within(group)
+        .getByRole("button", { name: "Test: SAT" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    await user.click(
+      within(group).getByRole("button", { name: "Switch to PAA" }),
+    );
     expect(props.onSwitchAssessment).toHaveBeenCalledWith("PAA");
+    await user.click(
+      within(group).getByRole("button", { name: "Switch to TSI" }),
+    );
+    expect(props.onSwitchAssessment).toHaveBeenCalledWith("TSI");
   });
 
-  it("switches back to the SAT from the PAA", async () => {
+  it("does not switch when the current test is pressed", async () => {
+    const { props, user } = setup();
+    await user.click(screen.getByRole("button", { name: "Test: SAT" }));
+    expect(props.onSwitchAssessment).not.toHaveBeenCalled();
+  });
+
+  it("follows the PAA's Spanish and switches back to the SAT", async () => {
     const { props, user } = setup({}, "PAA");
     expect(screen.getByRole("button", { name: /PAA Study/ })).toBeTruthy();
-    const label = translator("PAA")("Test: {name}. Switch to {other}", {
-      name: "PAA",
-      other: "SAT",
-    });
+    const label = translator("PAA")("Switch to {other}", { other: "SAT" });
     await user.click(screen.getByRole("button", { name: label }));
     expect(props.onSwitchAssessment).toHaveBeenCalledWith("SAT");
   });

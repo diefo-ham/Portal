@@ -72,21 +72,20 @@ test("a fresh browser opens the SAT, and the toggle swaps to the PAA and back", 
   await expect(
     page.getByRole("heading", { name: "What would you like to work on?" }),
   ).toBeVisible();
-  const toggle = page.getByRole("button", {
-    name: "Test: SAT. Switch to PAA",
-  });
-  await expect(toggle).toHaveText("SAT ⇄");
-  await toggle.click();
+  const switcher = page.getByRole("group", { name: "Choose a test" });
+  await expect(switcher).toHaveText("SATPAATSI");
+  await expect(
+    switcher.getByRole("button", { name: "Test: SAT" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await switcher.getByRole("button", { name: "Switch to PAA" }).click();
   await expect(page).toHaveURL(/#\/paa$/);
   await expect(
     page.getByRole("heading", { name: "¿En qué quieres trabajar?" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Prueba: PAA. Cambiar a SAT" }),
-  ).toHaveText("PAA ⇄");
-  await page
-    .getByRole("button", { name: "Prueba: PAA. Cambiar a SAT" })
-    .click();
+    page.getByRole("button", { name: "Prueba: PAA" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Cambiar a SAT" }).click();
   await expect(
     page.getByRole("heading", { name: "What would you like to work on?" }),
   ).toBeVisible();

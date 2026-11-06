@@ -17,6 +17,13 @@ export interface PanelPlan {
   /** In points, origin at the top-left of the page. */
   rect: Box;
   alt: string;
+  /** Places on the page (points) to paint white, such as a printed calculator tag. */
+  mask?: Box[];
+}
+
+export interface CropOptions {
+  /** Phrases to paint over in the question image only (e.g. "[basic]"). */
+  maskPhrases?: readonly string[];
 }
 
 /** Margin kept inside the page edges, in points. */
@@ -33,6 +40,7 @@ export function planCrops(
   record: SourceRecord,
   pages: readonly PageLayout[],
   language: "en" | "es" = "en",
+  options: CropOptions = {},
 ): PanelPlan[] {
   if (pages.length !== record.pages.length)
     throw new Error("Page layouts do not match the question's pages");
@@ -58,16 +66,28 @@ export function planCrops(
     });
     if (!foundKey) {
       const questionEnd = boundary ? boundary.y0 - 1 : end;
-      if (questionEnd > start + 2)
+      if (questionEnd > start + 2) {
+        const area = rect(start, questionEnd);
+        const mask = (options.maskPhrases ?? [])
+          .flatMap((phrase) => findPhrase(page, phrase))
+          .filter(
+            (box) =>
+              box.y0 >= area.y0 - 1 &&
+              box.y1 <= area.y1 + 1 &&
+              box.x0 >= area.x0 &&
+              box.x1 <= area.x1,
+          );
         plans.push({
           kind: "question",
           page: pageNumber,
-          rect: rect(start, questionEnd),
+          rect: area,
+          ...(mask.length ? { mask } : {}),
           alt:
             language === "es"
               ? `Pregunta ${record.id}, página ${pageNumber} del original. El diseño original incluye las opciones de respuesta.`
               : `Question ${record.id}, source page ${pageNumber}. Original layout includes any answer choices.`,
         });
+      }
     }
     if (boundary) {
       if (foundKey) throw new Error("Multiple visual answer key boundaries");

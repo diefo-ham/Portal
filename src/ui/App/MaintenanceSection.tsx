@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { StudyData } from "../../core/model";
 import { ClearData } from "../ClearData";
 import { PdfManager } from "../PdfManager";
@@ -16,6 +17,51 @@ export type MaintenanceSectionProps = {
   onReset: (clearBookmarks: boolean) => Promise<void>;
   onRemoveQuestions: () => Promise<void>;
   onEraseEverything: () => Promise<void>;
+  /** TSI: the College Board sample items stored on this device, and how to remove them. */
+  official?: { count: number; onRemove: () => Promise<void> };
+};
+
+/** Takes the Official (College Board sample) items off the device, after one confirmation. */
+const RemoveOfficial = ({
+  count,
+  busy,
+  onRemove,
+}: {
+  count: number;
+  busy: boolean;
+  onRemove: () => Promise<void>;
+}) => {
+  const t = useT();
+  const [asking, setAsking] = useState(false);
+  return (
+    <section className="utility remove-official">
+      <h3>{t("College Board sample items")}</h3>
+      <p className="small muted">
+        {t(
+          "{n} items labelled Official are stored here. Removing them keeps your original items, your answers and your bookmarks. Add the PDFs again to bring them back.",
+          { n: count },
+        )}
+      </p>
+      {asking ? (
+        <div className="confirm-row">
+          <button
+            className="danger"
+            disabled={busy}
+            onClick={() => void onRemove().finally(() => setAsking(false))}
+          >
+            {t("Yes, remove {n} official items", { n: count })}
+          </button>
+          <button disabled={busy} onClick={() => setAsking(false)}>
+            {t("Cancel")}
+          </button>
+        </div>
+      ) : (
+        <button disabled={busy || !count} onClick={() => setAsking(true)}>
+          {t("Remove official items")}
+        </button>
+      )}
+    </section>
+  );
 };
 
 /** Your questions: the PDFs, resetting progress, removing data, and what is stored. */
@@ -29,6 +75,7 @@ export const MaintenanceSection = ({
   onReset,
   onRemoveQuestions,
   onEraseEverything,
+  official,
 }: MaintenanceSectionProps) => {
   const t = useT();
   return (
@@ -50,6 +97,13 @@ export const MaintenanceSection = ({
           onRemove={onRemovePdf}
         />
       </div>
+      {official && official.count > 0 && (
+        <RemoveOfficial
+          count={official.count}
+          busy={busy}
+          onRemove={official.onRemove}
+        />
+      )}
       <ResetProgress
         busy={busy}
         archiveDate={archiveDate}

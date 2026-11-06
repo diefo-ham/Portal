@@ -1,4 +1,5 @@
 import {
+  ASSESSMENTS,
   assessmentInfo,
   assessmentOfSection,
   isAssessment,
@@ -31,22 +32,26 @@ export function parseQuestions(input: unknown): Question[] {
       return fail("id must be unique, nonempty, and safe.");
     ids.add(raw.id);
     if (raw.assessment != null && !isAssessment(raw.assessment))
-      return fail("assessment must be SAT or PAA.");
+      return fail("assessment must be SAT, PAA or TSI.");
     const assessment = raw.assessment ?? "SAT";
     const part = assessmentOfSection(String(raw.section));
     if (!part)
       return fail(
-        "section must be math or reading-writing (SAT), or lectura, redaccion, matematicas or ingles (PAA).",
+        "section must be math or reading-writing (SAT), lectura, redaccion, matematicas or ingles (PAA), or tsi-elar or tsi-math (TSI).",
       );
     if (part !== assessment)
       return fail(`section ${raw.section} does not belong to ${assessment}.`);
     // IDs carry their test, so one test's questions can never overwrite another's.
     const prefix = assessmentInfo(assessment).idPrefix;
-    if (prefix ? !raw.id.startsWith(prefix) : raw.id.startsWith("paa-"))
+    const rawId: string = raw.id;
+    const foreign = ASSESSMENTS.map((id) => assessmentInfo(id).idPrefix).find(
+      (other) => other && other !== prefix && rawId.startsWith(other),
+    );
+    if (prefix ? !raw.id.startsWith(prefix) : foreign)
       return fail(
         prefix
           ? `${assessment} question IDs must start with "${prefix}".`
-          : 'only PAA question IDs may start with "paa-".',
+          : `only ${ASSESSMENTS.find((id) => assessmentInfo(id).idPrefix === foreign)} question IDs may start with "${foreign}".`,
       );
     if (!text(raw.stem)) return fail("stem is required.");
     const q: Question = {
@@ -76,6 +81,26 @@ export function parseQuestions(input: unknown): Question[] {
       if (!["easy", "medium", "hard"].includes(String(raw.difficulty)))
         return fail("invalid difficulty.");
       q.difficulty = raw.difficulty as Question["difficulty"];
+    }
+    if (raw.origin != null) {
+      if (
+        assessment !== "TSI" ||
+        !["official", "original"].includes(String(raw.origin))
+      )
+        return fail(
+          "origin must be official or original, and only TSI questions have one.",
+        );
+      q.origin = raw.origin as Question["origin"];
+    }
+    if (raw.calculator != null) {
+      if (
+        assessment !== "TSI" ||
+        !["basic", "sqrt", "graphing"].includes(String(raw.calculator))
+      )
+        return fail(
+          "calculator must be basic, sqrt or graphing, and only TSI questions have one.",
+        );
+      q.calculator = raw.calculator as Question["calculator"];
     }
     if (raw.testStatus != null) {
       if (!["active", "inactive", "unknown"].includes(String(raw.testStatus)))
@@ -264,6 +289,8 @@ function contentKey(q: Question) {
     q.skill,
     q.skillDetail,
     q.difficulty,
+    q.origin,
+    q.calculator,
     q.passage,
     q.passageGroup,
     q.stem,

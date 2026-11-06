@@ -8,9 +8,10 @@ import { defaultFilters } from "../core/model";
 import { latestAttempt } from "../core/practice";
 import { DocumentPanels } from "./DocumentPanels";
 import { Filters, sectionName } from "./Filters";
+import { assessmentInfo } from "../core/assessments";
 import { useAssessment, useT } from "./i18n";
+import { OriginBadge } from "./QuestionBadges";
 import type { Mutate } from "@/src/types/ui";
-
 
 export type BrowseProps = {
   data: StudyData;
@@ -108,7 +109,9 @@ export const Browse = ({
             <button
               className={marked ? "bookmark selected" : "bookmark"}
               aria-pressed={marked}
-              aria-label={marked ? t("Remove bookmark") : t("Bookmark question")}
+              aria-label={
+                marked ? t("Remove bookmark") : t("Bookmark question")
+              }
               title={marked ? t("Remove bookmark") : t("Bookmark question")}
               onClick={() => void toggleBookmark(selected)}
             >
@@ -152,6 +155,7 @@ export const Browse = ({
             </>
           )}
           <div className="browse-metadata">
+            <OriginBadge question={selected} />
             <span>
               {selected.skill || t("Skill unspecified")}
               {selected.skillDetail ? ` · ${selected.skillDetail}` : ""}
@@ -168,7 +172,7 @@ export const Browse = ({
                   : t("Latest result: incorrect")
                 : t("No recorded answer")}
             </span>
-            {assessment !== "PAA" && (
+            {assessmentInfo(assessment).protectedTests && (
               <span>Practice-test status: {selected.testStatus}</span>
             )}
             {selected.sourceId && (
@@ -256,7 +260,7 @@ export const Browse = ({
                 {t("Matching questions")}{" "}
                 <span className="count">{filtered.length}</span>
               </h2>
-              {assessment !== "PAA" && (
+              {assessmentInfo(assessment).protectedTests && (
                 <p className="small muted">
                   {filters.active === "hide"
                     ? "Active practice-test questions are protected."
@@ -305,6 +309,7 @@ export const Browse = ({
                           ? t(question.difficulty)
                           : t("Unspecified")}
                       </span>
+                      <OriginBadge question={question} />
                     </span>
                     <span className="row-arrow">↗</span>
                   </button>

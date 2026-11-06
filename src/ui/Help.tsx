@@ -48,8 +48,131 @@ export const ShortcutHelp = () => {
 };
 
 export const Help = () => {
-  return useAssessment() === "PAA" ? <PaaHelp /> : <SatHelp />;
+  const assessment = useAssessment();
+  return assessment === "PAA" ? (
+    <PaaHelp />
+  ) : assessment === "TSI" ? (
+    <TsiHelp />
+  ) : (
+    <SatHelp />
+  );
 };
+
+function TsiHelp() {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const close = () => dialog.current?.close();
+  return (
+    <>
+      <button
+        ref={trigger}
+        className="text-button help-link"
+        aria-label="Help and keyboard shortcuts"
+        onClick={() => dialog.current?.showModal()}
+      >
+        Help
+      </button>
+      <dialog
+        ref={dialog}
+        className="practice-dialog help-dialog"
+        aria-labelledby="help-title"
+        onClose={() => trigger.current?.focus()}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) close();
+        }}
+      >
+        <div className="dialog-heading">
+          <h2 id="help-title">Using TSI Study</h2>
+          <button aria-label="Close help" onClick={close}>
+            ×
+          </button>
+        </div>
+        <div className="help-content">
+          <section className="help-overview" aria-label="TSI Study overview">
+            <p>
+              TSI Study practises the two tests of the TSIA2, ELAR (reading and
+              writing together) and Mathematics. Start a focused set, return to
+              what you missed, or browse the whole bank. There is no clock and
+              no score: you work at your own pace.
+            </p>
+            <dl>
+              <div>
+                <dt>Practice</dt>
+                <dd>Choose a test, a domain or a skill, and begin.</dd>
+              </div>
+              <div>
+                <dt>Review</dt>
+                <dd>
+                  Return to your mistakes, what you left unanswered, and your
+                  bookmarks.
+                </dd>
+              </div>
+              <div>
+                <dt>Browse</dt>
+                <dd>Search and open questions one at a time.</dd>
+              </div>
+            </dl>
+          </section>
+          <details>
+            <summary>Official and Original questions</summary>
+            <p>
+              Each question is labelled Official (a College Board sample
+              question) or Original (written for this portal). Use the Source
+              filter to practise one kind. In Settings you can switch off
+              &ldquo;Include College Board sample items&rdquo; to hide the
+              Official ones without deleting anything, or remove them from this
+              device.
+            </p>
+          </details>
+          <details>
+            <summary>Reading sets</summary>
+            <p>
+              Reading questions that share a passage are kept together, in their
+              original order. Paired passages and numbered sentences are shown
+              as printed, and in sentence questions the underlined part stays
+              underlined.
+            </p>
+          </details>
+          <details>
+            <summary>Calculators</summary>
+            <p>
+              The real TSIA2 gives one on-screen calculator for each Math
+              question: Basic (add, subtract, multiply, divide), Square root
+              (the same, plus a square-root key) or Graphing. This portal does
+              the same: the chip beside the domain names the calculator for that
+              question, and the Calculator button (or the \ key) opens it. They
+              are modelled on the features College Board describes, not copied
+              from its software; the Basic and Square-root ones carry out each
+              operation as you press the next, like a pocket calculator.
+            </p>
+          </details>
+          <details>
+            <summary>Your progress</summary>
+            <p>
+              The portal shows the percent of answers you got right, by test,
+              domain and skill. It does not show a TSI score or a pass or fail:
+              the real TSIA2 adapts to each student and College Board publishes
+              no way to convert practice answers into a score.
+            </p>
+          </details>
+          <details>
+            <summary>Keyboard shortcuts</summary>
+            <ShortcutHelp />
+          </details>
+          <details>
+            <summary>Your data</summary>
+            <p>
+              Everything is stored in this browser and works offline. In
+              Settings you can add your question PDFs, reset TSI progress or
+              remove the questions. SAT, PAA and TSI progress are kept
+              separately.
+            </p>
+          </details>
+        </div>
+      </dialog>
+    </>
+  );
+}
 
 function PaaHelp() {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -370,11 +493,11 @@ function SatHelp() {
               Choose Add your question PDFs and drop all your PDFs into the
               window that opens: the four SAT exports (read_write_active,
               read_write_inactive, math_active and math_inactive) and your PAA
-              export. They are sorted automatically, read in this browser,
-              never uploaded, and the whole set takes about 5 to 10 minutes.
-              Active questions are marked automatically from the files and stay
-              hidden by default. Settings lists every PDF you added and lets
-              you remove one.
+              export. They are sorted automatically, read in this browser, never
+              uploaded, and the whole set takes about 5 to 10 minutes. Active
+              questions are marked automatically from the files and stay hidden
+              by default. Settings lists every PDF you added and lets you remove
+              one.
             </p>
             <p>
               Reset study progress clears attempts, sessions, and Practice Test

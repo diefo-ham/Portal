@@ -5,7 +5,12 @@
  */
 import type { Box } from "./layout.ts";
 import type { PanelPlan } from "./crops.ts";
-import { contentRows, trimWhite, type RasterImage } from "./raster.ts";
+import {
+  contentRows,
+  paintOver,
+  trimWhite,
+  type RasterImage,
+} from "./raster.ts";
 
 /** One image of a question, in the shape the study data already uses. */
 export interface Panel {
@@ -57,11 +62,12 @@ export async function buildPanel(
   renderer: PanelRenderer,
   store: PanelStore,
 ): Promise<Panel> {
-  return storePanel(
-    plan,
-    trimWhite(await renderer.render(plan.page, plan.rect)),
-    store,
+  const raw = paintOver(
+    await renderer.render(plan.page, plan.rect),
+    plan.rect,
+    plan.mask ?? [],
   );
+  return storePanel(plan, trimWhite(raw), store);
 }
 
 export async function buildPanels(
@@ -73,7 +79,11 @@ export async function buildPanels(
   const rendered: { plan: PanelPlan; image: RasterImage; blank: boolean }[] =
     [];
   for (const plan of plans) {
-    const raw = await renderer.render(plan.page, plan.rect);
+    const raw = paintOver(
+      await renderer.render(plan.page, plan.rect),
+      plan.rect,
+      plan.mask ?? [],
+    );
     rendered.push({
       plan,
       image: trimWhite(raw),

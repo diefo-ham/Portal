@@ -139,7 +139,7 @@ describe("one question ID can never mean two tests", () => {
       "does not belong to PAA",
     );
     expect(() => parse({ ...paaQuestion("x3"), assessment: "ACT" })).toThrow(
-      "assessment must be SAT or PAA",
+      "assessment must be SAT, PAA or TSI",
     );
   });
 

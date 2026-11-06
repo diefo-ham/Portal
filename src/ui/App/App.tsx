@@ -5,6 +5,7 @@ import {
   isAssessment,
   scopeStudyData,
 } from "../../core/assessments";
+import { OFFICIAL_ITEMS_ALLOWED } from "../../core/buildFlags";
 import {
   beginSession,
   deleteSession,
@@ -32,6 +33,7 @@ import { Review } from "../Review";
 import { applyUpdate, subscribeToUpdates, updateReady } from "../../updates";
 import {
   eraseAllLocalData,
+  removeOfficialQuestions,
   removePdfQuestions,
   removeQuestionLibrary,
   storageErrorMessage,
@@ -55,7 +57,6 @@ import {
 } from "./retry";
 import { SettingsPage } from "./SettingsPage";
 import type { Page } from "@/src/types/ui";
-import { defined } from "@/src/utils/defined";
 
 /** Which test the person last used; a fresh browser starts on the SAT. */
 const LAST_KEY = "sat-last-assessment";
@@ -65,9 +66,11 @@ const routeOf = (): Assessment | undefined => {
   const hash = location.hash.toLowerCase();
   return hash.startsWith("#/paa")
     ? "PAA"
-    : hash.startsWith("#/sat")
-      ? "SAT"
-      : undefined;
+    : hash.startsWith("#/tsi")
+      ? "TSI"
+      : hash.startsWith("#/sat")
+        ? "SAT"
+        : undefined;
 };
 const lastChoice = (): Assessment | undefined => {
   const last = readStorage(LAST_KEY);
@@ -79,12 +82,6 @@ export const App = () => {
     () => routeOf() ?? lastChoice() ?? "SAT",
   );
   const info = assessmentInfo(assessment);
-  const otherAssessment = assessmentInfo(
-    defined(
-      ASSESSMENTS.find((id) => id !== assessment),
-      "The other test",
-    ),
-  );
   const t = useMemo(() => translator(assessment), [assessment]);
   const {
     data,
@@ -95,9 +92,26 @@ export const App = () => {
     setError,
     loadingMessage,
   } = useStudy(assessment);
+  // TSI items labelled Official can be hidden (a setting) or never present (a build).
+  const [includeOfficial, setIncludeOfficial] = usePersistedBoolean(
+    "sat-tsi-official",
+    true,
+  );
+  const hideOfficial =
+    info.hasOrigins && (!OFFICIAL_ITEMS_ALLOWED || !includeOfficial);
   const scoped = useMemo(
-    () => (data ? scopeStudyData(data, assessment) : undefined),
-    [data, assessment],
+    () =>
+      data ? scopeStudyData(data, assessment, { hideOfficial }) : undefined,
+    [data, assessment, hideOfficial],
+  );
+  const officialStored = useMemo(
+    () =>
+      info.hasOrigins && data
+        ? scopeStudyData(data, assessment).questions.filter(
+            (question) => question.origin === "official",
+          ).length
+        : 0,
+    [data, assessment, info.hasOrigins],
   );
   const [page, setPage] = useState<Page>("home");
   const [protectedTests, setProtectedTests] = usePersistedBoolean(
@@ -187,6 +201,19 @@ export const App = () => {
   ) => {
     const { prepareFromPdfs } = await import("../../importing/pdf/run");
     return adoptLibrary(() => prepareFromPdfs(files, options));
+  };
+  const prepareTsiPdfs = async (
+    files: File[],
+    options: Parameters<
+      (typeof import("../../importing/pdf/run"))["prepareFromTsiPdfs"]
+    >[1],
+  ) => {
+    const { prepareFromTsiPdfs } = await import("../../importing/pdf/run");
+    return adoptLibrary(() => prepareFromTsiPdfs(files, options));
+  };
+  const detectPdf = async (file: File) => {
+    const { detectBankKind } = await import("../../importing/pdf/run");
+    return detectBankKind(file);
   };
   const preparePaaPdfs = async (
     files: File[],
@@ -315,6 +342,18 @@ export const App = () => {
         t("Questions removed. Add your PDFs again whenever you like."),
       );
     });
+  const removeOfficial = () =>
+    run(async () => {
+      await adoptLibrary(async () => ({
+        result: { data: await removeOfficialQuestions() },
+      }));
+      setSessionId("");
+      setMessage(
+        t(
+          "Official items removed. Your original items, answers and bookmarks were kept.",
+        ),
+      );
+    });
   const eraseEverything = () =>
     run(async () => {
       await eraseAllLocalData();
@@ -325,7 +364,7 @@ export const App = () => {
       {!(page === "practice" && current && !current.finishedAt) && (
         <AppHeader
           info={info}
-          other={otherAssessment}
+          assessments={ASSESSMENTS.map(assessmentInfo)}
           page={page}
           testOpen={!!(current?.practiceTest || current?.timedTest)}
           onHome={() => setPage("home")}
@@ -457,6 +496,10 @@ export const App = () => {
             deleteRemovesAnswers,
             onDeleteRemovesAnswers: setDeleteRemovesAnswers,
             offerProtection: info.protectedTests,
+            officialItems:
+              info.hasOrigins && OFFICIAL_ITEMS_ALLOWED
+                ? { checked: includeOfficial, onChange: setIncludeOfficial }
+                : undefined,
             protectedTests,
             onProtectedTests: (next) => {
               setProtectedTests(next);
@@ -473,6 +516,10 @@ export const App = () => {
             onReset: resetProgress,
             onRemoveQuestions: removeQuestions,
             onEraseEverything: eraseEverything,
+            official:
+              info.hasOrigins && OFFICIAL_ITEMS_ALLOWED
+                ? { count: officialStored, onRemove: removeOfficial }
+                : undefined,
           }}
         />
       )}
@@ -482,6 +529,8 @@ export const App = () => {
         onClose={() => setAddOpen(false)}
         prepareSat={preparePdfs}
         preparePaa={preparePaaPdfs}
+        prepareTsi={prepareTsiPdfs}
+        detect={detectPdf}
       />
     </AssessmentProvider>
   );

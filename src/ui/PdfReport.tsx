@@ -35,7 +35,7 @@ export const downloadReport = (report: PrepareReport, name: string) => {
 };
 
 export type PdfReportProps = {
-  kind: "SAT" | "PAA";
+  kind: "SAT" | "PAA" | "TSI";
   report: PrepareReport;
   unchanged: boolean;
 };
@@ -43,7 +43,9 @@ export type PdfReportProps = {
 /** What one preparation did: how many questions, what was left out, how it was read. */
 export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
   const t = useT();
-  const paa = kind === "PAA";
+  // Everything but the SAT is a plain question bank: no active/inactive files.
+  const paa = kind !== "SAT";
+  const tsi = kind === "TSI";
   return (
     <div className="pdf-prepare-report" role="status">
       <p>
@@ -68,9 +70,23 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
       </p>
       {paa && !!report.ignored?.length && (
         <p className="small">
-          {t("Set aside, because they are not PAA question exports: {files}", {
-            files: report.ignored.join(", "),
-          })}
+          {t(
+            tsi
+              ? "Set aside, because they are not TSI question exports: {files}"
+              : "Set aside, because they are not PAA question exports: {files}",
+            { files: report.ignored.join(", ") },
+          )}
+        </p>
+      )}
+      {tsi && report.counts.origin && (
+        <p className="small muted">
+          {t(
+            "{official} College Board sample items and {original} original items.",
+            {
+              official: report.counts.origin.official ?? 0,
+              original: report.counts.origin.original ?? 0,
+            },
+          )}
         </p>
       )}
       {!paa && (
@@ -96,6 +112,11 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
               {line}
             </p>
           ))}
+        {report.warnings?.slice(0, 5).map((warning) => (
+          <p key={warning} className="small">
+            {t("Noted: {warning}", { warning })}
+          </p>
+        ))}
         {report.quarantined.slice(0, 5).map((item) => (
           <p key={item.sourceId} className="small">
             {t("Left out: {id} ({file}, pages {pages}): {reason}", {
@@ -111,9 +132,11 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
           onClick={() =>
             downloadReport(
               report,
-              paa
-                ? "paa-preparation-report.json"
-                : "pdf-preparation-report.json",
+              tsi
+                ? "tsi-preparation-report.json"
+                : paa
+                  ? "paa-preparation-report.json"
+                  : "pdf-preparation-report.json",
             )
           }
         >

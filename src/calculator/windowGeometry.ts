@@ -3,6 +3,8 @@ import { readJson } from "@/src/utils/storage";
 import type { Size, WindowGeometry } from "@/src/types/calculator";
 
 export const geometryKey = "sat-calculator-window-v1";
+/** The small keypad calculators (TSI Basic and Square root) remember their own window. */
+export const compactGeometryKey = "sat-calculator-window-compact-v1";
 export function clampGeometry(
   g: WindowGeometry,
   viewport: Size,
@@ -22,7 +24,20 @@ export function clampGeometry(
     y: clamp(g.y, margin, viewport.height - height - margin),
   };
 }
-export function defaultGeometry(viewport: Size): WindowGeometry {
+export function defaultGeometry(
+  viewport: Size,
+  compact = false,
+): WindowGeometry {
+  if (compact)
+    return clampGeometry(
+      {
+        x: viewport.width - 440 - 24,
+        y: 92,
+        width: 440,
+        height: Math.min(520, viewport.height - 120),
+      },
+      viewport,
+    );
   const width = Math.min(760, viewport.width * 0.58);
   return clampGeometry(
     {
@@ -34,13 +49,15 @@ export function defaultGeometry(viewport: Size): WindowGeometry {
     viewport,
   );
 }
-export function readGeometry(viewport: Size): WindowGeometry {
+export function readGeometry(viewport: Size, compact = false): WindowGeometry {
   // The saved value is untrusted: only use it if every field is a number.
-  const value = readJson(geometryKey) as Partial<WindowGeometry> | null;
+  const value = readJson(
+    compact ? compactGeometryKey : geometryKey,
+  ) as Partial<WindowGeometry> | null;
   if (
     value &&
     [value.x, value.y, value.width, value.height].every(Number.isFinite)
   )
     return clampGeometry(value as WindowGeometry, viewport);
-  return defaultGeometry(viewport);
+  return defaultGeometry(viewport, compact);
 }

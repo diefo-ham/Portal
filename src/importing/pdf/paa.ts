@@ -35,7 +35,7 @@ export const isPaaQuestionPage = (page: PageLayout) =>
   ID_PATTERN.test(page.text);
 
 /** Test names as printed, compared without accents or case. */
-const flat = (text: string) =>
+export const flat = (text: string) =>
   text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().trim();
 const TESTS: Record<string, PaaQuestionText["section"]> = {
   lectura: "lectura",
@@ -48,6 +48,8 @@ export interface PaaRecord extends SourceRecord {
   assessment: string;
   /** Lines between the "Question" heading and the choices (or the answer key). */
   stemLines: string[];
+  /** Height of each stem line in points; a reading is printed smaller than its question. */
+  stemHeights?: number[];
   /** Lines between the "Answer" label and the answer key; empty for grid-ins. */
   optionLines: string[];
   /** Lines below the "Rationale" heading. */
@@ -92,6 +94,10 @@ const DIFFICULTIES: Record<string, string> = {
   medio: "medium",
   dificil: "hard",
 };
+
+/** The Assessment value printed on the first question page of an export. */
+export const peekAssessment = (page: PageLayout): string =>
+  indexPaaExport("export", [page])[0]?.assessment ?? "";
 
 /** Only an export of PAA questions counts: an SAT export read here is left aside. */
 export const isPaaRecord = (record: PaaRecord) =>
@@ -159,6 +165,15 @@ export function indexPaaExport(
           .filter((line) => top(line) > from - 1 && top(line) < to - 0.5)
           .map((line) => normalizedText(line.text))
           .filter(Boolean);
+      const stem = page.lines
+        .filter(
+          (line) => top(line) > heading.y1 - 1 && top(line) < stemEnd - 0.5,
+        )
+        .map((line) => ({
+          text: normalizedText(line.text),
+          height: Math.max(...line.words.map((word) => word.y1 - word.y0)),
+        }))
+        .filter((line) => line.text);
       records.push({
         id: match[1].toLowerCase(),
         startPage: index + 1,
@@ -169,7 +184,8 @@ export function indexPaaExport(
         domain: column(2),
         skill: column(3),
         difficulty: column(4),
-        stemLines: between(heading.y1, stemEnd),
+        stemLines: stem.map((line) => line.text),
+        stemHeights: stem.map((line) => line.height),
         optionLines: answer ? between(answer.y1, key?.y0 ?? Infinity) : [],
         rationaleLines: rationale
           ? between(rationale.y1, Infinity).filter(
@@ -188,7 +204,7 @@ export function indexPaaExport(
 }
 
 /** A line number printed in the margin of a reading is not text. */
-const isLineNumber = (line: string) => /^\d{1,3}$/.test(line);
+export const isLineNumber = (line: string) => /^\d{1,3}$/.test(line);
 
 export interface PassageGroup {
   /** Stable id for the reading: the same text always gives the same id. */
@@ -217,12 +233,26 @@ const MIN_SHARED_CHARACTERS = 150;
  * margin numbers removed) is long enough; a quoted "Pregunta anterior" is not in
  * every question, so it never counts as part of the reading.
  */
+export interface GroupOptions {
+  /** Prefix of the group ids; defaults to the PAA's. */
+  prefix?: string;
+  /**
+   * Lines that are instructions, not reading (e.g. "Read the passage(s) below…").
+   * They are printed on every question, so they must not make two different
+   * readings look like one.
+   */
+  ignore?: (line: string) => boolean;
+}
+
 export function groupPassages(
   records: readonly PaaRecord[],
+  options: GroupOptions = {},
 ): Map<string, PassageGroup> {
   const result = new Map<string, PassageGroup>();
   const clean = (record: PaaRecord) =>
-    record.stemLines.filter((line) => !isLineNumber(line));
+    record.stemLines.filter(
+      (line) => !isLineNumber(line) && !options.ignore?.(line),
+    );
   const size = (lines: Iterable<string>) =>
     [...lines].reduce((total, line) => total + line.length, 0);
   let run: PaaRecord[] = [];
@@ -232,7 +262,11 @@ export function groupPassages(
       const first = clean(run[0]);
       const lines = new Set(first.filter((line) => common.has(line)));
       const passage = first.filter((line) => lines.has(line)).join("\n");
-      const group = { id: "paa-g-" + fnv(passage), passage, lines };
+      const group = {
+        id: (options.prefix ?? "paa-g-") + fnv(passage),
+        passage,
+        lines,
+      };
       for (const member of run) result.set(member.id, group);
     }
   };

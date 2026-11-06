@@ -102,9 +102,7 @@ describe("choosing the test", () => {
   it("switches test from the header, and remembers it", async () => {
     const user = userEvent.setup();
     render(<App />);
-    await user.click(
-      screen.getByRole("button", { name: "Test: SAT. Switch to PAA" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Switch to PAA" }));
     expect(location.hash).toBe("#/paa");
     expect(localStorage.getItem("sat-last-assessment")).toBe("PAA");
     expect(assessmentsAsked().at(-1)).toBe("PAA");

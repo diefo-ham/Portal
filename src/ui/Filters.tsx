@@ -2,6 +2,7 @@ import type {
   AnswerStatus,
   Difficulty,
   Filters as FilterValues,
+  QuestionOrigin,
   StudyData,
 } from "../core/model";
 import { assessmentInfo, sectionLabel } from "../core/assessments";
@@ -56,6 +57,15 @@ export const Filters = ({
     .map((difficulty) => ({
       value: difficulty,
       label: t(difficulty[0].toUpperCase() + difficulty.slice(1)),
+    }));
+  // Official / Original (TSI): offered only when the bank holds both kinds.
+  const originOptions = (["official", "original"] as const)
+    .filter((origin) =>
+      data.questions.some((question) => question.origin === origin),
+    )
+    .map((origin) => ({
+      value: origin,
+      label: origin === "official" ? t("Official") : t("Original"),
     }));
   const difficulties = value.difficulties?.length
     ? value.difficulties
@@ -188,6 +198,22 @@ export const Filters = ({
               })
             }
           />
+          {info.hasOrigins &&
+            (originOptions.length > 1 || !!value.origins?.length) && (
+              <MultiSelect
+                label={t("Source")}
+                options={originOptions}
+                value={value.origins ?? []}
+                emptyLabel={t("Official and original")}
+                selectionSummary={(labels) => labels.join(", ")}
+                onChange={(selected) =>
+                  onChange({
+                    ...value,
+                    origins: selected as QuestionOrigin[],
+                  })
+                }
+              />
+            )}
           <label className="check-filter">
             <input
               type="checkbox"

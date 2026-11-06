@@ -12,7 +12,8 @@ export const es: Record<string, string> = {
   "Test mode": "Modo de prueba",
   Settings: "Ajustes",
   "Main navigation": "Navegación principal",
-  "Test: {name}. Switch to {other}": "Prueba: {name}. Cambiar a {other}",
+  "Test: {name}": "Prueba: {name}",
+  "Choose a test": "Elige una prueba",
   "Switch to {other}": "Cambiar a {other}",
   "· any if none is selected": "· cualquiera si no eliges",
   "Dismiss error": "Cerrar el error",
@@ -408,6 +409,33 @@ export const es: Record<string, string> = {
   "Download report": "Descargar el informe",
   "Set aside, because they are not PAA question exports: {files}":
     "Se dejaron aparte porque no son exportaciones de preguntas de la PAA: {files}",
+  "Set aside, because they are not TSI question exports: {files}":
+    "Se dejaron aparte porque no son exportaciones de preguntas de la TSI: {files}",
+  "{official} College Board sample items and {original} original items.":
+    "{official} preguntas de muestra de College Board y {original} preguntas originales.",
+  "Noted: {warning}": "Nota: {warning}",
+  "Include College Board sample items":
+    "Incluir las preguntas de muestra de College Board",
+  "When off, the items labelled Official are hidden everywhere (practice, Browse, Review and your progress) and nothing is deleted. Turn it on to bring them back.":
+    "Si está apagado, las preguntas marcadas como Oficial se ocultan en todas partes (práctica, Explorar, Repaso y tu progreso) y no se borra nada. Enciéndelo para recuperarlas.",
+  "College Board sample items": "Preguntas de muestra de College Board",
+  "{n} items labelled Official are stored here. Removing them keeps your original items, your answers and your bookmarks. Add the PDFs again to bring them back.":
+    "Aquí hay {n} preguntas marcadas como Oficial. Quitarlas conserva tus preguntas originales, tus respuestas y tus marcadores. Vuelve a agregar los PDF para recuperarlas.",
+  "Yes, remove {n} official items": "Sí, quitar {n} preguntas oficiales",
+  "Remove official items": "Quitar las preguntas oficiales",
+  "Official items removed. Your original items, answers and bookmarks were kept.":
+    "Se quitaron las preguntas oficiales. Se conservaron tus preguntas originales, tus respuestas y tus marcadores.",
+  Source: "Origen",
+  "Official and original": "Oficiales y originales",
+  Official: "Oficial",
+  Original: "Original",
+  "College Board sample item": "Pregunta de muestra de College Board",
+  "Original practice item": "Pregunta de práctica original",
+  "Basic calculator": "Calculadora básica",
+  "Square root calculator": "Calculadora con raíz cuadrada",
+  "Graphing calculator": "Calculadora gráfica",
+  "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and College Board publishes no conversion, so this portal shows no score and no pass or fail.":
+    "Es la proporción de respuestas correctas en tu práctica. No es una puntuación de la TSI: la TSIA2 real se adapta a cada estudiante y College Board no publica una conversión, así que este portal no muestra puntuación ni aprobado o reprobado.",
   "Reset study progress": "Reiniciar el progreso de estudio",
   "Clear your answers and sessions to start fresh. You can keep your bookmarks. This also restores Practice Test question eligibility.":
     "Borra tus respuestas y sesiones para empezar de cero. Puedes conservar tus marcadores.",
@@ -469,11 +497,16 @@ export const es: Record<string, string> = {
   "These are {test} questions. Use the switch at the top to open them.":
     "Estas son preguntas de {test}. Usa el interruptor de arriba para abrirlas.",
   "Close window": "Cerrar la ventana",
-  "Drop all your PDFs, or the folder that holds them, together: the four SAT exports and your PAA export. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.":
-    "Suelta juntos todos tus PDF, o la carpeta que los contiene: las cuatro exportaciones de la SAT y tu exportación de la PAA. Se ordenan solos, se leen en este navegador y nunca se envían. Todo el conjunto puede tardar de 5 a 10 minutos; mantén esta pestaña abierta mientras trabaja.",
+  "Drop all your PDFs, or the folder that holds them, together: the four SAT exports, your PAA export and your TSI exports. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.":
+    "Suelta juntos todos tus PDF, o la carpeta que los contiene: las cuatro exportaciones de la SAT, tu exportación de la PAA y tus exportaciones de la TSI. Se ordenan solos, se leen en este navegador y nunca se envían. Todo el conjunto puede tardar de 5 a 10 minutos; mantén esta pestaña abierta mientras trabaja.",
   "Drop PDFs here": "Suelta los PDF aquí",
-  "SAT exports are recognised by name: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf and math_inactive.pdf. Any other PDF is read as a PAA export, or set aside if it is not one.":
-    "Las exportaciones de la SAT se reconocen por el nombre: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf y math_inactive.pdf. Cualquier otro PDF se lee como exportación de la PAA, o se deja aparte si no lo es.",
+  "SAT exports are recognised by name: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf and math_inactive.pdf. Any other PDF is sorted by the test named inside it (PAA or TSIA2), or set aside if it is neither.":
+    "Las exportaciones de la SAT se reconocen por el nombre: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf y math_inactive.pdf. Cualquier otro PDF se ordena según la prueba que nombra por dentro (PAA o TSIA2), o se deja aparte si no es ninguna.",
+  "Checking…": "Comprobando…",
+  "TSI export": "Exportación de la TSI",
+  "PAA export": "Exportación de la PAA",
+  "Not a PAA or TSI question export: it will be set aside":
+    "No es una exportación de preguntas de la PAA ni de la TSI: se dejará aparte",
   "PAA export, or set aside (checked when reading)":
     "Exportación de la PAA, o se deja aparte (se comprueba al leer)",
   Math: "Matemáticas",
