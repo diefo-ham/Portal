@@ -224,30 +224,39 @@ async function seedMath(page: Page) {
     .click();
 }
 
-test("a Math College Readiness test: 20 questions in order, no going back, no feedback, results by domain", async ({
+test("a Math College Readiness test: 20 questions, can go back and change answers, nothing shown until the end, results by domain", async ({
   page,
 }) => {
   await seedMath(page);
   await expect(page.getByText("20 questions", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Start the test/ }).click();
-  const counter = page.locator(".toolbar-count");
+  const counter = page.getByRole("button", { name: "Open question overview" });
   await expect(counter).toHaveText(/^Question 1\s+of 20$/);
-  await expect(page.getByRole("button", { name: /Previous/ })).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Open question overview" }),
-  ).toHaveCount(0);
   await expect(page.locator(".origin-badge")).toHaveCount(0);
-  for (let i = 0; i < 20; i++) {
-    await page.getByRole("radio").first().check({ force: true });
-    await page.locator("button.submit").click();
-    // Wait for the next question before answering it.
-    if (i < 19)
-      await expect(counter).toHaveText(
-        new RegExp(`^Question ${i + 2}\\s+of 20$`),
-      );
+  // Answer the first, go forward, come back and change it.
+  await page.getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "Next question →" }).click();
+  await expect(counter).toHaveText(/^Question 2\s+of 20$/);
+  await page.getByRole("button", { name: /Previous/ }).click();
+  await expect(counter).toHaveText(/^Question 1\s+of 20$/);
+  await expect(page.getByRole("radio").first()).toBeChecked();
+  await page.getByRole("radio").nth(1).check({ force: true });
+  await expect(page.getByRole("radio").nth(1)).toBeChecked();
+  for (let i = 0; i < 19; i++) {
+    await page.getByRole("button", { name: "Next question →" }).click();
+    await expect(counter).toHaveText(
+      new RegExp(`^Question ${i + 2}\\s+of 20$`),
+    );
     // No answer is ever explained while the test runs.
     await expect(page.getByText(/Not quite|Nicely done/)).toHaveCount(0);
+    if (i > 0) await page.getByRole("radio").first().check({ force: true });
   }
+  // The last question leads to the map, which counts what is answered.
+  await page.getByRole("button", { name: "Review and finish →" }).click();
+  await expect(
+    page.getByRole("button", { name: "Go to question 1, answered" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Finish test" }).click();
   await expect(
     page.getByRole("heading", { name: /^\d+ of 20 correct\.$/ }),
   ).toBeVisible();
@@ -268,10 +277,10 @@ test("a test can be left and continued, and hiding original questions shortens i
   await seedMath(page);
   await page.getByRole("button", { name: /Start the test/ }).click();
   await page.getByRole("radio").first().check({ force: true });
-  await page.locator("button.submit").click();
-  await expect(page.locator(".toolbar-count")).toHaveText(
-    /^Question 2\s+of 20$/,
-  );
+  await page.getByRole("button", { name: "Next question →" }).click();
+  await expect(
+    page.getByRole("button", { name: "Open question overview" }),
+  ).toHaveText(/^Question 2\s+of 20$/);
   await page.getByRole("button", { name: "← Exit" }).click();
   // Back on the Tests tab, in progress.
   await expect(page.getByText("in progress")).toBeVisible();
@@ -282,14 +291,15 @@ test("a test can be left and continued, and hiding original questions shortens i
   await page.getByRole("button", { name: "Continue" }).click();
   // Only the official questions are left in it (about half), and it goes on.
   const total = Number(
-    (await page.locator(".toolbar-count .muted").textContent())?.replace(
-      /\D/g,
-      "",
-    ),
+    (
+      await page
+        .getByRole("button", { name: "Open question overview" })
+        .locator(".muted")
+        .textContent()
+    )?.replace(/\D/g, ""),
   );
   expect(total).toBeGreaterThan(0);
   expect(total).toBeLessThan(20);
-  await expect(page.getByRole("button", { name: /Previous/ })).toHaveCount(0);
 });
 
 test("the bank's size is said plainly when it cannot fill the real test", async ({

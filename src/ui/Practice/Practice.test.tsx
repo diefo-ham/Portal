@@ -361,74 +361,94 @@ describe("Practice", () => {
 });
 
 describe("a TSI practice test", () => {
-  it("has no way back: no Previous, no overview, no Skip", () => {
+  it("can be gone back through, and shows no feedback", () => {
     setup(tsiTest());
-    expect(screen.queryByRole("button", { name: /Previous/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Skip/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Previous/ })).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Open question overview" }),
-    ).toBeNull();
-    expect(screen.getByText("Question 1")).toBeTruthy();
-  });
-
-  it("records the answer and moves on, showing no feedback", async () => {
-    const { user, session, data } = setup(tsiTest());
+      screen.getByRole("button", { name: "Open question overview" }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Check answer" })).toBeNull();
+  });
+
+  it("keeps a chosen answer as a draft without checking it, and moves on", async () => {
+    const { user, session, data } = setup(tsiTest());
     await user.click(screen.getByRole("radio", { name: /^AThree/ }));
-    await user.click(screen.getByRole("button", { name: "Next question" }));
-    await waitFor(() => expect(data.attempts).toHaveLength(1));
-    expect(data.attempts[0]).toMatchObject({
-      questionId: "tsi-a",
-      correct: false,
-    });
-    expect(session.index).toBe(1);
-    // Nothing said whether it was right.
-    expect(
-      screen.queryByText(/Not quite|Correct\. Nicely done|Two and two/),
-    ).toBeNull();
+    expect(session.drafts["tsi-a"]).toBe("A");
+    expect(data.attempts).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "Next question →" }));
+    await waitFor(() => expect(stem()).toBe("Question b?"));
+    // Nothing says whether it was right.
+    expect(screen.queryByText(/Not quite|Nicely done|Two and two/)).toBeNull();
   });
 
-  it("does not move back with the left arrow", async () => {
-    const { user, session } = setup(tsiTest());
-    await user.click(screen.getByRole("radio", { name: /^BFour/ }));
-    await user.click(screen.getByRole("button", { name: "Next question" }));
+  it("goes back to an earlier question and changes the answer", async () => {
+    const { user, session, refresh } = setup(tsiTest());
+    await user.click(screen.getByRole("radio", { name: /^AThree/ }));
+    await user.click(screen.getByRole("button", { name: "Next question →" }));
     await waitFor(() => expect(session.index).toBe(1));
-    fireEvent.keyDown(screen.getByRole("main"), { key: "ArrowLeft" });
-    expect(session.index).toBe(1);
-  });
-
-  it("finishes after the last answer and shows percent and domains, with no score", async () => {
-    const { user, session, data, refresh } = setup(tsiTest());
-    for (const [choice, name] of [
-      ["B", "Next question"],
-      ["B", "Next question"],
-      ["A", "Finish test"],
-    ] as const) {
-      await user.click(
-        screen.getByRole("radio", { name: new RegExp(`^${choice}`) }),
-      );
-      await user.click(screen.getByRole("button", { name }));
-      await waitFor(() => expect(data.attempts.length).toBeGreaterThan(0));
-      refresh();
-    }
-    await waitFor(() => expect(session.finishedAt).toBeDefined());
+    refresh();
+    await user.click(screen.getByRole("button", { name: /Previous/ }));
+    await waitFor(() => expect(session.index).toBe(0));
     refresh();
     expect(
-      await screen.findByRole("heading", { name: "2 of 3 correct." }),
+      (screen.getByRole("radio", { name: /^AThree/ }) as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    await user.click(screen.getByRole("radio", { name: /^BFour/ }));
+    expect(session.drafts["tsi-a"]).toBe("B");
+  });
+
+  it("moves with the arrow keys", async () => {
+    const { session, refresh } = setup(tsiTest());
+    fireEvent.keyDown(screen.getByRole("main"), { key: "ArrowRight" });
+    await waitFor(() => expect(session.index).toBe(1));
+    refresh();
+    fireEvent.keyDown(screen.getByRole("main"), { key: "ArrowLeft" });
+    await waitFor(() => expect(session.index).toBe(0));
+  });
+
+  it("leads from the last question to an overview that finishes the test and scores it", async () => {
+    const { user, session, data, refresh } = setup(tsiTest());
+    // Answer the first two (one right, one wrong) and leave the third open.
+    await user.click(screen.getByRole("radio", { name: /^BFour/ }));
+    await user.click(screen.getByRole("button", { name: "Next question →" }));
+    await waitFor(() => expect(session.index).toBe(1));
+    refresh();
+    await user.click(screen.getByRole("radio", { name: /^AThree/ }));
+    await user.click(screen.getByRole("button", { name: "Next question →" }));
+    await waitFor(() => expect(session.index).toBe(2));
+    refresh();
+    await user.click(
+      screen.getByRole("button", { name: "Review and finish →" }),
+    );
+    // The map shows which are answered, without saying which are right.
+    const map = within(await screen.findByRole("dialog"));
+    expect(
+      map.getByRole("button", { name: "Go to question 1, answered" }),
     ).toBeTruthy();
-    expect(screen.getByText(/67% correct/)).toBeTruthy();
+    expect(map.getByRole("button", { name: "Go to question 3" })).toBeTruthy();
+    await user.click(map.getByRole("button", { name: "Finish test" }));
+    await waitFor(() => expect(session.finishedAt).toBeDefined());
+    expect(data.attempts.map((a) => [a.questionId, a.correct])).toEqual([
+      ["tsi-a", true],
+      ["tsi-b", false],
+    ]);
+    refresh();
+    expect(
+      await screen.findByRole("heading", { name: "1 of 3 correct." }),
+    ).toBeTruthy();
+    expect(screen.getByText(/33% correct/)).toBeTruthy();
+    expect(screen.getByText(/1 question was not answered/)).toBeTruthy();
     expect(screen.getByText(/not a TSIA2 score/)).toBeTruthy();
     expect(screen.getByText("← Back to tests")).toBeTruthy();
   });
 
-  it("offers Finish test now instead of a session overview in the tools", async () => {
+  it("offers Finish test in the tools", async () => {
     const { user } = setup(tsiTest());
     await user.click(screen.getByRole("button", { name: "Practice tools" }));
+    expect(screen.getByRole("button", { name: "Finish test" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Finish test now" }),
+      screen.getByRole("button", { name: "Question overview" }),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Question overview" }),
-    ).toBeNull();
   });
 });

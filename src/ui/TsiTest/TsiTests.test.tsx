@@ -107,9 +107,11 @@ describe("the Tests tab", () => {
     ).toBeTruthy();
   });
 
-  it("explains the rules of the test, which cannot be gone back on", () => {
+  it("explains the rules of the test", () => {
     show(mathBank());
-    expect(screen.getByText(/cannot go back/)).toBeTruthy();
+    expect(
+      screen.getAllByText(/go back to any question/).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText(/no time limit/)).toBeTruthy();
   });
 

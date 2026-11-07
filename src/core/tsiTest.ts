@@ -16,7 +16,7 @@
  * as the Diagnostic does. The essay test is not part of this.
  */
 import { assessmentInfo } from "./assessments";
-import { beginSession } from "./commands";
+import { beginSession, finishSession, submitAnswer } from "./commands";
 import {
   defaultFilters,
   type Question,
@@ -313,3 +313,18 @@ export const elarFocus = (
     : is(question, DOMAIN.essay) || is(question, DOMAIN.sentence)
       ? "writing"
       : undefined;
+
+/**
+ * Scores a test and ends it. Answers are kept as drafts while the test is open,
+ * so a question can be reopened and changed; here each draft becomes an answer,
+ * and a question with none stays unanswered.
+ */
+export function finishTsiTest(data: StudyData, sessionId: string) {
+  const session = data.sessions.find((s) => s.id === sessionId);
+  if (!session?.tsiTest) throw new Error("This is not a TSI practice test.");
+  for (const id of session.questionIds) {
+    const draft = session.drafts[id];
+    if (draft) submitAnswer(data, sessionId, id, draft);
+  }
+  finishSession(data, sessionId);
+}

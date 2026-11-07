@@ -5,6 +5,8 @@ export type QuestionFooterProps = {
   index: number;
   total: number;
   isTest: boolean;
+  /** A TSI practice test: any question can be reopened; the last one leads to finishing. */
+  tsiTest?: boolean;
   answered: boolean;
   /** A save is running or the session is paused. */
   disabled: boolean;
@@ -20,6 +22,7 @@ export const QuestionFooter = ({
   index,
   total,
   isTest,
+  tsiTest = false,
   answered,
   disabled,
   onPrevious,
@@ -30,6 +33,7 @@ export const QuestionFooter = ({
   const t = useT();
   const last = index >= total - 1;
   const forwardLabel = () => {
+    if (tsiTest) return last ? t("Review and finish →") : t("Next question →");
     if (last) return isTest ? "Finish module →" : t("Review session →");
     if (isTest) return "Next question →";
     return answered ? t("Next question →") : t("Skip for now →");

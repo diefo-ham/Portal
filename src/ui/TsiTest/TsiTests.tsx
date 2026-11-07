@@ -128,8 +128,8 @@ export const TsiTests = ({
       <h1>TSIA2 practice tests</h1>
       <p className="muted">
         Each test is made of the same parts as the real TSIA2, in the same
-        numbers. You answer in order, with no going back and no answers shown
-        until the end, and there is no clock.
+        numbers. You can go back to any question and change an answer until you
+        finish, no answers are shown until the end, and there is no clock.
       </p>
       {!data.questions.length ? (
         <section className="empty-state">
@@ -204,9 +204,10 @@ export const TsiTests = ({
           )}
           <div className="test-rules small muted">
             <p>
-              <strong>As on the real test:</strong> you answer in order and
-              cannot go back; the answers appear only at the end; there is no
-              time limit. Exit saves your place, and you can continue later. A
+              <strong>As on the real test:</strong> there is no time limit and
+              no answer is shown until you finish. You can go back to any
+              question and change your answer; the question map shows which are
+              answered. Exit saves your place, and you can continue later. A
               Math question has the calculator its tag names (Basic, Square root
               or Graphing); the real test is adaptive, but this one keeps the
               real content balance instead of routing by difficulty.

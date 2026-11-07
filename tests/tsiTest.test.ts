@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { backfillAssessments, scopeStudyData } from "../src/core/assessments";
-import { submitAnswer } from "../src/core/commands";
-import { emptyData, type Question, type StudyData } from "../src/core/model";
+import { beginSession, submitAnswer } from "../src/core/commands";
+import {
+  defaultFilters,
+  emptyData,
+  type Question,
+  type StudyData,
+} from "../src/core/model";
 import {
   beginTsiTest,
   buildTsiTest,
   elarFocus,
+  finishTsiTest,
   plannedTotal,
   tsiTestAvailability,
   tsiTestSlots,
@@ -343,5 +349,30 @@ describe("a test as a session", () => {
         (id) => data.questions.find((x) => x.id === id)!.origin === "official",
       ),
     ).toBe(true);
+  });
+});
+
+describe("finishing a test", () => {
+  it("scores the drafts, leaves unanswered questions unanswered, and ends the test", () => {
+    const data = bank();
+    const ids = buildTsiTest(data, "crc", "math", seeded(8)).questionIds;
+    const session = beginTsiTest(data, "crc", "math", ids);
+    // Every answer is "A", which is right; one is changed to a wrong one; one is left open.
+    for (const id of ids.slice(0, 5)) session.drafts[id] = "A";
+    session.drafts[ids[1]] = "B";
+    finishTsiTest(data, session.id);
+    expect(session.finishedAt).toBeDefined();
+    expect(data.attempts).toHaveLength(5);
+    expect(data.attempts.filter((a) => a.correct)).toHaveLength(4);
+    expect(data.attempts.every((a) => a.sessionId === session.id)).toBe(true);
+  });
+
+  it("refuses a session that is not a TSI test", () => {
+    const data = bank();
+    const ids = data.questions.slice(0, 2).map((x) => x.id);
+    const session = beginSession(data, ids, defaultFilters);
+    expect(() => finishTsiTest(data, session.id)).toThrow(
+      "not a TSI practice test",
+    );
   });
 });

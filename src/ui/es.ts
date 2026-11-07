@@ -426,9 +426,8 @@ export const es: Record<string, string> = {
   "Graphing calculator": "Calculadora gráfica",
   "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and College Board publishes no conversion, so this portal shows no score and no pass or fail.":
     "Es la proporción de respuestas correctas en tu práctica. No es una puntuación de la TSI: la TSIA2 real se adapta a cada estudiante y College Board no publica una conversión, así que este portal no muestra puntuación ni aprobado o reprobado.",
-  "Next question": "Siguiente pregunta",
   "Finish test": "Terminar la prueba",
-  "Finish test now": "Terminar la prueba ahora",
+  "Review and finish →": "Revisar y terminar →",
   "Reset study progress": "Reiniciar el progreso de estudio",
   "Clear your answers and sessions to start fresh. You can keep your bookmarks. This also restores Practice Test question eligibility.":
     "Borra tus respuestas y sesiones para empezar de cero. Puedes conservar tus marcadores.",
