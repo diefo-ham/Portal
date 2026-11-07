@@ -1,7 +1,7 @@
 import type { Question } from "../../core/model";
 import { sectionName } from "../Filters";
 import { useT } from "../i18n";
-import { CalculatorChip, OriginBadge } from "../QuestionBadges";
+import { CalculatorChip } from "../QuestionBadges";
 
 export type QuestionHeadingProps = {
   question: Question;
@@ -38,7 +38,6 @@ export const QuestionHeading = ({
       <div>
         <p className="eyebrow">{sectionName(question.section)}</p>
         <span className="muted small">{question.domain || ""}</span>
-        <OriginBadge question={question} />
         <CalculatorChip question={question} />
       </div>
       <button

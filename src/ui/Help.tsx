@@ -114,14 +114,13 @@ function TsiHelp() {
             </dl>
           </section>
           <details>
-            <summary>Official and Original questions</summary>
+            <summary>Official and original questions</summary>
             <p>
-              Each question is labelled Official (a College Board sample
-              question) or Original (written for this portal). Use the Source
-              filter to practise one kind. In Settings you can switch off
-              &ldquo;Include College Board sample items&rdquo; to hide the
-              Official ones without deleting anything, or remove them from this
-              device.
+              Some questions are College Board sample questions (Official) and
+              the rest were written for this portal (Original); Browse shows
+              which. In Settings, &ldquo;Include original questions&rdquo; turns
+              the original ones off and on without deleting anything. Sessions
+              that contain them stay, without those questions.
             </p>
           </details>
           <details>

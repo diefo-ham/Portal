@@ -1,6 +1,6 @@
 import { scopeStudyData } from "../core/assessments";
 import type { Assessment } from "../core/model";
-import { removeOfficialFromData, removePdfFromData } from "../core/pdfLibrary";
+import { removePdfFromData } from "../core/pdfLibrary";
 import { referencedAssetKeys } from "../importing/documents";
 import {
   clearAssets,
@@ -45,17 +45,6 @@ export async function removeQuestionLibrary(assessment?: Assessment) {
 export async function removePdfQuestions(assessment: Assessment, key: string) {
   const data = await updateData((d) => {
     removePdfFromData(d, assessment, key);
-  });
-  if (data.questions.length)
-    await deleteAssetsExcept(referencedAssetKeys(data));
-  else await clearAssets();
-  return data;
-}
-
-/** Removes the TSI items labelled Official (see `removeOfficialFromData`). */
-export async function removeOfficialQuestions() {
-  const data = await updateData((d) => {
-    removeOfficialFromData(d);
   });
   if (data.questions.length)
     await deleteAssetsExcept(referencedAssetKeys(data));

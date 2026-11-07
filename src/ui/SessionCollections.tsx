@@ -28,7 +28,10 @@ export const SessionCollections = ({
   const completed = data.sessions
     .filter(
       (session) =>
-        !!session.finishedAt && !session.practiceTest && !session.timedTest,
+        !!session.finishedAt &&
+        !session.practiceTest &&
+        !session.timedTest &&
+        !session.tsiTest,
     )
     .toReversed();
   const starred = completed.filter((session) => session.starred);
@@ -38,7 +41,10 @@ export const SessionCollections = ({
       ...data.sessions
         .filter(
           (session) =>
-            !session.finishedAt && !session.practiceTest && !session.timedTest,
+            !session.finishedAt &&
+            !session.practiceTest &&
+            !session.timedTest &&
+            !session.tsiTest,
         )
         .toReversed(),
       ...completed.filter((session) => session.starred),
@@ -87,8 +93,9 @@ export const SessionCollections = ({
       <details className="session-history">
         <summary>
           {t("View all sessions ({n})", {
-            n: data.sessions.filter((s) => !s.practiceTest && !s.timedTest)
-              .length,
+            n: data.sessions.filter(
+              (s) => !s.practiceTest && !s.timedTest && !s.tsiTest,
+            ).length,
           })}
         </summary>
         <label className="session-search">

@@ -73,64 +73,61 @@ test("the switch reaches the TSI, and the TSI keeps its own questions", async ({
   await expect(page.getByRole("button", { name: /TSI Study/ })).toBeVisible();
 });
 
-test("the Source filter selects Official or Original, and Browse shows the label", async ({
+test("there is no Source filter, and a session shows no Official or Original tag", async ({
   page,
 }) => {
   await seed(page);
-  await page.getByText("Refine selection").click();
-  await page.getByRole("button", { name: /Official and original/ }).click();
-  await page.getByRole("checkbox", { name: "Official" }).check();
-  await expect(page.getByText("Max 2")).toBeVisible();
-  await page.getByRole("checkbox", { name: "Official" }).uncheck();
-  await page.getByRole("checkbox", { name: "Original" }).check();
-  await expect(page.getByText("Max 3")).toBeVisible();
-  await page.getByRole("button", { name: "Browse", exact: true }).click();
-  await expect(page.locator(".origin-badge.official")).toHaveCount(0);
-  await expect(page.locator(".origin-badge.original").first()).toBeVisible();
-});
-
-test("the Settings switch hides the official items and brings them back", async ({
-  page,
-}) => {
-  await seed(page);
-  await page.getByRole("button", { name: "Settings" }).click();
-  const include = page.getByLabel("Include College Board sample items");
-  await expect(include).toBeChecked();
-  await expect(page.getByText(/^5 questions · 0 attempts/)).toBeVisible();
-  await include.uncheck();
-  await expect(page.getByText(/^3 questions · 0 attempts/)).toBeVisible();
-  await page.getByRole("button", { name: "Practice", exact: true }).click();
-  await expect(page.getByText("Max 3")).toBeVisible();
-  // The Source filter has nothing to choose between, so it is not shown.
   await page.getByText("Refine selection").click();
   await expect(page.getByText("Source", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Mathematics" }).first().click();
+  await page.getByRole("button", { name: /Start practice/ }).click();
+  await expect(page.locator(".calculator-chip")).toBeVisible();
+  await expect(page.locator(".origin-badge")).toHaveCount(0);
+});
+
+test("the Settings switch hides the original questions and brings them back", async ({
+  page,
+}) => {
+  await seed(page);
+  await page.getByRole("button", { name: "Settings" }).click();
+  const include = page.getByLabel("Include original questions");
+  await expect(include).toBeChecked();
+  // No switch for the College Board sample items, and no button to remove them.
+  await expect(
+    page.getByText("Include College Board sample items"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Remove official items/ }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/^5 questions · 0 attempts/)).toBeVisible();
+  await include.uncheck();
+  await expect(page.getByText(/^2 questions · 0 attempts/)).toBeVisible();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await expect(page.getByText("Max 2")).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: "Settings" }).click();
-  await expect(
-    page.getByLabel("Include College Board sample items"),
-  ).not.toBeChecked();
-  await page.getByLabel("Include College Board sample items").check();
+  await expect(page.getByLabel("Include original questions")).not.toBeChecked();
+  await page.getByLabel("Include original questions").check();
   await expect(page.getByText(/^5 questions · 0 attempts/)).toBeVisible();
 });
 
-test("removing the official items keeps the originals", async ({ page }) => {
+test("hiding the original questions keeps a session, without those questions", async ({
+  page,
+}) => {
   await seed(page);
+  // A session over the whole TSI bank.
+  await page.getByRole("button", { name: /Start practice/ }).click();
+  await page.getByRole("button", { name: "Exit" }).click();
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Remove official items" }).click();
+  await page.getByLabel("Include original questions").uncheck();
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  // The session is still there to continue, now over the two official questions.
   await page
-    .getByRole("button", { name: "Yes, remove 2 official items" })
+    .getByRole("button", { name: /Continue|Resume/ })
+    .first()
     .click();
-  await expect(page.getByText(/^3 questions · 0 attempts/)).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Remove official items" }),
-  ).toHaveCount(0);
-  // The SAT's questions are untouched.
-  await page
-    .getByRole("group", { name: "Choose a test" })
-    .getByRole("button", { name: "Switch to SAT" })
-    .click();
-  await page.getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByText(/^12 questions · 0 attempts/)).toBeVisible();
+  await expect(page.getByText(/Question \d of 2/)).toBeVisible();
+  await expect(page.locator(".calculator-chip, h1").first()).toBeVisible();
 });
 
 test("each Math question opens the calculator its tag names", async ({
@@ -190,4 +187,131 @@ test("an ELAR question offers no calculator and no calculator chip", async ({
   await expect(
     page.getByRole("button", { name: "Calculator", exact: true }),
   ).toHaveCount(0);
+});
+
+// ---- Practice tests -------------------------------------------------------
+
+/** A bank big enough for a full College Readiness Math test: 8, 8, 4 and 5 per domain, half of them official. */
+const mathBank = () => {
+  const domains: [string, number][] = [
+    ["Quantitative Reasoning", 8],
+    ["Algebraic Reasoning", 8],
+    ["Geometric and Spatial Reasoning", 4],
+    ["Probabilistic and Statistical Reasoning", 5],
+  ];
+  let n = 0;
+  return parseQuestions({
+    schemaVersion: 1,
+    questions: domains.flatMap(([domain, count]) =>
+      Array.from({ length: count }, (_, i) =>
+        tsi(`m${++n}`, {
+          domain,
+          origin: i % 2 ? "official" : "original",
+          stem: `Synthetic math question ${n}.`,
+        }),
+      ),
+    ),
+  });
+};
+
+async function seedMath(page: Page) {
+  await page.goto("/#/tsi");
+  await seedStudyData(page, { questions: mathBank() });
+  await page.getByRole("button", { name: "Tests", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Subject" })
+    .getByRole("button", { name: "Mathematics" })
+    .click();
+}
+
+test("a Math College Readiness test: 20 questions, can go back and change answers, nothing shown until the end, results by domain", async ({
+  page,
+}) => {
+  await seedMath(page);
+  await expect(page.getByText("20 questions", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Start the test/ }).click();
+  const counter = page.getByRole("button", { name: "Open question overview" });
+  await expect(counter).toHaveText(/^Question 1\s+of 20$/);
+  await expect(page.locator(".origin-badge")).toHaveCount(0);
+  // Answer the first, go forward, come back and change it.
+  await page.getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "Next question →" }).click();
+  await expect(counter).toHaveText(/^Question 2\s+of 20$/);
+  await page.getByRole("button", { name: /Previous/ }).click();
+  await expect(counter).toHaveText(/^Question 1\s+of 20$/);
+  await expect(page.getByRole("radio").first()).toBeChecked();
+  await page.getByRole("radio").nth(1).check({ force: true });
+  await expect(page.getByRole("radio").nth(1)).toBeChecked();
+  for (let i = 0; i < 19; i++) {
+    await page.getByRole("button", { name: "Next question →" }).click();
+    await expect(counter).toHaveText(
+      new RegExp(`^Question ${i + 2}\\s+of 20$`),
+    );
+    // No answer is ever explained while the test runs.
+    await expect(page.getByText(/Not quite|Nicely done/)).toHaveCount(0);
+    if (i > 0) await page.getByRole("radio").first().check({ force: true });
+  }
+  // The last question leads to the map, which counts what is answered.
+  await page.getByRole("button", { name: "Review and finish →" }).click();
+  await expect(
+    page.getByRole("button", { name: "Go to question 1, answered" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Finish test" }).click();
+  await expect(
+    page.getByRole("heading", { name: /^\d+ of 20 correct\.$/ }),
+  ).toBeVisible();
+  await expect(page.locator(".tsi-test-domains li")).toHaveCount(4);
+  await expect(page.getByText(/not a TSIA2 score/)).toBeVisible();
+  await page.getByRole("button", { name: "← Back to tests" }).click();
+  await expect(page.getByText(/\d+ of 20 correct \(\d+%\)/)).toBeVisible();
+  // A test is not a practice session: it is not in the ordinary lists.
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await expect(
+    page.getByText("Mathematics College Readiness test"),
+  ).toHaveCount(0);
+});
+
+test("a test can be left and continued, and hiding original questions shortens it without ending it", async ({
+  page,
+}) => {
+  await seedMath(page);
+  await page.getByRole("button", { name: /Start the test/ }).click();
+  await page.getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "Next question →" }).click();
+  await expect(
+    page.getByRole("button", { name: "Open question overview" }),
+  ).toHaveText(/^Question 2\s+of 20$/);
+  await page.getByRole("button", { name: "← Exit" }).click();
+  // Back on the Tests tab, in progress.
+  await expect(page.getByText("in progress")).toBeVisible();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Include original questions").uncheck();
+  await page.getByRole("button", { name: "Tests", exact: true }).click();
+  await expect(page.getByText("in progress")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  // Only the official questions are left in it (about half), and it goes on.
+  const total = Number(
+    (
+      await page
+        .getByRole("button", { name: "Open question overview" })
+        .locator(".muted")
+        .textContent()
+    )?.replace(/\D/g, ""),
+  );
+  expect(total).toBeGreaterThan(0);
+  expect(total).toBeLessThan(20);
+});
+
+test("the bank's size is said plainly when it cannot fill the real test", async ({
+  page,
+}) => {
+  await seedMath(page);
+  await page
+    .getByRole("group", { name: "Test" })
+    .getByRole("button", { name: /Diagnostic/ })
+    .click();
+  await expect(page.getByText(/the real test has 48/)).toBeVisible();
+  await expect(
+    page.getByText(/fewer questions than the real test uses/),
+  ).toBeVisible();
 });

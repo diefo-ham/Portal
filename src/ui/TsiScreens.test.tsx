@@ -37,39 +37,22 @@ const bank = (...questions: Question[]): StudyData => ({
 });
 
 describe("the Source filter", () => {
-  const show = (data: StudyData, onChange = vi.fn()) => {
+  it("is gone: filters offer no Source control, whatever the bank holds", () => {
     render(
       <AssessmentProvider value="TSI">
         <Filters
-          data={data}
+          data={bank(question("a", { origin: "official" }), question("b"))}
           value={{ ...defaultFilters, statuses: [] }}
-          onChange={onChange}
+          onChange={vi.fn()}
         />
       </AssessmentProvider>,
     );
-    return { onChange, user: userEvent.setup() };
-  };
-
-  it("is offered when the bank holds both kinds, and sets the origins", async () => {
-    const { onChange, user } = show(
-      bank(question("a", { origin: "official" }), question("b")),
-    );
-    await user.click(
-      screen.getByRole("button", { name: /Official and original/ }),
-    );
-    await user.click(screen.getByRole("checkbox", { name: "Original" }));
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ origins: ["original"] }),
-    );
-  });
-
-  it("is left out when only one kind is stored, so it adds no control", () => {
-    show(bank(question("a"), question("b")));
     expect(screen.queryByText("Source")).toBeNull();
+    expect(screen.queryByText(/Official and original/)).toBeNull();
   });
 });
 
-describe("badges beside a question", () => {
+describe("beside a question in a session", () => {
   const heading = (q: Question) =>
     render(
       <AssessmentProvider value="TSI">
@@ -82,23 +65,21 @@ describe("badges beside a question", () => {
       </AssessmentProvider>,
     );
 
-  it("shows Official or Original and the calculator tier", () => {
+  it("shows the calculator tier but no Official or Original tag", () => {
     heading(question("a", { origin: "official", calculator: "sqrt" }));
-    expect(screen.getByText("Official").getAttribute("title")).toBe(
-      "College Board sample item",
-    );
     expect(screen.getByText("Square root calculator")).toBeTruthy();
+    expect(screen.queryByText("Official")).toBeNull();
+    expect(screen.queryByText("Original")).toBeNull();
   });
 
-  it("shows nothing extra for a question without them (SAT, PAA)", () => {
-    heading({ ...question("b"), origin: undefined, calculator: undefined });
-    expect(screen.queryByText("Original")).toBeNull();
+  it("shows no calculator chip for a question without one", () => {
+    heading({ ...question("b"), calculator: undefined });
     expect(screen.queryByText(/calculator/)).toBeNull();
   });
 });
 
 describe("Settings", () => {
-  it("offers the switch for sample items only when it is given", async () => {
+  it("offers the switch for original questions only when it is given", async () => {
     const onChange = vi.fn();
     const props = {
       timerDefault: true,
@@ -116,23 +97,21 @@ describe("Settings", () => {
         <StudyPreferences {...props} />
       </AssessmentProvider>,
     );
-    expect(screen.queryByText("Include College Board sample items")).toBeNull();
+    expect(screen.queryByText("Include original questions")).toBeNull();
     rerender(
       <AssessmentProvider value="TSI">
         <StudyPreferences
           {...props}
-          officialItems={{ checked: true, onChange }}
+          originalQuestions={{ checked: true, onChange }}
         />
       </AssessmentProvider>,
     );
-    await userEvent.click(
-      screen.getByLabelText("Include College Board sample items"),
-    );
+    await userEvent.click(screen.getByLabelText("Include original questions"));
     expect(onChange).toHaveBeenCalledWith(false);
+    expect(screen.queryByText("Include College Board sample items")).toBeNull();
   });
 
-  it("removes the official items only after a confirmation", async () => {
-    const onRemove = vi.fn(() => Promise.resolve());
+  it("no longer offers to remove the official items", () => {
     render(
       <AssessmentProvider value="TSI">
         <MaintenanceSection
@@ -144,46 +123,12 @@ describe("Settings", () => {
           onReset={vi.fn()}
           onRemoveQuestions={vi.fn()}
           onEraseEverything={vi.fn()}
-          official={{ count: 30, onRemove }}
         />
       </AssessmentProvider>,
     );
-    const user = userEvent.setup();
-    await user.click(
-      screen.getByRole("button", { name: "Remove official items" }),
-    );
-    expect(onRemove).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByText("College Board sample items")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Remove official items" }),
-    ).toBeTruthy();
-    await user.click(
-      screen.getByRole("button", { name: "Remove official items" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Yes, remove 30 official items" }),
-    );
-    expect(onRemove).toHaveBeenCalledOnce();
-  });
-
-  it("does not offer removal when there are no official items", () => {
-    render(
-      <AssessmentProvider value="TSI">
-        <MaintenanceSection
-          data={bank(question("b"))}
-          busy={false}
-          onAddPdfs={vi.fn()}
-          onRemovePdf={vi.fn()}
-          onRestore={vi.fn()}
-          onReset={vi.fn()}
-          onRemoveQuestions={vi.fn()}
-          onEraseEverything={vi.fn()}
-          official={{ count: 0, onRemove: vi.fn() }}
-        />
-      </AssessmentProvider>,
-    );
-    expect(
-      screen.queryByRole("button", { name: "Remove official items" }),
+      screen.queryByRole("button", { name: /official items/i }),
     ).toBeNull();
   });
 });
@@ -211,6 +156,47 @@ describe("the keypad calculators", () => {
     expect(document.querySelector("output")!.textContent).toBe("15");
     expect(screen.queryByRole("button", { name: "Square root" })).toBeNull();
   });
+
+  it.each([
+    ["basic", ["0", ".", "="]],
+    ["sqrt", ["0", ".", "√", "="]],
+  ] as const)(
+    "lays the %s keypad out as five full rows of four, operators in the right-hand column",
+    (tier, lastRow) => {
+      open(tier);
+      const keys = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          ".simple-calculator-keys button",
+        ),
+      ];
+      // A wide key takes two cells; every row is full.
+      const cells = keys.reduce(
+        (total, key) => total + (key.classList.contains("wide") ? 2 : 1),
+        0,
+      );
+      expect(cells).toBe(20);
+      const labels = keys.map((key) => key.textContent);
+      expect(labels.slice(0, 16)).toEqual([
+        "C",
+        "⌫",
+        "±",
+        "÷",
+        "7",
+        "8",
+        "9",
+        "×",
+        "4",
+        "5",
+        "6",
+        "−",
+        "1",
+        "2",
+        "3",
+        "+",
+      ]);
+      expect(labels.slice(16)).toEqual(lastRow);
+    },
+  );
 
   it("takes keys typed on the keypad, and Clear calculator resets it", async () => {
     const user = open("sqrt");

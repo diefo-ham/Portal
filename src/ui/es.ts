@@ -414,19 +414,9 @@ export const es: Record<string, string> = {
   "{official} College Board sample items and {original} original items.":
     "{official} preguntas de muestra de College Board y {original} preguntas originales.",
   "Noted: {warning}": "Nota: {warning}",
-  "Include College Board sample items":
-    "Incluir las preguntas de muestra de College Board",
-  "When off, the items labelled Official are hidden everywhere (practice, Browse, Review and your progress) and nothing is deleted. Turn it on to bring them back.":
-    "Si está apagado, las preguntas marcadas como Oficial se ocultan en todas partes (práctica, Explorar, Repaso y tu progreso) y no se borra nada. Enciéndelo para recuperarlas.",
-  "College Board sample items": "Preguntas de muestra de College Board",
-  "{n} items labelled Official are stored here. Removing them keeps your original items, your answers and your bookmarks. Add the PDFs again to bring them back.":
-    "Aquí hay {n} preguntas marcadas como Oficial. Quitarlas conserva tus preguntas originales, tus respuestas y tus marcadores. Vuelve a agregar los PDF para recuperarlas.",
-  "Yes, remove {n} official items": "Sí, quitar {n} preguntas oficiales",
-  "Remove official items": "Quitar las preguntas oficiales",
-  "Official items removed. Your original items, answers and bookmarks were kept.":
-    "Se quitaron las preguntas oficiales. Se conservaron tus preguntas originales, tus respuestas y tus marcadores.",
-  Source: "Origen",
-  "Official and original": "Oficiales y originales",
+  "Include original questions": "Incluir las preguntas originales",
+  "When off, the original questions are hidden everywhere (practice, Browse, Review and your progress) and nothing is deleted. Sessions that contain them stay, without those questions. Turn it on to bring them back.":
+    "Si está apagado, las preguntas originales se ocultan en todas partes (práctica, Explorar, Repaso y tu progreso) y no se borra nada. Las sesiones que las contienen se conservan, sin esas preguntas. Enciéndelo para recuperarlas.",
   Official: "Oficial",
   Original: "Original",
   "College Board sample item": "Pregunta de muestra de College Board",
@@ -436,6 +426,8 @@ export const es: Record<string, string> = {
   "Graphing calculator": "Calculadora gráfica",
   "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and College Board publishes no conversion, so this portal shows no score and no pass or fail.":
     "Es la proporción de respuestas correctas en tu práctica. No es una puntuación de la TSI: la TSIA2 real se adapta a cada estudiante y College Board no publica una conversión, así que este portal no muestra puntuación ni aprobado o reprobado.",
+  "Finish test": "Terminar la prueba",
+  "Review and finish →": "Revisar y terminar →",
   "Reset study progress": "Reiniciar el progreso de estudio",
   "Clear your answers and sessions to start fresh. You can keep your bookmarks. This also restores Practice Test question eligibility.":
     "Borra tus respuestas y sesiones para empezar de cero. Puedes conservar tus marcadores.",

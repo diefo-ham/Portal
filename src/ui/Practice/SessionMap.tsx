@@ -9,6 +9,8 @@ export type SessionMapProps = {
   /** Saved answers; in a test they mark a question as answered. */
   drafts: Record<string, string>;
   isTest: boolean;
+  /** Replaces the Finish button's text. */
+  finishLabel?: string;
   pending: boolean;
   onGo: (index: number) => void;
   onFinish: () => void;
@@ -40,6 +42,7 @@ export const SessionMap = ({
   attempts,
   drafts,
   isTest,
+  finishLabel,
   pending,
   onGo,
   onFinish,
@@ -82,7 +85,7 @@ export const SessionMap = ({
         </p>
       </section>
       <button onClick={onFinish} disabled={pending}>
-        {isTest ? "Finish module" : t("Finish session")}
+        {finishLabel ?? (isTest ? "Finish module" : t("Finish session"))}
       </button>
     </>
   );

@@ -3,6 +3,8 @@ import { useT } from "../i18n";
 
 export type ToolsPanelProps = {
   isTest: boolean;
+  /** A TSI practice test: finishing ends the test. */
+  tsiTest?: boolean;
   showTime: boolean;
   paused: boolean;
   pending: boolean;
@@ -18,6 +20,7 @@ export type ToolsPanelProps = {
 /** Shortcuts, the overview, the timer, details, and finishing or cancelling. */
 export const ToolsPanel = ({
   isTest,
+  tsiTest = false,
   showTime,
   paused,
   pending,
@@ -59,7 +62,7 @@ export const ToolsPanel = ({
       )}
       {!isTest && (
         <button onClick={onFinish} disabled={pending}>
-          {t("Finish session")}
+          {tsiTest ? t("Finish test") : t("Finish session")}
         </button>
       )}
     </div>

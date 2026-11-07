@@ -13,6 +13,8 @@ import {
 } from "../../core/practiceTest";
 import "../../calculator/layout.scss";
 import { CalculatorPanel } from "../../calculator/CalculatorPanel";
+import { finishTsiTest } from "../../core/tsiTest";
+import { TsiTestSummary } from "../TsiTest/TsiTestSummary";
 import { calculatorTierOf, strongestTier } from "../../core/calculators";
 import { useCalculatorState } from "../../calculator/useCalculatorState";
 import { useCalculatorToggle } from "@/src/helpers/useCalculatorToggle";
@@ -71,6 +73,9 @@ export const Practice = ({
   const t = useT();
   const test = storedSession.practiceTest;
   const isTest = !!test && !storedSession.finishedAt;
+  // A TSI practice test: answers are kept as drafts and scored when it is finished,
+  // so any question can be reopened and changed; nothing is shown until the end.
+  const tsiMode = !!storedSession.tsiTest && !storedSession.finishedAt;
   const module = isTest ? test.modules[test.currentModule] : undefined;
   // In a Practice Test only the current module's questions are in play.
   const session = module
@@ -178,10 +183,16 @@ export const Practice = ({
       await timer.flush();
       await calculatorWork.flush();
       if (onFinishModule) await onFinishModule();
+      else if (tsiMode) await mutate((d) => finishTsiTest(d, session.id));
       else await mutate((d) => finishSession(d, session.id));
     });
   // In a test, "submitting" just moves on: answers are only checked at the end.
   const submit = () => {
+    // In a TSI test Enter moves on; the last question opens the overview to finish from.
+    if (tsiMode)
+      return session.index < session.questionIds.length - 1
+        ? navigate(session.index + 1)
+        : dialog.open("overview");
     if (!isTest)
       return run(async () => {
         await timer.flush();
@@ -288,14 +299,20 @@ export const Practice = ({
             onBack={onBack}
             onRetry={onRetry}
             onCalculator={calculatorAvailable ? calculator.show : undefined}
+            testSummary={
+              storedSession.tsiTest ? (
+                <TsiTestSummary data={data} session={session} />
+              ) : undefined
+            }
           />
         )}
         {calculator.visible && calculatorPanel}
       </div>
     );
-  const answeredCount = isTest
-    ? session.questionIds.filter((id) => session.drafts[id]).length
-    : attempts.length;
+  const answeredCount =
+    isTest || tsiMode
+      ? session.questionIds.filter((id) => session.drafts[id]).length
+      : attempts.length;
   const titles: Record<Panel, string> = {
     overview: t("Question overview"),
     details: t("Question details"),
@@ -415,7 +432,7 @@ export const Practice = ({
             onChange={choose}
             onSubmit={() => void submit()}
           />
-          {!isTest && !attempt && (
+          {!isTest && !tsiMode && !attempt && (
             <button
               className="primary submit"
               disabled={pending || !canSubmit}
@@ -424,7 +441,7 @@ export const Practice = ({
               {t("Check answer")}
             </button>
           )}
-          {!isTest && attempt && (
+          {!isTest && !tsiMode && attempt && (
             <AnswerFeedback
               question={question}
               attempt={attempt}
@@ -440,8 +457,9 @@ export const Practice = ({
             disabled={pending || !!session.paused}
             onPrevious={() => void navigate(session.index - 1)}
             onNext={() => void navigate(session.index + 1)}
-            onFinish={() => void finish()}
+            onFinish={() => (tsiMode ? dialog.open("overview") : void finish())}
             nextButtonRef={nextButton}
+            tsiTest={tsiMode}
           />
         </article>
         {calculator.visible &&
@@ -474,6 +492,7 @@ export const Practice = ({
         {panel === "tools" && (
           <ToolsPanel
             isTest={isTest}
+            tsiTest={tsiMode}
             showTime={showTime}
             paused={!!session.paused}
             pending={pending}
@@ -505,7 +524,8 @@ export const Practice = ({
             index={session.index}
             attempts={attempts}
             drafts={session.drafts}
-            isTest={isTest}
+            isTest={isTest || tsiMode}
+            finishLabel={tsiMode ? "Finish test" : undefined}
             pending={pending}
             onGo={(index) => {
               dialog.close();

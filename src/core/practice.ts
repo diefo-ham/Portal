@@ -111,7 +111,6 @@ export function filterQuestions(data: StudyData, f: Filters): Question[] {
       (!f.skills?.length || f.skills.includes(skillKey(q))) &&
       (!difficulties.length ||
         (!!q.difficulty && difficulties.includes(q.difficulty))) &&
-      (!f.origins?.length || (!!q.origin && f.origins.includes(q.origin))) &&
       (f.active === "include" ||
         (f.active === "hide"
           ? q.testStatus !== "active"
@@ -144,7 +143,6 @@ export function createSession(
       ...(filters.difficulties
         ? { difficulties: [...filters.difficulties] }
         : {}),
-      ...(filters.origins ? { origins: [...filters.origins] } : {}),
     },
     drafts: {},
     elapsed: {},

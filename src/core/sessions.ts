@@ -1,10 +1,14 @@
 import { sectionLabel } from "./assessments";
 import type { Session, StudyData } from "./model";
+import { testName } from "./tsiNames";
 
 export const SESSION_NAME_MAX_LENGTH = 80;
 
 /** Turns an English phrase into the portal's language; English passes through. */
-export type Say = (text: string, values?: Record<string, string | number>) => string;
+export type Say = (
+  text: string,
+  values?: Record<string, string | number>,
+) => string;
 const english: Say = (text, values) =>
   values
     ? text.replace(/\{(\w+)\}/g, (match, name: string) =>
@@ -24,6 +28,8 @@ export function sessionDefaultName(
   t: Say = english,
 ): string {
   if (session.practiceTest) return "Practice Test";
+  if (session.tsiTest)
+    return testName(session.tsiTest.kind, session.tsiTest.subject);
   const questions = session.questionIds
     .map((id) => data.questions.find((question) => question.id === id))
     .filter((question) => question !== undefined);

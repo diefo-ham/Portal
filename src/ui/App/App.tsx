@@ -5,7 +5,6 @@ import {
   isAssessment,
   scopeStudyData,
 } from "../../core/assessments";
-import { OFFICIAL_ITEMS_ALLOWED } from "../../core/buildFlags";
 import {
   beginSession,
   deleteSession,
@@ -33,7 +32,6 @@ import { Review } from "../Review";
 import { applyUpdate, subscribeToUpdates, updateReady } from "../../updates";
 import {
   eraseAllLocalData,
-  removeOfficialQuestions,
   removePdfQuestions,
   removeQuestionLibrary,
   storageErrorMessage,
@@ -43,6 +41,7 @@ import { Browse } from "../Browse";
 import { AddPdfsDialog } from "../AddPdfsDialog";
 import { AssessmentProvider, translator } from "../i18n";
 import { TimedTestRun, TimedTestSetup } from "../TimedTest";
+import { TsiTests } from "../TsiTest/TsiTests";
 import { usePersistedBoolean } from "@/src/helpers/usePersistedBoolean";
 import { readStorage, writeStorage } from "@/src/utils/storage";
 import { ActiveQuestionsDialog } from "./ActiveQuestionsDialog";
@@ -92,26 +91,25 @@ export const App = () => {
     setError,
     loadingMessage,
   } = useStudy(assessment);
-  // TSI items labelled Official can be hidden (a setting) or never present (a build).
-  const [includeOfficial, setIncludeOfficial] = usePersistedBoolean(
-    "sat-tsi-official",
+  // TSI questions labelled Original can be hidden, leaving the Official ones. The
+  // choice is only offered when both kinds are stored, and only applies then, so
+  // it can never leave a bank empty with nothing to turn back on.
+  const [includeOriginal, setIncludeOriginal] = usePersistedBoolean(
+    "sat-tsi-original",
     true,
   );
-  const hideOfficial =
-    info.hasOrigins && (!OFFICIAL_ITEMS_ALLOWED || !includeOfficial);
+  const bothKinds = useMemo(() => {
+    if (!info.hasOrigins || !data) return false;
+    const mine = scopeStudyData(data, assessment).questions;
+    return (
+      mine.some((question) => question.origin === "official") &&
+      mine.some((question) => question.origin === "original")
+    );
+  }, [data, assessment, info.hasOrigins]);
+  const hideOrigin = bothKinds && !includeOriginal ? "original" : undefined;
   const scoped = useMemo(
-    () =>
-      data ? scopeStudyData(data, assessment, { hideOfficial }) : undefined,
-    [data, assessment, hideOfficial],
-  );
-  const officialStored = useMemo(
-    () =>
-      info.hasOrigins && data
-        ? scopeStudyData(data, assessment).questions.filter(
-            (question) => question.origin === "official",
-          ).length
-        : 0,
-    [data, assessment, info.hasOrigins],
+    () => (data ? scopeStudyData(data, assessment, { hideOrigin }) : undefined),
+    [data, assessment, hideOrigin],
   );
   const [page, setPage] = useState<Page>("home");
   const [protectedTests, setProtectedTests] = usePersistedBoolean(
@@ -342,18 +340,6 @@ export const App = () => {
         t("Questions removed. Add your PDFs again whenever you like."),
       );
     });
-  const removeOfficial = () =>
-    run(async () => {
-      await adoptLibrary(async () => ({
-        result: { data: await removeOfficialQuestions() },
-      }));
-      setSessionId("");
-      setMessage(
-        t(
-          "Official items removed. Your original items, answers and bookmarks were kept.",
-        ),
-      );
-    });
   const eraseEverything = () =>
     run(async () => {
       await eraseAllLocalData();
@@ -366,7 +352,9 @@ export const App = () => {
           info={info}
           assessments={ASSESSMENTS.map(assessmentInfo)}
           page={page}
-          testOpen={!!(current?.practiceTest || current?.timedTest)}
+          testOpen={
+            !!(current?.practiceTest || current?.timedTest || current?.tsiTest)
+          }
           onHome={() => setPage("home")}
           onNavigate={(next) => {
             setPage(next);
@@ -394,7 +382,16 @@ export const App = () => {
           }}
         />
       )}
-      {page === "tests" && info.testMode ? (
+      {page === "tests" && info.fixedTests ? (
+        <TsiTests
+          data={view}
+          mutate={mutate}
+          onOpen={openSession}
+          removesAnswers={deleteRemovesAnswers}
+          timerDefault={timerDefault}
+          onAddQuestions={() => setAddOpen(true)}
+        />
+      ) : page === "tests" && info.testMode ? (
         <TimedTestSetup
           data={view}
           mutate={mutate}
@@ -436,7 +433,7 @@ export const App = () => {
           session={current}
           mutate={mutate}
           showCorrectExplanations={showCorrectExplanations}
-          onBack={() => setPage("home")}
+          onBack={() => setPage(current.tsiTest ? "tests" : "home")}
           onRetry={(ids, kind) => {
             const { filters: again, name } = sessionRetry(current, kind);
             void start(ids, 0, again, name);
@@ -496,10 +493,9 @@ export const App = () => {
             deleteRemovesAnswers,
             onDeleteRemovesAnswers: setDeleteRemovesAnswers,
             offerProtection: info.protectedTests,
-            officialItems:
-              info.hasOrigins && OFFICIAL_ITEMS_ALLOWED
-                ? { checked: includeOfficial, onChange: setIncludeOfficial }
-                : undefined,
+            originalQuestions: bothKinds
+              ? { checked: includeOriginal, onChange: setIncludeOriginal }
+              : undefined,
             protectedTests,
             onProtectedTests: (next) => {
               setProtectedTests(next);
@@ -516,10 +512,6 @@ export const App = () => {
             onReset: resetProgress,
             onRemoveQuestions: removeQuestions,
             onEraseEverything: eraseEverything,
-            official:
-              info.hasOrigins && OFFICIAL_ITEMS_ALLOWED
-                ? { count: officialStored, onRemove: removeOfficial }
-                : undefined,
           }}
         />
       )}

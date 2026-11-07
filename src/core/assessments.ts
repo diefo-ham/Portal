@@ -2,6 +2,7 @@ import {
   assessmentOf,
   type Assessment,
   type Question,
+  type QuestionOrigin,
   type Section,
   type Session,
   type StudyData,
@@ -38,6 +39,8 @@ export interface AssessmentInfo {
   idPrefix: string;
   /** Items carry an Official / Original label (TSI). */
   hasOrigins: boolean;
+  /** Practice tests with a fixed composition, taken in order (TSI). */
+  fixedTests: boolean;
 }
 
 const SAT: AssessmentInfo = {
@@ -69,6 +72,7 @@ const SAT: AssessmentInfo = {
   protectedTests: true,
   idPrefix: "",
   hasOrigins: false,
+  fixedTests: false,
 };
 
 const PAA: AssessmentInfo = {
@@ -116,6 +120,7 @@ const PAA: AssessmentInfo = {
   protectedTests: false,
   idPrefix: "paa-",
   hasOrigins: false,
+  fixedTests: false,
 };
 
 /**
@@ -153,6 +158,7 @@ const TSI: AssessmentInfo = {
   protectedTests: false,
   idPrefix: "tsi-",
   hasOrigins: true,
+  fixedTests: true,
 };
 
 const INFO: Record<Assessment, AssessmentInfo> = { SAT, PAA, TSI };
@@ -289,10 +295,38 @@ const ownerOf = (data: StudyData) => {
 
 export interface ScopeOptions {
   /**
-   * Leave out TSI items labelled Official, with their answers, bookmarks and the
-   * sessions that contain them. Nothing is deleted: turning it off brings them back.
+   * Leave out TSI items with this label (Original or Official), together with
+   * their answers and bookmarks. Nothing is deleted: turning it off brings them
+   * back. A session that contains some of them stays, without those questions;
+   * only a session with nothing else in it is left out.
    */
-  hideOfficial?: boolean;
+  hideOrigin?: QuestionOrigin;
+}
+
+/**
+ * A session as a screen sees it with some questions hidden: the same session,
+ * with the hidden ones skipped. Its position is the question it was on, or the
+ * next one still shown (the previous one if none follows).
+ */
+function withoutQuestions(
+  session: Session,
+  hidden: ReadonlySet<string>,
+): Session | undefined {
+  if (!session.questionIds.some((id) => hidden.has(id))) return session;
+  const questionIds = session.questionIds.filter((id) => !hidden.has(id));
+  if (!questionIds.length) return undefined;
+  const after = session.questionIds
+    .slice(session.index)
+    .find((id) => !hidden.has(id));
+  const before = session.questionIds
+    .slice(0, session.index)
+    .reverse()
+    .find((id) => !hidden.has(id));
+  return {
+    ...session,
+    questionIds,
+    index: Math.max(0, questionIds.indexOf(after ?? before ?? questionIds[0])),
+  };
 }
 
 /**
@@ -307,11 +341,11 @@ export function scopeStudyData(
 ): StudyData {
   const owner = ownerOf(data);
   const hidden = new Set(
-    options.hideOfficial
+    options.hideOrigin
       ? data.questions
           .filter(
             (question) =>
-              question.origin === "official" &&
+              question.origin === options.hideOrigin &&
               questionAssessment(question) === assessment,
           )
           .map((question) => question.id)
@@ -328,14 +362,15 @@ export function scopeStudyData(
         (attempt.assessment ?? owner(attempt.questionId)) === assessment &&
         !hidden.has(attempt.questionId),
     ),
-    sessions: data.sessions.filter(
-      (session) =>
-        (session.assessment ??
-          (session.questionIds[0] !== undefined
-            ? owner(session.questionIds[0])
-            : "SAT")) === assessment &&
-        !session.questionIds.some((id) => hidden.has(id)),
-    ),
+    sessions: data.sessions
+      .filter(
+        (session) =>
+          (session.assessment ??
+            (session.questionIds[0] !== undefined
+              ? owner(session.questionIds[0])
+              : "SAT")) === assessment,
+      )
+      .flatMap((session) => withoutQuestions(session, hidden) ?? []),
     annotations: Object.fromEntries(
       Object.entries(data.annotations).filter(
         ([id]) => owner(id) === assessment && !hidden.has(id),

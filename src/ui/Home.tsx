@@ -64,7 +64,6 @@ export const Home = ({
       skills: [],
       statuses: ["unanswered"],
       difficulties: [],
-      origins: [],
     });
   return (
     <main className="page home-page">
