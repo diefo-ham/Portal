@@ -4,6 +4,10 @@ Practice Test extends `Session.practiceTest` (version 1). Ordinary sessions have
 
 `core/practiceTest.ts` owns selection, module construction, clocks, progression, routing, exposure and scoring. `importing/practiceTestBackup.ts` validates saved test invariants. No external scoring services or proprietary tables are used.
 
+## Locked until you import
+
+The 120 bundled SAT examples have no active/inactive status and are never used to build a test. The Practice Tests screen opens only once the person has imported SAT questions of their own (`hasImportedQuestions`); until then it shows the locked screen with **Add your question PDFs**. See [examples.md](examples.md).
+
 ## Construction and exposure
 
 Only imported `active` questions qualify. Ordinary Practice attempts do not consume test eligibility. Module counts are 27 R&W and 22 Math. Greedy deficit balancing targets Easy/Medium/Hard proportions of 30/40/30 (first), 50/35/15 (lower) and 15/35/50 (higher). It balances available domains equally and favors skill diversity. Missing difficulty counts as Medium; scarce domains/difficulties redistribute slots instead of inventing metadata. Module 2 is never exclusively Easy or Hard: insufficient variety blocks construction, and future full-test modules retain a small reserve of differing difficulty. Presentation order is shuffled with injectable randomness. These are approximate blueprints; metadata scarcity can prevent the intended mix.

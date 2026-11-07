@@ -2,6 +2,7 @@
 
 - Offline-first, private study on one laptop. Essential workflows must need no internet after installation.
 - User-imported question material is data, never repository content. Commit only original synthetic examples. Never scrape or bypass College Board controls.
+- The app ships one set of original example questions per test (SAT, PAA, TSI) in `public/examples/`, written for the portal (not College Board items), marked `bundled`, with no active/inactive status. They study like any other question but are not the person's own: they never unlock the Tests screens (Practice Tests, Test mode, Tests, locked until the person imports questions of their own for that test), are never used to build a test, and "Remove my questions" leaves them. The portal is the same for everyone; there is no edition switch. See `docs/examples.md`.
 - Hide active practice-test questions by default. Unknown is explicit and is not a promise that a question is safe from spoilers.
 - The question is central. Prefer study usefulness, calm typography, and accessible interaction over gamification or dashboards.
 - Notes are intentionally absent from the product; retain the legacy note field only for stored-data/backup compatibility. Bookmarks remain useful, and progress reset preserves them unless the user explicitly chooses to clear them.

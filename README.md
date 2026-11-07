@@ -1,10 +1,10 @@
 # SAT Study
 
-A private, local-first SAT practice workspace. The application bundles **no questions at all**; you add your own. It does not scrape College Board, redistribute its question bank, or send study data anywhere.
+A private, local-first SAT practice workspace. The application bundles only a small set of original example questions for each test (written for this portal, see [docs/examples.md](docs/examples.md)); the real banks are your own PDFs, which you add. It does not scrape College Board, redistribute its question bank, or send study data anywhere.
 
 ## Use on GitHub Pages
 
-The repository deploys to GitHub Pages with `.github/workflows/deploy.yml`. The hosted site is a static copy of the app. It contains **no questions**, only the app and the feature for adding your own PDFs. It never includes a prepared PDF library: `private-data/` is git-ignored, and the workflow fails if a library, PDF, or env file reaches the build.
+The repository deploys to GitHub Pages with `.github/workflows/deploy.yml`. The hosted site is a static copy of the app. It contains **no College Board questions**: only the app, the original example questions in `public/examples/`, and the feature for adding your own PDFs. It never includes a prepared PDF library: `private-data/` is git-ignored, and the workflow fails if a library, PDF, or env file reaches the build.
 
 - Progress lives in your own browser's IndexedDB for the site's address (`https://<user>.github.io/<repo>/`). It is separate from any `http://127.0.0.1:4317` data and is not uploaded anywhere.
 - Progress is not copied between browsers or between a local install and the hosted site. Clearing a browser's site data removes it; **Reset study progress** can be undone from the same page.

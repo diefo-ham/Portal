@@ -173,6 +173,60 @@ describe("navigating", () => {
   });
 });
 
+describe("tests and the bundled examples", () => {
+  const bundledOnly = (assessment?: Assessment) => {
+    const data = testCorpus(2);
+    data.questions = data.questions.map((q) => ({
+      ...q,
+      ...(assessment ? { assessment } : {}),
+      bundled: true as const,
+    }));
+    return data;
+  };
+
+  it("keeps Tests locked, but visible, until questions of your own are added", async () => {
+    study.useStudy.mockImplementation(() => answer({ data: bundledOnly() }));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Tests" }));
+    expect(
+      screen.getByRole("heading", {
+        name: "Tests open when you add your own questions.",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "A test, at your pace." }),
+    ).toBeNull();
+  });
+
+  it("opens the test setup as soon as one question is the person's own", async () => {
+    const data = bundledOnly();
+    data.questions[0] = { ...data.questions[0], bundled: undefined };
+    study.useStudy.mockImplementation(() => answer({ data }));
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Tests" }));
+    expect(
+      screen.getByRole("heading", { name: "A test, at your pace." }),
+    ).toBeTruthy();
+  });
+
+  it("locks Test mode in Spanish on the PAA", async () => {
+    location.hash = "#/paa";
+    study.useStudy.mockImplementation(() =>
+      answer({ data: bundledOnly("PAA") }),
+    );
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Modo de prueba" }));
+    expect(
+      screen.getByRole("heading", {
+        name: "Las pruebas se abren cuando agregas tus propias preguntas.",
+      }),
+    ).toBeTruthy();
+  });
+});
+
 describe("settings", () => {
   const openSettings = async () => {
     const user = userEvent.setup();

@@ -1,7 +1,7 @@
-import { scopeStudyData } from "../core/assessments";
 import type { Assessment } from "../core/model";
 import { removePdfFromData } from "../core/pdfLibrary";
 import { referencedAssetKeys } from "../importing/documents";
+import { EXAMPLES_RECEIPT } from "../importing/preparedLibrary";
 import {
   clearAssets,
   deleteAssetsExcept,
@@ -14,28 +14,40 @@ import {
  * Sessions are dropped with the questions they point at (attempts stay, without
  * a session); adding the same PDFs again brings the questions back under the
  * same IDs, so the saved answers apply again. With an assessment, only that
- * test's questions go and the other test is left as it is.
+ * test's questions go and the other test is left as it is. The bundled example
+ * questions are not the person's: they stay, with their images, and so do the
+ * sessions made only of them.
  */
 export async function removeQuestionLibrary(assessment?: Assessment) {
   const data = await updateData((d) => {
-    if (!assessment) {
-      d.questions = [];
-      d.imports = [];
-      d.sessions = [];
-      for (const attempt of d.attempts) delete attempt.sessionId;
-      return;
-    }
-    const own = scopeStudyData(d, assessment);
-    const removedSessions = new Set(own.sessions.map((s) => s.id));
-    d.questions = d.questions.filter((q) => q.assessment !== assessment);
-    d.sessions = d.sessions.filter((s) => !removedSessions.has(s.id));
+    const removed = new Set(
+      d.questions
+        .filter(
+          (q) =>
+            q.bundled !== true && (!assessment || q.assessment === assessment),
+        )
+        .map((q) => q.id),
+    );
+    d.questions = d.questions.filter((q) => !removed.has(q.id));
+    // A session goes when any of its questions did (a mixed one cannot continue).
+    const gone = new Set(
+      d.sessions
+        .filter((s) => s.questionIds.some((id) => removed.has(id)))
+        .map((s) => s.id),
+    );
+    d.sessions = d.sessions.filter((s) => !gone.has(s.id));
     for (const attempt of d.attempts)
-      if (attempt.sessionId && removedSessions.has(attempt.sessionId))
+      if (
+        attempt.sessionId &&
+        (gone.has(attempt.sessionId) || removed.has(attempt.questionId))
+      )
         delete attempt.sessionId;
-    // Import receipts are not tied to a test; they only record what was added.
-    if (!d.questions.length) d.imports = [];
+    // Receipts of the person's own libraries go, so the same PDFs can be added
+    // again; the examples' receipt stays, so they are not copied a second time.
+    if (!assessment || !d.questions.some((q) => q.bundled !== true))
+      d.imports = d.imports.filter((x) => x.id.startsWith(EXAMPLES_RECEIPT));
   });
-  if (assessment && data.questions.length)
+  if (data.questions.length)
     await deleteAssetsExcept(referencedAssetKeys(data));
   else await clearAssets();
   return data;

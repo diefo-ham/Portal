@@ -101,7 +101,15 @@ export function serviceWorker() {
       // The PDF reader (its worker and the chunk that loads it) is cached on first use
       // instead of on every first visit.
       const lazy = /^assets\/(pdf\.worker\.min|run)-[^/]+\.m?js$/;
-      const precache = ["./", ...files.filter((file) => !lazy.test(file))];
+      // The example questions' images (about 20 MB) are copied into the local
+      // database on the first load, so they are not kept a second time here or
+      // downloaded again with every release; their manifest and questions are
+      // cached so the app can check them offline.
+      const exampleImage = /^examples\/assets\//;
+      const precache = [
+        "./",
+        ...files.filter((file) => !lazy.test(file) && !exampleImage.test(file)),
+      ];
       await writeFile(
         join(outDir, "sw.js"),
         worker

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { Filters as FilterValues, StudyData } from "../core/model";
+import { hasImportedQuestions } from "../core/assessments";
 import { filterQuestions } from "../core/practice";
 import { reviewQueues } from "../core/review";
 import { ContinueSessions } from "./ContinueSessions";
@@ -72,6 +73,16 @@ export const Home = ({
       <p className="muted">
         {t("Choose a focus, settle in, and take it one question at a time.")}
       </p>
+      {data.questions.length > 0 && !hasImportedQuestions(data) && (
+        <p className="small muted">
+          {t(
+            "You are working with the example questions that come with the portal. Add your own question PDFs for more, and to open the tests.",
+          )}{" "}
+          <button className="text-button" onClick={onAddQuestions}>
+            {t("Add your question PDFs")}
+          </button>
+        </p>
+      )}
       <ContinueSessions data={data} actions={sessionActions} />
       {!data.questions.length ? (
         <section className="empty-state">

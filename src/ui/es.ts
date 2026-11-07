@@ -36,6 +36,17 @@ export const es: Record<string, string> = {
   "This portal comes with no questions. Add your own College Board question PDFs and they are prepared on this device; nothing is uploaded.":
     "Este portal no trae preguntas. Agrega tus propios PDF de preguntas y se preparan en este dispositivo; no se envía nada.",
   "Add your question PDFs": "Agrega tus PDF de preguntas",
+  TESTS: "PRUEBAS",
+  "You are working with the example questions that come with the portal. Add your own question PDFs for more, and to open the tests.":
+    "Estás trabajando con las preguntas de ejemplo que trae el portal. Agrega tus propios PDF de preguntas para tener más y para abrir las pruebas.",
+  "Only the example questions are here so far. Add your PDFs below.":
+    "Por ahora solo están las preguntas de ejemplo. Agrega tus PDF abajo.",
+  "Tests open when you add your own questions.":
+    "Las pruebas se abren cuando agregas tus propias preguntas.",
+  "The example questions that come with this portal are for studying in Browse, Practice and Review. A test is built only from question PDFs you add yourself.":
+    "Las preguntas de ejemplo que trae este portal son para estudiar en Explorar, Práctica y Repaso. Una prueba se arma solo con los PDF de preguntas que agregas tú.",
+  "They are prepared on this device and nothing is uploaded. Once you have added some, this page becomes the test setup.":
+    "Se preparan en este dispositivo y no se sube nada. Cuando hayas agregado algunos, esta página pasa a ser la preparación de la prueba.",
   "Practice selection": "Selección de práctica",
   "Choose your focus": "Elige tu enfoque",
   "Reset filters": "Restablecer filtros",
@@ -372,8 +383,6 @@ export const es: Record<string, string> = {
   "Your questions": "Tus preguntas",
   "{n} questions are stored in this browser, with your answers.":
     "{n} preguntas guardadas en este navegador, con tus respuestas.",
-  "No questions yet. Add your PDFs below.":
-    "Todavía no hay preguntas. Agrega tus PDF abajo.",
   "Nothing is uploaded, and no account is needed.":
     "No se envía nada y no hace falta una cuenta.",
   "Previous study state restored. Saved timers are paused.":

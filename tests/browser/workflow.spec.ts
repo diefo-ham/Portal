@@ -98,6 +98,8 @@ test("progress survives closing and reopening the browser process", async ({}, t
     let page = await context.newPage();
     await page.addInitScript(() => {
       Math.random = () => 0.999999;
+      // This profile is not the configured one: keep the bundled examples out of the pool.
+      localStorage.setItem("sat-bundled-examples", "off");
     });
     // A fresh profile has no remembered test; the link opens the SAT directly.
     await page.goto("http://127.0.0.1:4318/#/sat");

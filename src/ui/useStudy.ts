@@ -8,7 +8,10 @@ import {
 } from "../storage/database";
 import type { ResetArchive } from "../storage/resetArchive";
 import { keepStorage, storageErrorMessage } from "../storage/localData";
-import { loadPreparedLibrary } from "../importing/preparedLibrary";
+import {
+  loadBundledExamples,
+  loadPreparedLibrary,
+} from "../importing/preparedLibrary";
 export function useStudy(assessment: Assessment = "SAT") {
   const [data, setData] = useState<StudyData>();
   const [archive, setArchive] = useState<ResetArchive>();
@@ -19,7 +22,8 @@ export function useStudy(assessment: Assessment = "SAT") {
   );
   useEffect(() => {
     loadPreparedLibrary(setLoadingMessage)
-      .then(async (next) => {
+      .then(() => loadBundledExamples(setLoadingMessage))
+      .then((next) => {
         setData(next);
       })
       .catch(async (e) => {
