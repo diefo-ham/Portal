@@ -161,10 +161,12 @@ function TsiHelp() {
           <details>
             <summary>Your data</summary>
             <p>
-              Everything is stored in this browser and works offline. In
+              Everything is stored in this browser and works offline. A fresh
+              install comes with original example questions for each test; the
+              Tests tab opens once you have added question PDFs of your own. In
               Settings you can add your question PDFs, reset TSI progress or
-              remove the questions. SAT, PAA and TSI progress are kept
-              separately.
+              remove your questions (the examples stay). SAT, PAA and TSI
+              progress are kept separately.
             </p>
           </details>
         </div>
@@ -294,10 +296,13 @@ function PaaHelp() {
           <details>
             <summary>Tus datos</summary>
             <p>
-              Todo se guarda en este navegador y funciona sin conexión. En
-              Ajustes puedes agregar tus PDF de preguntas, reiniciar el progreso
-              de la PAA o quitar las preguntas. El progreso del SAT y el de la
-              PAA se guardan por separado.
+              Todo se guarda en este navegador y funciona sin conexión. Una
+              instalación nueva trae preguntas de ejemplo originales para cada
+              prueba; el Modo de prueba se abre cuando hayas agregado PDF de
+              preguntas propios. En Ajustes puedes agregar tus PDF de preguntas,
+              reiniciar el progreso de la PAA o quitar tus preguntas (las de
+              ejemplo se quedan). El progreso del SAT y el de la PAA se guardan
+              por separado.
             </p>
           </details>
         </div>
@@ -409,6 +414,11 @@ function SatHelp() {
           </details>
           <details open={openSection === "tests"}>
             <summary {...detail("tests")}>Tests</summary>
+            <p>
+              The example questions that come with the portal are for studying
+              in Browse, Practice and Review. Tests are built from your own
+              question PDFs, so this page opens once you have added some.
+            </p>
             <p>
               Choose a Full Test or one module. Timed modules count down;
               untimed modules use an unlimited stopwatch. A live module can be

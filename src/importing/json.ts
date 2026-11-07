@@ -102,6 +102,11 @@ export function parseQuestions(input: unknown): Question[] {
         );
       q.calculator = raw.calculator as Question["calculator"];
     }
+    if (raw.bundled != null) {
+      if (raw.bundled !== true)
+        return fail("bundled must be true when present.");
+      q.bundled = true;
+    }
     if (raw.testStatus != null) {
       if (!["active", "inactive", "unknown"].includes(String(raw.testStatus)))
         return fail("invalid testStatus.");
@@ -298,6 +303,7 @@ function contentKey(q: Question) {
     q.answer,
     q.rationale,
     q.testStatus,
+    q.bundled,
     q.media,
     q.document,
   ]);

@@ -25,6 +25,12 @@ export interface Question {
   assessment?: Assessment;
   sourceId?: string;
   source?: string;
+  /**
+   * True for the example questions that ship with the app. They are not the
+   * person's own: they never unlock the Tests screens and "Remove my questions"
+   * leaves them. Absent on everything else.
+   */
+  bundled?: true;
   section: Section;
   domain?: string;
   skill?: string;

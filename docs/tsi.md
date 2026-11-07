@@ -1,6 +1,6 @@
 # TSI Portal
 
-The portal serves three tests from one codebase: the **SAT**, the **PAA** and the **TSI** (the Texas Success Initiative Assessment 2.0, TSIA2). The header switch (**SAT · PAA · TSI**) moves between them from anywhere, and `#/tsi` links straight to the TSI. Everything below is what differs for the TSI. Content is always the person's own: the app and the website build contain **no TSI questions**, and no College Board item is ever committed.
+The portal serves three tests from one codebase: the **SAT**, the **PAA** and the **TSI** (the Texas Success Initiative Assessment 2.0, TSIA2). The header switch (**SAT · PAA · TSI**) moves between them from anywhere, and `#/tsi` links straight to the TSI. Everything below is what differs for the TSI. Content is always the person's own: the app and the website build contain **no College Board TSI questions** (only the original examples described in [examples.md](examples.md)), and no College Board item is ever committed.
 
 ## How the TSI differs
 
@@ -24,7 +24,7 @@ Every TSI question is labelled in its own rationale: the last line is `Source: o
 - **Build.** A build made with `VITE_INCLUDE_OFFICIAL=false` refuses Official items at import (each is left out with the reason "College Board sample item left out: this build includes original items only"). One constant (`src/core/buildFlags.ts`), not a fork.
 - A question with a missing or unrecognized Source line is **treated as Official** and listed under "Noted" in the import report.
 
-The official items are College Board's copyright. Whether and when to distribute them is a decision for the owner of the portal. The app still ships with no questions at all, so a paid build would also need a way to deliver original items; that is not part of this change and would need the question-material rule in `AGENTS.md` to be revisited.
+The official items are College Board's copyright. Whether and when to distribute them is a decision for the owner of the portal. The app ships only the 60 + 60 original examples in `public/examples/` ([examples.md](examples.md)); delivering the full original bank would be a separate decision.
 
 ## Importing the TSI PDFs
 

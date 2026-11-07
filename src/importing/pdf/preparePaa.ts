@@ -20,6 +20,11 @@ import {
 } from "./paa.ts";
 import type { ReviewedOverride } from "./record.ts";
 import {
+  convertSatExampleRecord,
+  isSatBankRecord,
+  satExampleSignature,
+} from "./satExamples.ts";
+import {
   CALCULATOR_TAG_PHRASES,
   convertTsiRecord,
   groupTsiPassages,
@@ -119,6 +124,34 @@ export const TSI_PROFILE: BankProfile = {
       `None of the PDFs is a TSIA2 question export, so nothing was added. Set aside: ${ignored.join(", ")}.`,
     nothingPrepared: (first) =>
       "No question could be prepared. Check that these are TSIA2 question exports." +
+      (first ? ` First problem: ${first}` : ""),
+  },
+};
+
+/**
+ * The bundled SAT examples: one bank-layout PDF with Assessment = SAT. Only
+ * `scripts/build-examples.mjs` uses it; the Add-PDFs dialog does not.
+ */
+export const SAT_EXAMPLES_PROFILE: BankProfile = {
+  parser: "sat-examples-pdf-v1",
+  label: "SAT examples",
+  idPrefix: "example-",
+  language: "en",
+  accepts: isSatBankRecord,
+  group: () => new Map(),
+  signature: satExampleSignature,
+  convert: (record, _group, override) => {
+    const { text, notes } = convertSatExampleRecord(record, override);
+    return { text: text as unknown as Record<string, unknown>, notes };
+  },
+  say: {
+    reading: (file, page, pages) => `Reading ${file}: page ${page} of ${pages}`,
+    converting: (done, total) => `Preparing questions: ${done} of ${total}`,
+    checking: "Checking the prepared library…",
+    noneQualified: (ignored) =>
+      `None of the PDFs holds SAT questions in this layout. Set aside: ${ignored.join(", ")}.`,
+    nothingPrepared: (first) =>
+      "No question could be prepared." +
       (first ? ` First problem: ${first}` : ""),
   },
 };

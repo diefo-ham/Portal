@@ -301,6 +301,11 @@ export interface ScopeOptions {
    * only a session with nothing else in it is left out.
    */
   hideOrigin?: QuestionOrigin;
+  /**
+   * Leave out the bundled example questions, in the same way. The Tests screens
+   * use this: a test is built from the person's own questions only.
+   */
+  hideBundled?: boolean;
 }
 
 /**
@@ -341,15 +346,15 @@ export function scopeStudyData(
 ): StudyData {
   const owner = ownerOf(data);
   const hidden = new Set(
-    options.hideOrigin
-      ? data.questions
-          .filter(
-            (question) =>
-              question.origin === options.hideOrigin &&
-              questionAssessment(question) === assessment,
-          )
-          .map((question) => question.id)
-      : [],
+    data.questions
+      .filter(
+        (question) =>
+          questionAssessment(question) === assessment &&
+          ((options.hideOrigin !== undefined &&
+            question.origin === options.hideOrigin) ||
+            (options.hideBundled === true && question.bundled === true)),
+      )
+      .map((question) => question.id),
   );
   return {
     ...data,
@@ -381,6 +386,21 @@ export function scopeStudyData(
     ),
   };
 }
+
+/**
+ * Whether the person has added questions of their own for a test. The bundled
+ * examples do not count: the Tests screens (Practice Tests, Test mode, Tests)
+ * stay locked until this is true.
+ */
+export const hasImportedQuestions = (
+  data: Pick<StudyData, "questions">,
+  assessment?: Assessment,
+): boolean =>
+  data.questions.some(
+    (question) =>
+      question.bundled !== true &&
+      (assessment === undefined || questionAssessment(question) === assessment),
+  );
 
 /** The part of the study history that belongs to one assessment. */
 export type StudySlice = Pick<

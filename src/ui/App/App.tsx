@@ -3,6 +3,7 @@ import {
   ASSESSMENTS,
   assessmentInfo,
   isAssessment,
+  hasImportedQuestions,
   scopeStudyData,
 } from "../../core/assessments";
 import {
@@ -41,6 +42,7 @@ import { Browse } from "../Browse";
 import { AddPdfsDialog } from "../AddPdfsDialog";
 import { AssessmentProvider, translator } from "../i18n";
 import { TimedTestRun, TimedTestSetup } from "../TimedTest";
+import { TestsLocked } from "../TestsLocked";
 import { TsiTests } from "../TsiTest/TsiTests";
 import { usePersistedBoolean } from "@/src/helpers/usePersistedBoolean";
 import { readStorage, writeStorage } from "@/src/utils/storage";
@@ -109,6 +111,19 @@ export const App = () => {
   const hideOrigin = bothKinds && !includeOriginal ? "original" : undefined;
   const scoped = useMemo(
     () => (data ? scopeStudyData(data, assessment, { hideOrigin }) : undefined),
+    [data, assessment, hideOrigin],
+  );
+  // Tests are built from the person's own questions only, and stay locked until
+  // there are some: the bundled examples are for studying.
+  const ownQuestions = useMemo(
+    () => (data ? hasImportedQuestions(data, assessment) : false),
+    [data, assessment],
+  );
+  const testView = useMemo(
+    () =>
+      data
+        ? scopeStudyData(data, assessment, { hideOrigin, hideBundled: true })
+        : undefined,
     [data, assessment, hideOrigin],
   );
   const [page, setPage] = useState<Page>("home");
@@ -275,6 +290,7 @@ export const App = () => {
       </main>
     );
   const view = scoped ?? data;
+  const testData = testView ?? view;
   const filtered = filterQuestions(view, filters);
   const current = view.sessions.find((s) => s.id === sessionId);
   const changeFilters = (value: FilterValues) => {
@@ -382,9 +398,11 @@ export const App = () => {
           }}
         />
       )}
-      {page === "tests" && info.fixedTests ? (
+      {page === "tests" && !ownQuestions ? (
+        <TestsLocked onAddQuestions={() => setAddOpen(true)} />
+      ) : page === "tests" && info.fixedTests ? (
         <TsiTests
-          data={view}
+          data={testData}
           mutate={mutate}
           onOpen={openSession}
           removesAnswers={deleteRemovesAnswers}
@@ -393,7 +411,7 @@ export const App = () => {
         />
       ) : page === "tests" && info.testMode ? (
         <TimedTestSetup
-          data={view}
+          data={testData}
           mutate={mutate}
           onOpen={openSession}
           removesAnswers={deleteRemovesAnswers}
@@ -411,7 +429,7 @@ export const App = () => {
         />
       ) : page === "tests" && info.practiceTests ? (
         <PracticeTestSetup
-          data={view}
+          data={testData}
           mutate={mutate}
           onOpen={openSession}
           onSettings={() => setPage("data")}

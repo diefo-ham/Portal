@@ -31,15 +31,20 @@ export const MaintenanceSection = ({
   onEraseEverything,
 }: MaintenanceSectionProps) => {
   const t = useT();
+  // The bundled examples are not "my questions": they are neither counted here
+  // nor removed by "Remove my questions".
+  const own = data.questions.filter((q) => q.bundled !== true).length;
   return (
     <section className="maintenance" aria-labelledby="maintenance-heading">
       <h2 id="maintenance-heading">{t("Your questions")}</h2>
       <p className="muted">
-        {data.questions.length
+        {own
           ? t("{n} questions are stored in this browser, with your answers.", {
-              n: data.questions.length.toLocaleString(),
+              n: own.toLocaleString(),
             })
-          : t("No questions yet. Add your PDFs below.")}{" "}
+          : t(
+              "Only the example questions are here so far. Add your PDFs below.",
+            )}{" "}
         {t("Nothing is uploaded, and no account is needed.")}
       </p>
       <div className="data-grid">
@@ -58,7 +63,7 @@ export const MaintenanceSection = ({
       />
       <ClearData
         busy={busy}
-        hasQuestions={data.questions.length > 0}
+        hasQuestions={own > 0}
         onRemoveQuestions={onRemoveQuestions}
         onEraseEverything={onEraseEverything}
       />

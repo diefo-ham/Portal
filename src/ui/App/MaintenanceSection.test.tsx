@@ -68,11 +68,25 @@ describe("MaintenanceSection", () => {
     ).toBeTruthy();
   });
 
-  it("invites adding PDFs when there are no questions", () => {
+  it("invites adding PDFs when there are no questions of your own", () => {
     setup({ data: emptyData() });
     expect(
-      screen.getByText(/No questions yet\. Add your PDFs below\./),
+      screen.getByText(
+        /Only the example questions are here so far\. Add your PDFs below\./,
+      ),
     ).toBeTruthy();
+  });
+
+  it("does not count the bundled examples as your questions, and leaves them out of removal", () => {
+    const data: StudyData = testCorpus(2);
+    data.questions = data.questions.map((q) => ({ ...q, bundled: true }));
+    setup({ data });
+    expect(
+      screen.getByText(/Only the example questions are here so far/),
+    ).toBeTruthy();
+    expect(
+      (screen.getByText("Remove my questions") as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("counts questions, attempts and bookmarks on this device", () => {

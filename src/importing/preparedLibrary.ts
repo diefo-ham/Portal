@@ -6,10 +6,16 @@ import {
   updateData,
 } from "../storage/database";
 import { assessmentOf, type StudyData } from "../core/model";
+import { EXAMPLES_OFF_KEY, EXAMPLES_PATH } from "../core/bundled";
+import { readStorage } from "../utils/storage";
 
 /** One key for "the same source question", which never crosses assessments. */
 const sourceKey = (q: StudyData["questions"][number]) =>
   [assessmentOf(q), q.source, q.sourceId].join("\u0000");
+
+/** Receipt id prefixes in `imports`: the person's own libraries, and the bundled examples. */
+export const PREPARED_RECEIPT = "prepared:";
+export const EXAMPLES_RECEIPT = "examples:";
 
 /** Source label of the original example questions older versions offered. */
 const EXAMPLE_SOURCE = "Original synthetic examples";
@@ -29,27 +35,37 @@ export interface LibrarySource {
 const library = (path: string) =>
   `${import.meta.env.BASE_URL}local-library/${path}`;
 
-const serverSource: LibrarySource = {
+/** A library served as static files under `base` (manifest.json, questions.json, assets/). */
+const staticSource = (
+  base: (path: string) => string,
+  what: string,
+): LibrarySource => ({
   async manifest() {
-    const response = await fetch(library("manifest.json"), {
+    const response = await fetch(base("manifest.json"), {
       cache: "no-store",
     });
     if (response.status === 404) return undefined;
-    if (!response.ok)
-      throw new Error("Cannot read the prepared local question library.");
+    if (!response.ok) throw new Error(`Cannot read the ${what}.`);
     return response.json();
   },
   async questions() {
-    const response = await fetch(library("questions.json"));
+    const response = await fetch(base("questions.json"));
     if (!response.ok) throw new Error("Prepared question data is missing.");
     return response.text();
   },
   async asset(key) {
-    const response = await fetch(library("assets/" + key));
+    const response = await fetch(base("assets/" + key));
     if (!response.ok) throw new Error("A prepared PDF image is missing.");
     return response.blob();
   },
-};
+});
+
+const serverSource = staticSource(library, "prepared local question library");
+
+const examplesSource = staticSource(
+  (path) => `${import.meta.env.BASE_URL}${EXAMPLES_PATH}${path}`,
+  "bundled example questions",
+);
 
 /**
  * A library prepared in memory. Its images were already stored under their
@@ -86,6 +102,8 @@ export interface LibraryResult {
 export async function ingestLibrary(
   source: LibrarySource,
   progress: (message: string) => void,
+  /** Prefix of the receipt kept in `imports`; the examples use their own. */
+  receipt: string = PREPARED_RECEIPT,
 ): Promise<LibraryResult> {
   const manifest = (await source.manifest()) as
     Record<string, unknown> | undefined;
@@ -109,7 +127,7 @@ export async function ingestLibrary(
   const label =
     typeof manifest.label === "string" ? manifest.label.slice(0, 120) : "";
   const questionCount = manifest.questionCount as number;
-  const id = "prepared:" + manifest.revision;
+  const id = receipt + manifest.revision;
   const data = await readData();
   const present = await assetKeys();
   const missing = assetList.filter((key) => !present.has(key));
@@ -195,5 +213,26 @@ export function loadPreparedLibrary(progress: (message: string) => void) {
     .then((result) => result.data)
     .finally(() => {
       loading = undefined;
+    }));
+}
+
+let loadingExamples: Promise<StudyData> | undefined;
+/**
+ * Adds the bundled example questions (`public/examples/`) once per revision.
+ * They never stop the app from opening: if they cannot be read (offline before
+ * the first copy, a damaged file), the study data is returned as it is and the
+ * next load tries again.
+ */
+export function loadBundledExamples(progress: (message: string) => void) {
+  if (readStorage(EXAMPLES_OFF_KEY) === "off") return readData();
+  return (loadingExamples ??= ingestLibrary(
+    examplesSource,
+    progress,
+    EXAMPLES_RECEIPT,
+  )
+    .then((result) => result.data)
+    .catch(() => readData())
+    .finally(() => {
+      loadingExamples = undefined;
     }));
 }

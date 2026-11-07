@@ -12,6 +12,7 @@ The portal serves two tests from one codebase: the **SAT** and the **PAA** (Prue
 | Scoring | Estimated SAT range from full tests | 200–800 per part and 10–40 per subpart, converted from the whole test. No penalty for wrong answers. **The portal does not invent a conversion.** |
 | Calculator | Bundled Offline calculator | None: the guide says the problems do not need one |
 | Spoiler protection | Active practice-test questions hidden | No such concept; questions import as `unknown` and nothing is hidden |
+| Example questions | 120 bundled; Practice Tests stay locked until SAT questions of your own are imported | 120 bundled; Test mode stays locked until PAA questions of your own are imported (see [examples.md](examples.md)) |
 | Interface language | English | Spanish (Inglés questions stay in English, with Spanish explanations) |
 
 What the PAA Portal shows instead of a score: percent correct and attempt counts for each part, each domain (Matemáticas uses the guide's four subscore areas: Aritmética, Álgebra, Geometría, Análisis de datos y Probabilidad) and each skill, with a "limited data" note under five attempts and a line saying it is practice accuracy, not a PAA score.

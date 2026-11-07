@@ -80,5 +80,8 @@ test("erasing everything returns the app to a clean first run", async ({
   // The reloaded app recreates an empty database; it holds no questions.
   expect(stored).toBeLessThanOrEqual(1);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await expect(page.getByText("No questions yet.")).toBeVisible();
+  // A clean first run: the bundled examples are back, and none of the person's own.
+  await expect(
+    page.getByText(/Only the example questions are here so far/),
+  ).toBeVisible();
 });
