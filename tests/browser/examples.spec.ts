@@ -92,7 +92,34 @@ test("adding your own questions opens the tests; removing them leaves the exampl
   await page.goto("/#/sat");
   await openSettings(page);
   await expect(stored(page)).toContainText("120 questions");
+  // With only the examples there is nothing to protect and no examples switch.
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Protect unused practice-test questions",
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("checkbox", { name: "Include example questions" }),
+  ).toHaveCount(0);
   await addOwnQuestions(page);
+
+  // Once there are questions of your own, the examples are hidden by default,
+  // the protection setting appears, and a switch brings the examples back.
+  await openSettings(page);
+  await expect(stored(page)).toContainText("12 questions");
+  await expect(
+    page.getByRole("checkbox", {
+      name: "Protect unused practice-test questions",
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("checkbox", { name: "Include example questions" })
+    .check();
+  await expect(stored(page)).toContainText("132 questions");
+  await page
+    .getByRole("checkbox", { name: "Include example questions" })
+    .uncheck();
+  await expect(stored(page)).toContainText("12 questions");
 
   await page.getByRole("button", { name: "Tests", exact: true }).click();
   await expect(

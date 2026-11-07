@@ -6,24 +6,22 @@
 import { ingestLibrary, memorySource } from "../preparedLibrary.ts";
 import { deleteAssetsExcept, writeAssets } from "../../storage/database.ts";
 import { referencedAssetKeys } from "../documents.ts";
-import type { ActiveSetting } from "./classify.ts";
 import { encodeWebp, openExport } from "./pdfjsAdapter.ts";
 import {
-  assignExports,
   parseOverrides,
-  prepareLibrary,
-  type ExportName,
   type PrepareDeps,
   type PrepareReport,
   type PreparedLibrary,
   type Progress,
 } from "./prepare.ts";
 import { flat, isPaaQuestionPage, peekAssessment } from "./paa.ts";
-import { preparePaaLibrary, prepareTsiLibrary } from "./preparePaa.ts";
+import {
+  prepareSatLibrary,
+  preparePaaLibrary,
+  prepareTsiLibrary,
+} from "./preparePaa.ts";
 
 export interface RunOptions {
-  /** Defaults to reading the relationship from the files themselves. */
-  mode?: ActiveSetting;
   /** Optional JSON file of reviewed exceptions. */
   overridesFile?: File;
   signal?: AbortSignal;
@@ -46,21 +44,18 @@ const deps: PrepareDeps = {
   },
 };
 
-export async function prepareFromPdfs(files: File[], options: RunOptions) {
-  const assigned = assignExports(files);
-  if (assigned.missing.length)
-    throw new Error(
-      `Choose all four exports. Missing: ${assigned.missing.map((name) => name + ".pdf").join(", ")}.`,
-    );
-  const overrides = options.overridesFile
+const overridesOf = async (options: RunOptions) =>
+  options.overridesFile
     ? parseOverrides(JSON.parse(await options.overridesFile.text()))
     : undefined;
+
+/** SAT question PDF(s): one file with both tests and the ACTIVE / INACTIVE badges. */
+export async function prepareFromSatPdfs(files: File[], options: RunOptions) {
   return adopt(
-    await prepareLibrary(
-      assigned.found as Record<ExportName, File>,
+    await prepareSatLibrary(
+      files,
       {
-        mode: options.mode,
-        overrides,
+        overrides: await overridesOf(options),
         signal: options.signal,
         progress: options.progress,
       },
@@ -70,30 +65,32 @@ export async function prepareFromPdfs(files: File[], options: RunOptions) {
   );
 }
 
-/** PAA exports: any number of PDFs, any file names, no active/inactive pairing. */
+/** PAA question PDF(s): any number, any file names. */
 export async function prepareFromPaaPdfs(files: File[], options: RunOptions) {
-  const overrides = options.overridesFile
-    ? parseOverrides(JSON.parse(await options.overridesFile.text()))
-    : undefined;
   return adopt(
     await preparePaaLibrary(
       files,
-      { overrides, signal: options.signal, progress: options.progress },
+      {
+        overrides: await overridesOf(options),
+        signal: options.signal,
+        progress: options.progress,
+      },
       deps,
     ),
     options,
   );
 }
 
-/** TSIA2 exports: two PDFs (ELAR, Mathematics) or any number, any file names. */
+/** TSIA2 question PDF(s): any number, any file names. */
 export async function prepareFromTsiPdfs(files: File[], options: RunOptions) {
-  const overrides = options.overridesFile
-    ? parseOverrides(JSON.parse(await options.overridesFile.text()))
-    : undefined;
   return adopt(
     await prepareTsiLibrary(
       files,
-      { overrides, signal: options.signal, progress: options.progress },
+      {
+        overrides: await overridesOf(options),
+        signal: options.signal,
+        progress: options.progress,
+      },
       deps,
     ),
     options,
@@ -112,23 +109,25 @@ async function adopt(prepared: PreparedLibrary, options: RunOptions) {
 }
 
 /**
- * Which test a PDF is an export of, from the Assessment column of its first
- * question page; undefined when it is neither (a letter, a study guide, an SAT export).
+ * Which test a PDF holds questions for, from the Assessment column of its first
+ * question page; undefined when it is none (a letter, a study guide).
  */
 export async function detectBankKind(
   file: File,
-): Promise<"PAA" | "TSI" | undefined> {
+): Promise<"SAT" | "PAA" | "TSI" | undefined> {
   const reader = await openExport(new Uint8Array(await file.arrayBuffer()));
   try {
     for (let page = 1; page <= Math.min(3, reader.pageCount); page++) {
       const layout = await reader.layout(page);
       if (!isPaaQuestionPage(layout)) continue;
       const assessment = flat(peekAssessment(layout));
-      return assessment === "paa"
-        ? "PAA"
-        : assessment === "tsia2" || assessment === "tsi"
-          ? "TSI"
-          : undefined;
+      return assessment === "sat"
+        ? "SAT"
+        : assessment === "paa"
+          ? "PAA"
+          : assessment === "tsia2" || assessment === "tsi"
+            ? "TSI"
+            : undefined;
     }
     return undefined;
   } catch {

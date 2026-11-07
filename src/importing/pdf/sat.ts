@@ -1,18 +1,18 @@
 /**
- * Reading profile for the bundled SAT example questions: one PDF in the
- * Educator Question Bank layout (the layout the PAA and TSI exports use) with
- * `Assessment` = SAT. It is not the reader for SAT exports: those come as four
- * named files read as active and inactive sets (`prepare.ts`). The examples
- * carry no active/inactive information, so every question is `unknown`.
+ * Reading profile for SAT questions in the Educator Question Bank layout (the
+ * layout the PAA and TSI exports use) with `Assessment` = SAT: one PDF with
+ * both tests and every status. Whether a question is in a live College Board
+ * practice test comes from the ACTIVE / INACTIVE badge at the top right of its
+ * page (`marks.ts`); a page without one is `unknown`, which is not a promise
+ * that the question is safe from spoilers.
  *
- * Used by `scripts/build-examples.mjs` only. Pure functions: no PDF library, no
- * DOM, no storage.
+ * Pure functions: no PDF library, no DOM, no storage.
  */
 import { extractAnswer, type Answer } from "./answers.ts";
 import { choiceLabels, flat, isLineNumber, type PaaRecord } from "./paa.ts";
 import { cleanSkill, type ReviewedOverride } from "./record.ts";
 
-export const SAT_EXAMPLE_SOURCE = "SAT examples";
+export const SAT_SOURCE = "College Board SAT question bank";
 
 const SECTIONS: Record<string, "math" | "reading-writing"> = {
   math: "math",
@@ -23,7 +23,7 @@ const DIFFICULTIES = new Set(["easy", "medium", "hard"]);
 export const isSatBankRecord = (record: PaaRecord) =>
   flat(record.assessment) === "sat";
 
-export interface SatExampleText {
+export interface SatQuestionText {
   id: string;
   assessment: "SAT";
   sourceId: string;
@@ -40,10 +40,10 @@ export interface SatExampleText {
   extractionWarnings?: string[];
 }
 
-export function convertSatExampleRecord(
+export function convertSatRecord(
   record: PaaRecord,
   override?: ReviewedOverride,
-): { text: SatExampleText; notes: string[] } {
+): { text: SatQuestionText; notes: string[] } {
   const { answer, origin: answerKeyOrigin } = extractAnswer(
     record.texts.join("\n"),
   );
@@ -60,15 +60,15 @@ export function convertSatExampleRecord(
     !record.skill
   )
     throw new Error("Missing or unrecognized metadata");
-  const text: SatExampleText = {
-    id: "example-" + record.id,
+  const text: SatQuestionText = {
+    id: "cb-" + record.id,
     assessment: "SAT",
     sourceId: record.id,
-    source: SAT_EXAMPLE_SOURCE,
+    source: SAT_SOURCE,
     section,
     domain: record.domain,
     skill: cleanSkill(record.skill),
-    difficulty: difficulty as SatExampleText["difficulty"],
+    difficulty: difficulty as SatQuestionText["difficulty"],
     stem:
       record.stemLines.filter((line) => !isLineNumber(line)).join(" ") ||
       "Question " + record.id,
@@ -94,8 +94,8 @@ export function convertSatExampleRecord(
   return { text, notes: [] };
 }
 
-/** Two copies of one ID must agree on metadata and answer key. */
-export function satExampleSignature(record: PaaRecord): string {
+/** Two copies of one ID must agree on metadata, status and answer key. */
+export function satSignature(record: PaaRecord): string {
   const keys = [
     ...record.texts.join("\n").matchAll(/Correct Answer:\s*([^\n]+)/g),
   ].map((match) => match[1]);
@@ -105,6 +105,12 @@ export function satExampleSignature(record: PaaRecord): string {
     record.domain,
     record.skill,
     flat(record.difficulty),
+    record.badge ?? null,
     keys,
   ]);
 }
+
+/** Active or inactive from the badge; no badge is unknown. */
+export const satStatus = (
+  record: PaaRecord,
+): "active" | "inactive" | "unknown" => record.badge ?? "unknown";

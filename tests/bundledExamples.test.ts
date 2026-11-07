@@ -189,3 +189,107 @@ describe("seeding and removing the examples", () => {
     await reset();
   });
 });
+
+describe("examples and imports never duplicate a question", () => {
+  const lib = (q: unknown[]) => {
+    const text = JSON.stringify({ schemaVersion: 1, questions: q });
+    return {
+      text,
+      source: {
+        manifest: async () => ({
+          format: "sat-study-local-library-v1",
+          revision: createHash("sha256").update(text).digest("hex"),
+          questionCount: q.length,
+          assets: [],
+        }),
+        questions: async () => text,
+        asset: async () => new Blob([]),
+      } as LibrarySource,
+    };
+  };
+  const base = {
+    assessment: "SAT",
+    section: "math",
+    stem: "Original synthetic stem.",
+    choices: [
+      { id: "A", text: "x" },
+      { id: "B", text: "y" },
+    ],
+    answer: { type: "choice", value: "A" },
+    testStatus: "unknown",
+  };
+
+  it("drops an example when an imported question has the same ID, and keeps the other examples", async () => {
+    await updateData((d) => void Object.assign(d, emptyData()));
+    const examples = lib([
+      {
+        ...base,
+        id: "example-same",
+        sourceId: "same",
+        source: EXAMPLES_SOURCE,
+        bundled: true,
+      },
+      {
+        ...base,
+        id: "example-other",
+        sourceId: "other",
+        source: EXAMPLES_SOURCE,
+        bundled: true,
+      },
+    ]);
+    await ingestLibrary(examples.source, () => undefined, EXAMPLES_RECEIPT);
+    const real = lib([
+      {
+        ...base,
+        id: "cb-same",
+        sourceId: "same",
+        source: "College Board SAT question bank",
+      },
+    ]);
+    const { data } = await ingestLibrary(real.source, () => undefined);
+    expect(data.questions.map((q) => q.id).sort()).toEqual([
+      "cb-same",
+      "example-other",
+    ]);
+    await updateData((d) => void Object.assign(d, emptyData()));
+  });
+
+  it("does not add an example where an imported question already has the ID", async () => {
+    await updateData((d) => void Object.assign(d, emptyData()));
+    const real = lib([
+      {
+        ...base,
+        id: "cb-same",
+        sourceId: "same",
+        source: "College Board SAT question bank",
+      },
+    ]);
+    await ingestLibrary(real.source, () => undefined);
+    const examples = lib([
+      {
+        ...base,
+        id: "example-same",
+        sourceId: "same",
+        source: EXAMPLES_SOURCE,
+        bundled: true,
+      },
+      {
+        ...base,
+        id: "example-other",
+        sourceId: "other",
+        source: EXAMPLES_SOURCE,
+        bundled: true,
+      },
+    ]);
+    const { data } = await ingestLibrary(
+      examples.source,
+      () => undefined,
+      EXAMPLES_RECEIPT,
+    );
+    expect(data.questions.map((q) => q.id).sort()).toEqual([
+      "cb-same",
+      "example-other",
+    ]);
+    await updateData((d) => void Object.assign(d, emptyData()));
+  });
+});

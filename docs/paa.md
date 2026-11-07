@@ -54,6 +54,8 @@ The guide's rules for answers the student supplies: positive numbers only (whole
 
 ## Importing the PAA questions
 
+**Update:** every page of a PAA PDF must now carry the PAA access code, and the pop-up takes the three test PDFs in one drop (see [pdf-import.md](pdf-import.md)); the notes below on layout still apply.
+
 The **Add your question PDFs** pop-up (from the empty screens, or **Add PDFs** in Settings → Your questions) accepts one or more PDFs with any file names, alongside the SAT exports in the same drop (the four SAT files are recognised by name and read as a set; everything else is read as a PAA export), in the Educator Question Bank layout with English labels (Question ID, Assessment, Test, Domain, Skill, Difficulty, Question, Answer, Correct Answer, Rationale) and Spanish content. There is no active/inactive pairing. Because file names say nothing, a PDF is recognized by its content: one whose first pages carry no "Question ID:" line, or whose questions are not PAA (an SAT export), is set aside, named in the result, and does not stop the others; if none qualifies, nothing is added and the message says why. A question ID that appears in two files must agree with itself or that question is left out, and the first copy is used.
 
 `src/importing/pdf/paa.ts` is the reading profile; `preparePaa.ts` orchestrates it. It differs from the SAT reader because the exports differ:

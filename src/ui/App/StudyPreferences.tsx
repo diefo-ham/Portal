@@ -14,6 +14,12 @@ export type StudyPreferencesProps = {
   onProtectedTests: (value: boolean) => void;
   /** TSI only, when the bank holds both Official and Original questions. */
   originalQuestions?: { checked: boolean; onChange: (value: boolean) => void };
+  /**
+   * The bundled example questions, offered only once questions of the person's
+   * own exist. One setting for all three tests; it only matters for a test that
+   * has questions of its own.
+   */
+  exampleQuestions?: { checked: boolean; onChange: (value: boolean) => void };
 };
 
 /** The study checkboxes on the Settings page. */
@@ -28,6 +34,7 @@ export const StudyPreferences = ({
   protectedTests,
   onProtectedTests,
   originalQuestions,
+  exampleQuestions,
 }: StudyPreferencesProps) => {
   const t = useT();
   return (
@@ -64,6 +71,16 @@ export const StudyPreferences = ({
           label={t("Include original questions")}
           hint={t(
             "When off, the original questions are hidden everywhere (practice, Browse, Review and your progress) and nothing is deleted. Sessions that contain them stay, without those questions. Turn it on to bring them back.",
+          )}
+        />
+      )}
+      {exampleQuestions && (
+        <PreferenceToggle
+          checked={exampleQuestions.checked}
+          onChange={exampleQuestions.onChange}
+          label={t("Include example questions")}
+          hint={t(
+            "The portal's own example questions are hidden once you have added questions of your own. Turn this on to study them too. Nothing is deleted, and a test with no questions of your own keeps its examples.",
           )}
         />
       )}

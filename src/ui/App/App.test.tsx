@@ -227,6 +227,96 @@ describe("tests and the bundled examples", () => {
   });
 });
 
+describe("Settings with and without questions of your own", () => {
+  const openSettings = async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Settings" }));
+    return user;
+  };
+  const stored = () => screen.getByText(/questions · \d+ attempts/).textContent;
+  /** The person's own questions, plus two bundled examples. */
+  const mixed = () => {
+    const data = testCorpus(2);
+    const own = data.questions.length;
+    data.questions.push(
+      ...data.questions.slice(0, 2).map((q, i) => ({
+        ...q,
+        id: `example-${i}`,
+        bundled: true as const,
+      })),
+    );
+    return { data, own };
+  };
+
+  it("offers no protection setting and no examples switch with only the examples", async () => {
+    const data = testCorpus(2);
+    data.questions = data.questions.map((q) => ({
+      ...q,
+      bundled: true as const,
+    }));
+    study.useStudy.mockImplementation(() => answer({ data }));
+    await openSettings();
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "Protect unused practice-test questions",
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "Include example questions" }),
+    ).toBeNull();
+  });
+
+  it("offers the protection setting once there are questions of your own", async () => {
+    const { data } = mixed();
+    study.useStudy.mockImplementation(() => answer({ data }));
+    await openSettings();
+    expect(
+      screen.getByRole("checkbox", {
+        name: "Protect unused practice-test questions",
+      }),
+    ).toBeTruthy();
+  });
+
+  it("hides the examples by default once there are questions of your own, and brings them back on request", async () => {
+    const { data, own } = mixed();
+    study.useStudy.mockImplementation(() => answer({ data }));
+    const user = await openSettings();
+    expect(stored()).toMatch(new RegExp(`^${own} questions`));
+    const toggle = screen.getByRole("checkbox", {
+      name: "Include example questions",
+    }) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    await user.click(toggle);
+    expect(stored()).toMatch(new RegExp(`^${own + 2} questions`));
+  });
+
+  it("keeps the examples of a test that has no questions of your own", async () => {
+    // Own PAA questions exist, so the switch is offered, but the SAT has only examples.
+    const data = testCorpus(2);
+    data.questions = data.questions.map((q) => ({
+      ...q,
+      id: `paa-${q.id}`,
+      assessment: "PAA" as const,
+      section: "matematicas" as const,
+    }));
+    const ex = testCorpus(2)
+      .questions.slice(0, 2)
+      .map((q, i) => ({
+        ...q,
+        id: `example-${i}`,
+        bundled: true as const,
+      }));
+    data.questions.push(...ex);
+    study.useStudy.mockImplementation(() => answer({ data }));
+    await openSettings();
+    expect(
+      screen.getByRole("checkbox", { name: "Include example questions" }),
+    ).toBeTruthy();
+    expect(stored()).toMatch(/^2 questions/);
+  });
+});
+
 describe("settings", () => {
   const openSettings = async () => {
     const user = userEvent.setup();

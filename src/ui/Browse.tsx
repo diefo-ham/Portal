@@ -8,7 +8,7 @@ import { defaultFilters } from "../core/model";
 import { latestAttempt } from "../core/practice";
 import { DocumentPanels } from "./DocumentPanels";
 import { Filters, sectionName } from "./Filters";
-import { assessmentInfo } from "../core/assessments";
+import { offersProtection } from "../core/assessments";
 import { useAssessment, useT } from "./i18n";
 import { OriginBadge } from "./QuestionBadges";
 import type { Mutate } from "@/src/types/ui";
@@ -172,7 +172,7 @@ export const Browse = ({
                   : t("Latest result: incorrect")
                 : t("No recorded answer")}
             </span>
-            {assessmentInfo(assessment).protectedTests && (
+            {offersProtection(data, assessment) && (
               <span>Practice-test status: {selected.testStatus}</span>
             )}
             {selected.sourceId && (
@@ -260,7 +260,7 @@ export const Browse = ({
                 {t("Matching questions")}{" "}
                 <span className="count">{filtered.length}</span>
               </h2>
-              {assessmentInfo(assessment).protectedTests && (
+              {offersProtection(data, assessment) && (
                 <p className="small muted">
                   {filters.active === "hide"
                     ? "Active practice-test questions are protected."

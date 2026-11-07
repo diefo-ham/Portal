@@ -1,28 +1,6 @@
 import type { PrepareReport } from "../importing/pdf/prepare";
 import { useT } from "./i18n";
 
-const SUBJECTS: Record<string, string> = {
-  read_write: "Reading & Writing",
-  math: "Math",
-};
-
-/** Plain-language account of how the active and inactive files were read. */
-export function explainClassification(report: PrepareReport): string[] {
-  const lines = Object.entries(report.interpretation).map(([group, mode]) => {
-    const subject = SUBJECTS[group] ?? group;
-    if (mode === "active-only")
-      return `The two ${subject} files share no questions, so the questions in the active file were marked active.`;
-    if (mode === "inclusive")
-      return `The active ${subject} file also contains the inactive questions, so only the questions found nowhere else were marked active.`;
-    return `Every ${subject} question outside the inactive file was marked unknown.`;
-  });
-  for (const conflict of report.conflicts)
-    lines.push(
-      `The ${SUBJECTS[conflict.section] ?? conflict.section} files overlap unevenly, so the questions that could not be classified were marked unknown.`,
-    );
-  return lines;
-}
-
 export const downloadReport = (report: PrepareReport, name: string) => {
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(report, null, 2)], { type: "application/json" }),
@@ -43,7 +21,7 @@ export type PdfReportProps = {
 /** What one preparation did: how many questions, what was left out, how it was read. */
 export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
   const t = useT();
-  // Everything but the SAT is a plain question bank: no active/inactive files.
+  // The SAT marks questions active or inactive by the badge on each page; the PAA and TSI have no such concept.
   const paa = kind !== "SAT";
   const tsi = kind === "TSI";
   return (
@@ -68,12 +46,22 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
             })
           : ""}
       </p>
-      {paa && !!report.ignored?.length && (
+      {!!report.refused?.length && (
+        <p className="small">
+          {t(
+            "Not added, because no page carries the access code for this test: {files}",
+            { files: report.refused.join(", ") },
+          )}
+        </p>
+      )}
+      {!!report.ignored?.length && (
         <p className="small">
           {t(
             tsi
               ? "Set aside, because they are not TSI question exports: {files}"
-              : "Set aside, because they are not PAA question exports: {files}",
+              : paa
+                ? "Set aside, because they are not PAA question exports: {files}"
+                : "Set aside, because they are not SAT question exports: {files}",
             { files: report.ignored.join(", ") },
           )}
         </p>
@@ -106,12 +94,13 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
       )}
       <details>
         <summary>{t("How this was worked out")}</summary>
-        {!paa &&
-          explainClassification(report).map((line) => (
-            <p key={line} className="small">
-              {line}
-            </p>
-          ))}
+        {!paa && (
+          <p className="small">
+            {t(
+              "Each SAT question is marked active or inactive by the badge at the top right of its page; a page without a badge is marked unknown.",
+            )}
+          </p>
+        )}
         {report.warnings?.slice(0, 5).map((warning) => (
           <p key={warning} className="small">
             {t("Noted: {warning}", { warning })}

@@ -351,6 +351,7 @@ export function scopeStudyData(
         (question) =>
           questionAssessment(question) === assessment &&
           ((options.hideOrigin !== undefined &&
+            question.bundled !== true &&
             question.origin === options.hideOrigin) ||
             (options.hideBundled === true && question.bundled === true)),
       )
@@ -401,6 +402,20 @@ export const hasImportedQuestions = (
       question.bundled !== true &&
       (assessment === undefined || questionAssessment(question) === assessment),
   );
+
+/**
+ * Whether the spoiler-protection controls (the "Protect unused practice-test
+ * questions" setting and the active filter) make sense: only for a test that has
+ * practice-test questions at all (the SAT), and only once the person has
+ * imported questions of their own. The bundled examples have no active or
+ * inactive status, so with only them there is nothing to protect.
+ */
+export const offersProtection = (
+  data: Pick<StudyData, "questions">,
+  assessment: Assessment,
+): boolean =>
+  assessmentInfo(assessment).protectedTests &&
+  hasImportedQuestions(data, assessment);
 
 /** The part of the study history that belongs to one assessment. */
 export type StudySlice = Pick<

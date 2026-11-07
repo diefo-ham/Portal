@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { assessmentInfo } from "../core/assessments";
+import { offersProtection } from "../core/assessments";
 import type { StudyData } from "../core/model";
 import { reviewQueues, sessionOutcomes, sessionTiming } from "../core/review";
 import { sessionDisplayName } from "../core/sessions";
@@ -22,7 +22,7 @@ export const Review = ({
   onOpen,
 }: ReviewProps) => {
   const t = useT();
-  const info = assessmentInfo(useAssessment());
+  const assessment = useAssessment();
   const [visible, setVisible] = useState(5);
   const queues = reviewQueues(data, protectTests);
   const bookmarks = data.questions
@@ -108,7 +108,7 @@ export const Review = ({
         </section>
       </div>
       <p className="small muted">
-        {info.protectedTests &&
+        {offersProtection(data, assessment) &&
           (protectTests
             ? "Practice-test protection is on for these review sets."
             : "Review sets may include active practice-test questions.")}{" "}

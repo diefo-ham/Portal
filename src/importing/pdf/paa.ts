@@ -23,6 +23,7 @@ import {
   type AnswerOrigin,
 } from "./answers.ts";
 import { findPhrase, type Line, type PageLayout, type Word } from "./layout.ts";
+import { accessLine, badgeOf, type Badge } from "./marks.ts";
 import type { ReviewedOverride } from "./record.ts";
 import type { SourceRecord } from "./segment.ts";
 
@@ -54,6 +55,10 @@ export interface PaaRecord extends SourceRecord {
   optionLines: string[];
   /** Lines below the "Rationale" heading. */
   rationaleLines: string[];
+  /** What the first page's access line says after "Ref."; absent when it has none. */
+  ref?: string;
+  /** The ACTIVE / INACTIVE badge of the first page (SAT pages only). */
+  badge?: Badge;
 }
 
 export interface PaaQuestionText {
@@ -160,14 +165,23 @@ export function indexPaaExport(
       const answer = labelLine(page, "Answer", heading.y1);
       const rationale = labelLine(page, "Rationale", heading.y1);
       const stemEnd = answer?.y0 ?? key?.y0 ?? Infinity;
+      const access = accessLine(page);
       const between = (from: number, to: number) =>
         page.lines
-          .filter((line) => top(line) > from - 1 && top(line) < to - 0.5)
+          .filter(
+            (line) =>
+              line !== access?.line &&
+              top(line) > from - 1 &&
+              top(line) < to - 0.5,
+          )
           .map((line) => normalizedText(line.text))
           .filter(Boolean);
       const stem = page.lines
         .filter(
-          (line) => top(line) > heading.y1 - 1 && top(line) < stemEnd - 0.5,
+          (line) =>
+            line !== access?.line &&
+            top(line) > heading.y1 - 1 &&
+            top(line) < stemEnd - 0.5,
         )
         .map((line) => ({
           text: normalizedText(line.text),
@@ -192,6 +206,8 @@ export function indexPaaExport(
               (line) => !/^Correct Answer:/.test(line),
             )
           : [],
+        ...(access ? { ref: access.token } : {}),
+        ...(badgeOf(page) ? { badge: badgeOf(page) } : {}),
       });
     }
     if (!records.length)

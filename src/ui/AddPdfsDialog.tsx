@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  assignExports,
-  EXPORT_NAMES,
-  type ExportName,
-  type PrepareReport,
-  type Progress,
-} from "../importing/pdf/prepare";
+import type { PrepareReport, Progress } from "../importing/pdf/prepare";
 import { readDrop } from "./droppedFiles";
 import { useAssessment, useT } from "./i18n";
 import { PdfReport } from "./PdfReport";
@@ -23,20 +17,20 @@ export type PrepareFiles = (
 export type AddPdfsDialogProps = {
   open: boolean;
   onClose: () => void;
-  /** The four SAT exports, read together. */
+  /** SAT question PDF(s): one file holds both tests and the ACTIVE / INACTIVE badges. */
   prepareSat: PrepareFiles;
-  /** Any PAA exports; PDFs that are not PAA question exports are set aside. */
+  /** PAA question PDF(s), any file names. */
   preparePaa: PrepareFiles;
-  /** TSIA2 exports (ELAR and Mathematics). */
-  prepareTsi?: PrepareFiles;
+  /** TSIA2 question PDF(s), any file names. */
+  prepareTsi: PrepareFiles;
   /**
-   * Which test a PDF is an export of, from the Assessment column of its first
-   * pages. Without it every PDF that is not an SAT export is read as PAA.
+   * Which test a PDF holds questions for, from the Assessment column of its
+   * first pages; undefined when it is none of the three.
    */
-  detect?: (file: File) => Promise<"PAA" | "TSI" | undefined>;
+  detect: (file: File) => Promise<Kind | undefined>;
 };
 
-type Kind = "SAT" | "PAA" | "TSI";
+export type Kind = "SAT" | "PAA" | "TSI";
 
 interface Outcome {
   kind: Kind;
@@ -56,9 +50,10 @@ const megabytes = (bytes: number) =>
     : `${Math.max(1, Math.round(bytes / 1e3))} KB`;
 
 /**
- * Drop the PDFs here. The SAT exports are recognised by name and read as a set;
- * every other PDF is sorted by the test named inside it (PAA or TSIA2), and
- * anything that is neither is set aside. Nothing is guessed from file names.
+ * Drop the PDFs here, with any file names. Each is sorted by the test named
+ * inside it (SAT, PAA or TSIA2), and anything that is none of them is set
+ * aside. Nothing is guessed from file names. Every page must carry the access
+ * code for its test, which the reader checks.
  */
 export const AddPdfsDialog = ({ open, ...rest }: AddPdfsDialogProps) => {
   // Mounted only while open: every opening starts clean, and a closed dialog
@@ -86,8 +81,11 @@ function OpenDialog({
   const [error, setError] = useState("");
   const [outcomes, setOutcomes] = useState<Outcome[]>([]);
   const [kinds, setKinds] = useState<
-    Record<string, "PAA" | "TSI" | "unknown" | "checking">
+    Record<string, Kind | "unknown" | "checking">
   >({});
+  // Each PDF is read once in full to see which test it is for. One at a time:
+  // the SAT file alone can be hundreds of megabytes.
+  const looking = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     const opener = document.activeElement;
@@ -105,22 +103,14 @@ function OpenDialog({
     return () => window.removeEventListener("beforeunload", warn);
   }, [running]);
 
-  const sat = assignExports(files);
-  const satNames = Object.keys(sat.found) as ExportName[];
-  const satReady = satNames.length > 0 && !sat.missing.length;
-  const inSatSet = new Set<unknown>(Object.values(sat.found));
-  const others = files.filter((file) => !inSatSet.has(file));
-  const tsiFiles =
-    prepareTsi && detect
-      ? others.filter((file) => kinds[fileKey(file)] === "TSI")
-      : [];
-  const paaFiles = others.filter((file) => !tsiFiles.includes(file));
-  const satFiles = satReady
-    ? EXPORT_NAMES.map((name) => sat.found[name] as File)
-    : [];
+  const ofKind = (kind: Kind) =>
+    files.filter((file) => kinds[fileKey(file)] === kind);
+  const satFiles = ofKind("SAT");
+  const paaFiles = ofKind("PAA");
+  const tsiFiles = ofKind("TSI");
   const checking = files.some((file) => kinds[fileKey(file)] === "checking");
   const canStart =
-    (satReady || paaFiles.length > 0 || tsiFiles.length > 0) &&
+    (satFiles.length > 0 || paaFiles.length > 0 || tsiFiles.length > 0) &&
     !running &&
     !checking;
 
@@ -142,26 +132,27 @@ function OpenDialog({
         (file) => !current.some((known) => fileKey(known) === fileKey(file)),
       ),
     ]);
-    // A PDF that is not an SAT export is looked at to see which test it is for.
-    if (detect)
-      for (const file of fresh) {
-        if (Object.keys(assignExports([file]).found).length) continue;
-        const key = fileKey(file);
-        setKinds((current) => ({ ...current, [key]: "checking" }));
+    // Each PDF is looked at to see which test it is for.
+    for (const file of fresh) {
+      const key = fileKey(file);
+      setKinds((current) => ({ ...current, [key]: "checking" }));
+      looking.current = looking.current.then(() =>
         detect(file).then(
           (kind) =>
             setKinds((current) => ({ ...current, [key]: kind ?? "unknown" })),
           () => setKinds((current) => ({ ...current, [key]: "unknown" })),
-        );
-      }
+        ),
+      );
+    }
   };
 
   const start = async () => {
     const jobs: { kind: Kind; files: File[]; run: PrepareFiles }[] = [];
-    if (satReady) jobs.push({ kind: "SAT", files: satFiles, run: prepareSat });
+    if (satFiles.length)
+      jobs.push({ kind: "SAT", files: satFiles, run: prepareSat });
     if (paaFiles.length)
       jobs.push({ kind: "PAA", files: paaFiles, run: preparePaa });
-    if (tsiFiles.length && prepareTsi)
+    if (tsiFiles.length)
       jobs.push({ kind: "TSI", files: tsiFiles, run: prepareTsi });
     const signal = (controller.current = new AbortController()).signal;
     setRunning(true);
@@ -229,24 +220,15 @@ function OpenDialog({
   };
 
   const tag = (file: File) => {
-    const name = satNames.find((candidate) => sat.found[candidate] === file);
-    if (!name) {
-      const kind = kinds[fileKey(file)];
-      if (detect && kind === "checking") return t("Checking…");
-      if (detect && kind === "TSI") return t("TSI export");
-      if (detect && kind === "PAA") return t("PAA export");
-      if (detect && kind === "unknown")
-        return t("Not a PAA or TSI question export: it will be set aside");
-      return t("PAA export, or set aside (checked when reading)");
-    }
-    const subject = name.startsWith("math")
-      ? t("Math")
-      : t("Reading & Writing");
-    const status = name.endsWith("_inactive") ? t("inactive") : t("active");
-    return `${t("SAT")} · ${subject} · ${status}`;
+    const kind = kinds[fileKey(file)];
+    if (kind === "SAT") return t("SAT questions");
+    if (kind === "PAA") return t("PAA questions");
+    if (kind === "TSI") return t("TSI questions");
+    if (kind === "unknown")
+      return t("Not an SAT, PAA or TSI question PDF: it will be set aside");
+    return t("Checking…");
   };
 
-  const missing = sat.missing.map((name) => `${name}.pdf`).join(", ");
   const close = () => {
     if (!running) onClose();
   };
@@ -294,7 +276,7 @@ function OpenDialog({
       </div>
       <p className="small muted">
         {t(
-          "Drop all your PDFs, or the folder that holds them, together: the four SAT exports, your PAA export and your TSI exports. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.",
+          "Drop your SAT, PAA and TSI question PDFs, or the folder that holds them, together or one at a time. They are sorted for you, read in this browser and never uploaded. The SAT PDF is large and can take 10 minutes or more; keep this tab open while it works.",
         )}
       </p>
       <div className={`drop-zone${over ? " over" : ""}`}>
@@ -318,7 +300,7 @@ function OpenDialog({
       </div>
       <p className="small muted">
         {t(
-          "SAT exports are recognised by name: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf and math_inactive.pdf. Any other PDF is sorted by the test named inside it (PAA or TSIA2), or set aside if it is neither.",
+          "File names do not matter. Each PDF is sorted by the test named inside it, and only pages that carry the access code for that test are added.",
         )}
       </p>
       {files.length > 0 && (
@@ -348,13 +330,6 @@ function OpenDialog({
         <p className="small" role="status">
           {t("Ignored, because they are not PDFs: {files}", {
             files: notPdf.join(", "),
-          })}
-        </p>
-      )}
-      {satNames.length > 0 && !satReady && (
-        <p className="small" role="status">
-          {t("The SAT exports are read together. Still needed: {files}", {
-            files: missing,
           })}
         </p>
       )}

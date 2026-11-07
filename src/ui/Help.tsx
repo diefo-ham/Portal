@@ -447,6 +447,12 @@ function SatHelp() {
               Protect active questions
             </summary>
             <p>
+              This setting, and the matching filter in Practice and Browse,
+              appear once you have added SAT questions of your own: the example
+              questions that come with the portal have no active or inactive
+              status, so there is nothing to protect.
+            </p>
+            <p>
               Active questions may belong to current or future official Bluebook
               practice material. With protection enabled, ordinary Practice
               hides them by default; Tests intentionally use active questions.
@@ -499,14 +505,19 @@ function SatHelp() {
               Adding questions and resetting progress
             </summary>
             <p>
-              Choose Add your question PDFs and drop all your PDFs into the
-              window that opens: the four SAT exports (read_write_active,
-              read_write_inactive, math_active and math_inactive) and your PAA
-              export. They are sorted automatically, read in this browser, never
-              uploaded, and the whole set takes about 5 to 10 minutes. Active
-              questions are marked automatically from the files and stay hidden
-              by default. Settings lists every PDF you added and lets you remove
-              one.
+              Choose Add your question PDFs and drop your SAT, PAA and TSI PDFs
+              into the window that opens. File names do not matter: each PDF is
+              sorted by the test named inside it, and only pages that carry the
+              access code for that test are added. They are read in this browser
+              and never uploaded; the SAT PDF is large and can take 10 minutes
+              or more. Each SAT question is marked active or inactive by the
+              badge on its page, and active questions stay hidden by default.
+              Settings lists every PDF you added and lets you remove one.
+            </p>
+            <p>
+              Once a test has questions of your own, its example questions are
+              hidden. Include example questions in Settings brings them back;
+              nothing is deleted either way.
             </p>
             <p>
               Reset study progress clears attempts, sessions, and Practice Test

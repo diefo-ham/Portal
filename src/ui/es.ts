@@ -37,6 +37,24 @@ export const es: Record<string, string> = {
     "Este portal no trae preguntas. Agrega tus propios PDF de preguntas y se preparan en este dispositivo; no se envía nada.",
   "Add your question PDFs": "Agrega tus PDF de preguntas",
   TESTS: "PRUEBAS",
+  "SAT questions": "Preguntas del SAT",
+  "PAA questions": "Preguntas de la PAA",
+  "TSI questions": "Preguntas del TSI",
+  "Not an SAT, PAA or TSI question PDF: it will be set aside":
+    "No es un PDF de preguntas del SAT, la PAA o el TSI: se dejará aparte",
+  "Drop your SAT, PAA and TSI question PDFs, or the folder that holds them, together or one at a time. They are sorted for you, read in this browser and never uploaded. The SAT PDF is large and can take 10 minutes or more; keep this tab open while it works.":
+    "Suelta tus PDF de preguntas del SAT, la PAA y el TSI, o la carpeta que los contiene, juntos o de uno en uno. Se ordenan solos, se leen en este navegador y nunca se suben. El PDF del SAT es grande y puede tardar 10 minutos o más; mantén esta pestaña abierta mientras trabaja.",
+  "File names do not matter. Each PDF is sorted by the test named inside it, and only pages that carry the access code for that test are added.":
+    "Los nombres de archivo no importan. Cada PDF se ordena por la prueba que nombra por dentro, y solo se agregan las páginas que llevan el código de acceso de esa prueba.",
+  "Not added, because no page carries the access code for this test: {files}":
+    "No se agregó, porque ninguna página lleva el código de acceso de esta prueba: {files}",
+  "Set aside, because they are not SAT question exports: {files}":
+    "Se dejaron aparte porque no son PDF de preguntas del SAT: {files}",
+  "Each SAT question is marked active or inactive by the badge at the top right of its page; a page without a badge is marked unknown.":
+    "Cada pregunta del SAT se marca como activa o inactiva por la insignia de la esquina superior derecha de su página; una página sin insignia queda como desconocida.",
+  "Include example questions": "Incluir preguntas de ejemplo",
+  "The portal's own example questions are hidden once you have added questions of your own. Turn this on to study them too. Nothing is deleted, and a test with no questions of your own keeps its examples.":
+    "Las preguntas de ejemplo del portal se ocultan cuando ya agregaste preguntas propias. Activa esto para estudiarlas también. No se borra nada, y una prueba sin preguntas propias conserva sus ejemplos.",
   "You are working with the example questions that come with the portal. Add your own question PDFs for more, and to open the tests.":
     "Estás trabajando con las preguntas de ejemplo que trae el portal. Agrega tus propios PDF de preguntas para tener más y para abrir las pruebas.",
   "Only the example questions are here so far. Add your PDFs below.":
@@ -498,26 +516,10 @@ export const es: Record<string, string> = {
   "These are {test} questions. Use the switch at the top to open them.":
     "Estas son preguntas de {test}. Usa el interruptor de arriba para abrirlas.",
   "Close window": "Cerrar la ventana",
-  "Drop all your PDFs, or the folder that holds them, together: the four SAT exports, your PAA export and your TSI exports. They are sorted for you, read in this browser and never uploaded. The whole set can take 5 to 10 minutes; keep this tab open while it works.":
-    "Suelta juntos todos tus PDF, o la carpeta que los contiene: las cuatro exportaciones de la SAT, tu exportación de la PAA y tus exportaciones de la TSI. Se ordenan solos, se leen en este navegador y nunca se envían. Todo el conjunto puede tardar de 5 a 10 minutos; mantén esta pestaña abierta mientras trabaja.",
   "Drop PDFs here": "Suelta los PDF aquí",
-  "SAT exports are recognised by name: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf and math_inactive.pdf. Any other PDF is sorted by the test named inside it (PAA or TSIA2), or set aside if it is neither.":
-    "Las exportaciones de la SAT se reconocen por el nombre: read_write_active.pdf, read_write_inactive.pdf, math_active.pdf y math_inactive.pdf. Cualquier otro PDF se ordena según la prueba que nombra por dentro (PAA o TSIA2), o se deja aparte si no es ninguna.",
   "Checking…": "Comprobando…",
-  "TSI export": "Exportación de la TSI",
-  "PAA export": "Exportación de la PAA",
-  "Not a PAA or TSI question export: it will be set aside":
-    "No es una exportación de preguntas de la PAA ni de la TSI: se dejará aparte",
-  "PAA export, or set aside (checked when reading)":
-    "Exportación de la PAA, o se deja aparte (se comprueba al leer)",
-  Math: "Matemáticas",
-  "Reading & Writing": "Lectura y redacción",
-  active: "activa",
-  inactive: "inactiva",
   "Ignored, because they are not PDFs: {files}":
     "Se ignoraron porque no son PDF: {files}",
-  "The SAT exports are read together. Still needed: {files}":
-    "Las exportaciones de la SAT se leen juntas. Faltan: {files}",
   "None of these PDFs is a question export, so nothing was added. Set aside: {files}":
     "Ninguno de estos PDF es una exportación de preguntas, así que no se agregó nada. Se dejaron aparte: {files}",
   "{active} are marked active and stay hidden until you choose to include them; {inactive} are inactive.":
