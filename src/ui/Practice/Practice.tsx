@@ -13,6 +13,7 @@ import {
 } from "../../core/practiceTest";
 import "../../calculator/layout.scss";
 import { CalculatorPanel } from "../../calculator/CalculatorPanel";
+import { TsiTestSummary } from "../TsiTest/TsiTestSummary";
 import { calculatorTierOf, strongestTier } from "../../core/calculators";
 import { useCalculatorState } from "../../calculator/useCalculatorState";
 import { useCalculatorToggle } from "@/src/helpers/useCalculatorToggle";
@@ -71,6 +72,8 @@ export const Practice = ({
   const t = useT();
   const test = storedSession.practiceTest;
   const isTest = !!test && !storedSession.finishedAt;
+  // A TSI practice test: in order, no going back, no feedback until the end.
+  const sequential = !!storedSession.tsiTest && !storedSession.finishedAt;
   const module = isTest ? test.modules[test.currentModule] : undefined;
   // In a Practice Test only the current module's questions are in play.
   const session = module
@@ -182,6 +185,22 @@ export const Practice = ({
     });
   // In a test, "submitting" just moves on: answers are only checked at the end.
   const submit = () => {
+    if (sequential)
+      return run(async () => {
+        await timer.flush();
+        await calculatorWork.flush();
+        // Answer and move on in one save; the last answer finishes the test.
+        await mutate((d) => {
+          submitAnswer(d, session.id, question.id, answer);
+          const current = defined(
+            d.sessions.find((s) => s.id === session.id),
+            "This session",
+          );
+          const next = session.questionIds[session.index + 1];
+          if (next) current.index = current.questionIds.indexOf(next);
+          else finishSession(d, session.id);
+        });
+      });
     if (!isTest)
       return run(async () => {
         await timer.flush();
@@ -288,6 +307,11 @@ export const Practice = ({
             onBack={onBack}
             onRetry={onRetry}
             onCalculator={calculatorAvailable ? calculator.show : undefined}
+            testSummary={
+              storedSession.tsiTest ? (
+                <TsiTestSummary data={data} session={session} />
+              ) : undefined
+            }
           />
         )}
         {calculator.visible && calculatorPanel}
@@ -325,8 +349,9 @@ export const Practice = ({
         else if (action.type === "bookmark") void toggleBookmark();
         else if (action.type === "choose")
           choose(answer === action.id ? "" : action.id);
-        else if (action.type === "navigate") void navigate(action.index);
-        else if (action.type === "finish") void finish();
+        else if (action.type === "navigate") {
+          if (!sequential) void navigate(action.index);
+        } else if (action.type === "finish") void finish();
         else if (action.type === "submit") void submit();
       }}
       className="practice-page focused-practice"
@@ -367,10 +392,14 @@ export const Practice = ({
             : undefined
         }
         onExit={() => void exit()}
-        onOverview={() => {
-          if (isTest) void finish();
-          else dialog.open("overview");
-        }}
+        onOverview={
+          sequential
+            ? undefined
+            : () => {
+                if (isTest) void finish();
+                else dialog.open("overview");
+              }
+        }
         onTools={() => dialog.open("tools")}
       />
       {module && (
@@ -421,10 +450,14 @@ export const Practice = ({
               disabled={pending || !canSubmit}
               onClick={() => void submit()}
             >
-              {t("Check answer")}
+              {sequential
+                ? session.index >= session.questionIds.length - 1
+                  ? t("Finish test")
+                  : t("Next question")
+                : t("Check answer")}
             </button>
           )}
-          {!isTest && attempt && (
+          {!isTest && !sequential && attempt && (
             <AnswerFeedback
               question={question}
               attempt={attempt}
@@ -432,17 +465,19 @@ export const Practice = ({
               showTime={showTime}
             />
           )}
-          <QuestionFooter
-            index={session.index}
-            total={session.questionIds.length}
-            isTest={isTest}
-            answered={!!attempt}
-            disabled={pending || !!session.paused}
-            onPrevious={() => void navigate(session.index - 1)}
-            onNext={() => void navigate(session.index + 1)}
-            onFinish={() => void finish()}
-            nextButtonRef={nextButton}
-          />
+          {!sequential && (
+            <QuestionFooter
+              index={session.index}
+              total={session.questionIds.length}
+              isTest={isTest}
+              answered={!!attempt}
+              disabled={pending || !!session.paused}
+              onPrevious={() => void navigate(session.index - 1)}
+              onNext={() => void navigate(session.index + 1)}
+              onFinish={() => void finish()}
+              nextButtonRef={nextButton}
+            />
+          )}
         </article>
         {calculator.visible &&
           calculatorAvailable &&
@@ -474,6 +509,7 @@ export const Practice = ({
         {panel === "tools" && (
           <ToolsPanel
             isTest={isTest}
+            sequential={sequential}
             showTime={showTime}
             paused={!!session.paused}
             pending={pending}

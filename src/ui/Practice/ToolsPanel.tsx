@@ -3,6 +3,8 @@ import { useT } from "../i18n";
 
 export type ToolsPanelProps = {
   isTest: boolean;
+  /** A TSI practice test: no overview (no going back), and finishing ends the test. */
+  sequential?: boolean;
   showTime: boolean;
   paused: boolean;
   pending: boolean;
@@ -18,6 +20,7 @@ export type ToolsPanelProps = {
 /** Shortcuts, the overview, the timer, details, and finishing or cancelling. */
 export const ToolsPanel = ({
   isTest,
+  sequential = false,
   showTime,
   paused,
   pending,
@@ -35,7 +38,9 @@ export const ToolsPanel = ({
         <summary>{t("Keyboard shortcuts & help")}</summary>
         <ShortcutHelp />
       </details>
-      <button onClick={onOverview}>{t("Question overview")}</button>
+      {!sequential && (
+        <button onClick={onOverview}>{t("Question overview")}</button>
+      )}
       {!isTest && (
         <label>
           <input
@@ -59,7 +64,7 @@ export const ToolsPanel = ({
       )}
       {!isTest && (
         <button onClick={onFinish} disabled={pending}>
-          {t("Finish session")}
+          {sequential ? t("Finish test now") : t("Finish session")}
         </button>
       )}
     </div>

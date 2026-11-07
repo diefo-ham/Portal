@@ -63,10 +63,10 @@ export function sessionTiming(
 // Revisit unanswered *assigned* material, rather than treating the entire unseen
 // bank as unfinished work. A later answer resolves it in the global review queue.
 export function reviewQueues(data: StudyData, protectTests = true) {
-  // A timed test still in progress has not left anything unanswered yet.
+  // A test still in progress has not left anything unanswered yet.
   const assigned = new Set(
     data.sessions
-      .filter((s) => !(s.timedTest && !s.finishedAt))
+      .filter((s) => !((s.timedTest || s.tsiTest) && !s.finishedAt))
       .flatMap((s) => s.questionIds),
   );
   const eligible = filterQuestions(data, {

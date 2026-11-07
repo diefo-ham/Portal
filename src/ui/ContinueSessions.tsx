@@ -11,7 +11,9 @@ export type ContinueSessionsProps = {
 export const ContinueSessions = ({ data, actions }: ContinueSessionsProps) => {
   const t = useT();
   const sessions = data.sessions
-    .filter((s) => !s.finishedAt && !s.practiceTest && !s.timedTest)
+    .filter(
+      (s) => !s.finishedAt && !s.practiceTest && !s.timedTest && !s.tsiTest,
+    )
     .toReversed();
   if (!sessions.length) return null;
   const rows = sessions.map((session) => (

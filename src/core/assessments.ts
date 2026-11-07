@@ -39,6 +39,8 @@ export interface AssessmentInfo {
   idPrefix: string;
   /** Items carry an Official / Original label (TSI). */
   hasOrigins: boolean;
+  /** Practice tests with a fixed composition, taken in order (TSI). */
+  fixedTests: boolean;
 }
 
 const SAT: AssessmentInfo = {
@@ -70,6 +72,7 @@ const SAT: AssessmentInfo = {
   protectedTests: true,
   idPrefix: "",
   hasOrigins: false,
+  fixedTests: false,
 };
 
 const PAA: AssessmentInfo = {
@@ -117,6 +120,7 @@ const PAA: AssessmentInfo = {
   protectedTests: false,
   idPrefix: "paa-",
   hasOrigins: false,
+  fixedTests: false,
 };
 
 /**
@@ -154,6 +158,7 @@ const TSI: AssessmentInfo = {
   protectedTests: false,
   idPrefix: "tsi-",
   hasOrigins: true,
+  fixedTests: true,
 };
 
 const INFO: Record<Assessment, AssessmentInfo> = { SAT, PAA, TSI };

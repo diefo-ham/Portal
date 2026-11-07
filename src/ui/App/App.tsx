@@ -41,6 +41,7 @@ import { Browse } from "../Browse";
 import { AddPdfsDialog } from "../AddPdfsDialog";
 import { AssessmentProvider, translator } from "../i18n";
 import { TimedTestRun, TimedTestSetup } from "../TimedTest";
+import { TsiTests } from "../TsiTest/TsiTests";
 import { usePersistedBoolean } from "@/src/helpers/usePersistedBoolean";
 import { readStorage, writeStorage } from "@/src/utils/storage";
 import { ActiveQuestionsDialog } from "./ActiveQuestionsDialog";
@@ -351,7 +352,9 @@ export const App = () => {
           info={info}
           assessments={ASSESSMENTS.map(assessmentInfo)}
           page={page}
-          testOpen={!!(current?.practiceTest || current?.timedTest)}
+          testOpen={
+            !!(current?.practiceTest || current?.timedTest || current?.tsiTest)
+          }
           onHome={() => setPage("home")}
           onNavigate={(next) => {
             setPage(next);
@@ -379,7 +382,16 @@ export const App = () => {
           }}
         />
       )}
-      {page === "tests" && info.testMode ? (
+      {page === "tests" && info.fixedTests ? (
+        <TsiTests
+          data={view}
+          mutate={mutate}
+          onOpen={openSession}
+          removesAnswers={deleteRemovesAnswers}
+          timerDefault={timerDefault}
+          onAddQuestions={() => setAddOpen(true)}
+        />
+      ) : page === "tests" && info.testMode ? (
         <TimedTestSetup
           data={view}
           mutate={mutate}
@@ -421,7 +433,7 @@ export const App = () => {
           session={current}
           mutate={mutate}
           showCorrectExplanations={showCorrectExplanations}
-          onBack={() => setPage("home")}
+          onBack={() => setPage(current.tsiTest ? "tests" : "home")}
           onRetry={(ids, kind) => {
             const { filters: again, name } = sessionRetry(current, kind);
             void start(ids, 0, again, name);

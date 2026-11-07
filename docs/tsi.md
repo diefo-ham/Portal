@@ -84,6 +84,29 @@ Source: the TSIA2 [Student brochure](https://accuplacer.collegeboard.org/accupla
 - **Essay.** A separate test of one randomly chosen prompt, 300 to 600 words, scored on several qualities; it must be started and finished in one sitting.
 - **Scores.** Reported on College Board's scales with college-readiness benchmarks and diagnostic levels. The portal shows none of this: the conversion depends on the adaptive model and is not published for practice answers.
 
+## Practice tests (the Tests tab)
+
+The Tests tab builds a practice test with the composition College Board publishes (see "The real test" above): **Mathematics or ELAR**, as the **College Readiness** test (20 or 30 questions) or the **Diagnostic** (48). Each is a session (`session.tsiTest`, `src/core/tsiTest.ts`) taken on the ordinary Practice screen with these differences: there is no feedback until the end, the test is untimed, and **Exit** saves your place (the real test has "save and finish later"). At the end the results show percent correct and each domain, with the usual review of every question; there is no score and no pass or fail. Tests stay out of the ordinary session lists and out of "left unanswered" while they are in progress, and are listed under **Your tests** (open, rename, delete).
+
+- **What a test is made of.** Mathematics: Quantitative 6, Algebraic 7, Geometric 3, Probabilistic 4 (Diagnostic: 12 each). ELAR CRC: 1 literary set of 4, 2 paired-passage (Synthesis) questions, 9 other informational, 1 essay-revision set of 4, 11 sentence questions; ELAR Diagnostic: 3 literary sets, 2 Synthesis, 10 informational, 3 essay sets, 12 sentence questions. Reading-focused questions come first, each half starting with its sets, as the Diagnostic does. Sets stay together in the bank's order.
+- **How questions are chosen.** From the questions the Settings currently show (so **Include original questions** applies), preferring those answered least, then at random. Nothing is routed by difficulty: the real test is adaptive, but a bank of this size cannot be, so the portal keeps the real content balance instead.
+- **A bank that is too small** builds what it can. The setup shows, for each part, what the real test uses and what the bank holds, and how many questions the test will have; a finished test says if it was shorter. (The supplied bank fills all four tests, but only has 3 literary and 3 essay sets, so ELAR tests repeat sets after a few.)
+- **Domains must match.** A question counts toward a part by its **Domain** (exactly as in the list above) and, for the paired passages, by its **Skill** being `Synthesis`; passage sets are questions that share one `passageGroup`.
+- If Original questions are switched off while a test is in progress, the test continues without them (like any session) and returns whole when they are switched back on.
+
+## Adding more questions to the PDFs
+
+Both the TSI and the PAA import any number of PDFs with any file names, so a longer file, or another file, can simply be added in **Add your question PDFs**: new IDs are added, an ID already stored with the same content is skipped, an ID whose content changed is refreshed (your answers stay), and an ID that appears in two files must agree in both or that question is left out. (The SAT is different: it needs its four named files, read as active and inactive sets; new SAT questions would have to go inside those files.) Each TSI page needs:
+
+- A unique **Question ID** of 8 hex characters.
+- The header table: `Assessment` = `TSIA2`, `Test` = `ELAR` or `Mathematics`, `Domain` (one of the eight names above, spelled exactly), `Skill` (free text), `Difficulty` = Easy, Medium or Hard.
+- `Question` with the stem, `Answer` with choices `A.` to `D.`, `Correct Answer: X`, and `Rationale`.
+- A last rationale line `Source: official College Board TSIA2 sample question…` or `Source: original practice item…` (anything else counts as Official).
+- Math: the stem ends with `[basic]`, `[square root]` or `[graphing]`.
+- ELAR sets: the four questions of a set on consecutive pages, each repeating the same passage (in smaller type than the question); a paired passage has its two columns headed `Passage 1` and `Passage 2`, with Skill `Synthesis`.
+
+`node scripts/pdf-tsi-check.mjs <pdf>` checks a file locally before it is added: counts, IDs, answer keys, tags and reading sets.
+
 ## Data: one record, three tests
 
 `Question`, `Attempt` and `Session` carry `assessment` (`"SAT"`, `"PAA"` or `"TSI"`); data stored before the PAA or TSI existed has no field and is read as SAT. Everything described in [the PAA notes](paa.md) about separate progress, separate maintenance and per-test preferences applies to the TSI too: reset progress, its recovery archive (`reset-archive-TSI`) and **Remove my questions** act on the TSI only, and **Erase all data on this device** covers all three. The Include-original-questions switch is a browser preference (`sat-tsi-original`, so Erase removes it).
@@ -92,5 +115,6 @@ Source: the TSIA2 [Student brochure](https://accuplacer.collegeboard.org/accupla
 
 - Adaptive testing, timed modules, a clock, and any score or pass/fail for the TSI: the real test is adaptive and untimed, and no official conversion exists.
 - A "choose your test" screen on first visit: the header switch and `#/tsi` are the ways in for now.
-- Shipping the original items inside the app (see above), and a TSI Practice Test tab (see above for how the real test is built).
+- Shipping the original items inside the app (see above).
+- Routing a test by difficulty, and the essay test.
 - The Python preparation tool (`scripts/import_college_board.py`) reads SAT exports only; the TSI is prepared in the browser.

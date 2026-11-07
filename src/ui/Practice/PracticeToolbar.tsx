@@ -21,7 +21,8 @@ export type PracticeToolbarProps = {
     onToggle: () => void;
   };
   onExit: () => void;
-  onOverview: () => void;
+  /** Absent in a TSI practice test, which has no overview: the count is then plain text. */
+  onOverview?: () => void;
   onTools: () => void;
 };
 
@@ -42,14 +43,21 @@ export const PracticeToolbar = ({
       <button className="text-button" onClick={onExit}>
         {t("← Exit")}
       </button>
-      <button
-        className="text-button"
-        onClick={onOverview}
-        aria-label={t("Open question overview")}
-      >
-        {t("Question {n}", { n: index + 1 })}{" "}
-        <span className="muted">{t("of {total}", { total })}</span>
-      </button>
+      {onOverview ? (
+        <button
+          className="text-button"
+          onClick={onOverview}
+          aria-label={t("Open question overview")}
+        >
+          {t("Question {n}", { n: index + 1 })}{" "}
+          <span className="muted">{t("of {total}", { total })}</span>
+        </button>
+      ) : (
+        <span className="toolbar-count">
+          {t("Question {n}", { n: index + 1 })}{" "}
+          <span className="muted">{t("of {total}", { total })}</span>
+        </span>
+      )}
       <div className="toolbar-right">
         {timer && (
           <span

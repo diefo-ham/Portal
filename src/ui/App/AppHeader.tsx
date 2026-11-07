@@ -35,6 +35,7 @@ export const AppHeader = ({
   // The SAT has module-style Practice Tests; the PAA has a timed test mode.
   if (info.practiceTests) links.push(["tests", "Tests"]);
   else if (info.testMode) links.push(["tests", "Test mode"]);
+  else if (info.fixedTests) links.push(["tests", "Tests"]);
   return (
     <header className="app-header">
       <button className="brand" onClick={onHome}>

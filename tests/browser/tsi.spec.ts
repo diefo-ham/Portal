@@ -188,3 +188,120 @@ test("an ELAR question offers no calculator and no calculator chip", async ({
     page.getByRole("button", { name: "Calculator", exact: true }),
   ).toHaveCount(0);
 });
+
+// ---- Practice tests -------------------------------------------------------
+
+/** A bank big enough for a full College Readiness Math test: 8, 8, 4 and 5 per domain, half of them official. */
+const mathBank = () => {
+  const domains: [string, number][] = [
+    ["Quantitative Reasoning", 8],
+    ["Algebraic Reasoning", 8],
+    ["Geometric and Spatial Reasoning", 4],
+    ["Probabilistic and Statistical Reasoning", 5],
+  ];
+  let n = 0;
+  return parseQuestions({
+    schemaVersion: 1,
+    questions: domains.flatMap(([domain, count]) =>
+      Array.from({ length: count }, (_, i) =>
+        tsi(`m${++n}`, {
+          domain,
+          origin: i % 2 ? "official" : "original",
+          stem: `Synthetic math question ${n}.`,
+        }),
+      ),
+    ),
+  });
+};
+
+async function seedMath(page: Page) {
+  await page.goto("/#/tsi");
+  await seedStudyData(page, { questions: mathBank() });
+  await page.getByRole("button", { name: "Tests", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Subject" })
+    .getByRole("button", { name: "Mathematics" })
+    .click();
+}
+
+test("a Math College Readiness test: 20 questions in order, no going back, no feedback, results by domain", async ({
+  page,
+}) => {
+  await seedMath(page);
+  await expect(page.getByText("20 questions", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /Start the test/ }).click();
+  const counter = page.locator(".toolbar-count");
+  await expect(counter).toHaveText(/^Question 1\s+of 20$/);
+  await expect(page.getByRole("button", { name: /Previous/ })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Open question overview" }),
+  ).toHaveCount(0);
+  await expect(page.locator(".origin-badge")).toHaveCount(0);
+  for (let i = 0; i < 20; i++) {
+    await page.getByRole("radio").first().check({ force: true });
+    await page.locator("button.submit").click();
+    // Wait for the next question before answering it.
+    if (i < 19)
+      await expect(counter).toHaveText(
+        new RegExp(`^Question ${i + 2}\\s+of 20$`),
+      );
+    // No answer is ever explained while the test runs.
+    await expect(page.getByText(/Not quite|Nicely done/)).toHaveCount(0);
+  }
+  await expect(
+    page.getByRole("heading", { name: /^\d+ of 20 correct\.$/ }),
+  ).toBeVisible();
+  await expect(page.locator(".tsi-test-domains li")).toHaveCount(4);
+  await expect(page.getByText(/not a TSIA2 score/)).toBeVisible();
+  await page.getByRole("button", { name: "← Back to tests" }).click();
+  await expect(page.getByText(/\d+ of 20 correct \(\d+%\)/)).toBeVisible();
+  // A test is not a practice session: it is not in the ordinary lists.
+  await page.getByRole("button", { name: "Practice", exact: true }).click();
+  await expect(
+    page.getByText("Mathematics College Readiness test"),
+  ).toHaveCount(0);
+});
+
+test("a test can be left and continued, and hiding original questions shortens it without ending it", async ({
+  page,
+}) => {
+  await seedMath(page);
+  await page.getByRole("button", { name: /Start the test/ }).click();
+  await page.getByRole("radio").first().check({ force: true });
+  await page.locator("button.submit").click();
+  await expect(page.locator(".toolbar-count")).toHaveText(
+    /^Question 2\s+of 20$/,
+  );
+  await page.getByRole("button", { name: "← Exit" }).click();
+  // Back on the Tests tab, in progress.
+  await expect(page.getByText("in progress")).toBeVisible();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByLabel("Include original questions").uncheck();
+  await page.getByRole("button", { name: "Tests", exact: true }).click();
+  await expect(page.getByText("in progress")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  // Only the official questions are left in it (about half), and it goes on.
+  const total = Number(
+    (await page.locator(".toolbar-count .muted").textContent())?.replace(
+      /\D/g,
+      "",
+    ),
+  );
+  expect(total).toBeGreaterThan(0);
+  expect(total).toBeLessThan(20);
+  await expect(page.getByRole("button", { name: /Previous/ })).toHaveCount(0);
+});
+
+test("the bank's size is said plainly when it cannot fill the real test", async ({
+  page,
+}) => {
+  await seedMath(page);
+  await page
+    .getByRole("group", { name: "Test" })
+    .getByRole("button", { name: /Diagnostic/ })
+    .click();
+  await expect(page.getByText(/the real test has 48/)).toBeVisible();
+  await expect(
+    page.getByText(/fewer questions than the real test uses/),
+  ).toBeVisible();
+});

@@ -115,7 +115,9 @@ export const SessionResults = ({
       <button className="text-button" onClick={onBack}>
         {session.practiceTest
           ? "← Back to Practice Test"
-          : t("← Back to practice")}
+          : session.tsiTest
+            ? "← Back to tests"
+            : t("← Back to practice")}
       </button>
       {onCalculator && (
         <button

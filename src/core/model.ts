@@ -137,9 +137,24 @@ export interface TimedTest {
   marked: string[];
   unusedOnly: boolean;
 }
+/** The two stages of a TSIA2 subject: the College Readiness Classification test, then the Diagnostic. */
+export type TsiTestKind = "crc" | "diagnostic";
+export type TsiSubject = "elar" | "math";
+/**
+ * A TSI practice test: a session with a fixed composition (see core/tsiTest.ts)
+ * answered in order, with no going back and no feedback until the end.
+ */
+export interface TsiTest {
+  version: 1;
+  kind: TsiTestKind;
+  subject: TsiSubject;
+  /** What the bank could not supply when the test was built, in words. */
+  shortfall?: string[];
+}
 export interface Session {
   practiceTest?: PracticeTest;
   timedTest?: TimedTest;
+  tsiTest?: TsiTest;
   id: string;
   assessment?: Assessment;
   /** Optional user-facing override; the default label is derived on demand. */
@@ -222,6 +237,10 @@ export type PracticeTestSession = Session & { practiceTest: PracticeTest };
 /** A session that is a PAA timed test. */
 export type TimedTestSession = Session & { timedTest: TimedTest };
 
+/** A session that is a TSI practice test. */
+export type TsiTestSession = Session & { tsiTest: TsiTest };
+export const isTsiTestSession = (session: Session): session is TsiTestSession =>
+  !!session.tsiTest;
 export const isPracticeTestSession = (
   session: Session,
 ): session is PracticeTestSession => !!session.practiceTest;

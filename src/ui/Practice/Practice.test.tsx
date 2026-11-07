@@ -91,6 +91,31 @@ const setup = (
 const stem = () => screen.getByRole("heading", { level: 1 }).textContent;
 const card = () => screen.getByRole("article");
 
+/** Three TSI Math questions as a practice test: in order, no going back, no feedback. */
+const tsiTest = () => {
+  const data = emptyData();
+  data.questions.push(
+    ...["a", "b", "c"].map((letter) =>
+      choiceQuestion({
+        id: `tsi-${letter}`,
+        assessment: "TSI",
+        section: "tsi-math",
+        stem: `Question ${letter}?`,
+        testStatus: "unknown",
+      }),
+    ),
+  );
+  const session = beginSession(
+    data,
+    ["tsi-a", "tsi-b", "tsi-c"],
+    defaultFilters,
+    "Mathematics College Readiness test",
+    false,
+  );
+  session.tsiTest = { version: 1, kind: "crc", subject: "math" };
+  return { data, session };
+};
+
 describe("Practice", () => {
   it("opens on the session's current question", () => {
     setup();
@@ -332,5 +357,78 @@ describe("Practice", () => {
     expect(
       document.querySelector(".completed-calculator-context"),
     ).toBeTruthy();
+  });
+});
+
+describe("a TSI practice test", () => {
+  it("has no way back: no Previous, no overview, no Skip", () => {
+    setup(tsiTest());
+    expect(screen.queryByRole("button", { name: /Previous/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Skip/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Open question overview" }),
+    ).toBeNull();
+    expect(screen.getByText("Question 1")).toBeTruthy();
+  });
+
+  it("records the answer and moves on, showing no feedback", async () => {
+    const { user, session, data } = setup(tsiTest());
+    expect(screen.queryByRole("button", { name: "Check answer" })).toBeNull();
+    await user.click(screen.getByRole("radio", { name: /^AThree/ }));
+    await user.click(screen.getByRole("button", { name: "Next question" }));
+    await waitFor(() => expect(data.attempts).toHaveLength(1));
+    expect(data.attempts[0]).toMatchObject({
+      questionId: "tsi-a",
+      correct: false,
+    });
+    expect(session.index).toBe(1);
+    // Nothing said whether it was right.
+    expect(
+      screen.queryByText(/Not quite|Correct\. Nicely done|Two and two/),
+    ).toBeNull();
+  });
+
+  it("does not move back with the left arrow", async () => {
+    const { user, session } = setup(tsiTest());
+    await user.click(screen.getByRole("radio", { name: /^BFour/ }));
+    await user.click(screen.getByRole("button", { name: "Next question" }));
+    await waitFor(() => expect(session.index).toBe(1));
+    fireEvent.keyDown(screen.getByRole("main"), { key: "ArrowLeft" });
+    expect(session.index).toBe(1);
+  });
+
+  it("finishes after the last answer and shows percent and domains, with no score", async () => {
+    const { user, session, data, refresh } = setup(tsiTest());
+    for (const [choice, name] of [
+      ["B", "Next question"],
+      ["B", "Next question"],
+      ["A", "Finish test"],
+    ] as const) {
+      await user.click(
+        screen.getByRole("radio", { name: new RegExp(`^${choice}`) }),
+      );
+      await user.click(screen.getByRole("button", { name }));
+      await waitFor(() => expect(data.attempts.length).toBeGreaterThan(0));
+      refresh();
+    }
+    await waitFor(() => expect(session.finishedAt).toBeDefined());
+    refresh();
+    expect(
+      await screen.findByRole("heading", { name: "2 of 3 correct." }),
+    ).toBeTruthy();
+    expect(screen.getByText(/67% correct/)).toBeTruthy();
+    expect(screen.getByText(/not a TSIA2 score/)).toBeTruthy();
+    expect(screen.getByText("← Back to tests")).toBeTruthy();
+  });
+
+  it("offers Finish test now instead of a session overview in the tools", async () => {
+    const { user } = setup(tsiTest());
+    await user.click(screen.getByRole("button", { name: "Practice tools" }));
+    expect(
+      screen.getByRole("button", { name: "Finish test now" }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Question overview" }),
+    ).toBeNull();
   });
 });
