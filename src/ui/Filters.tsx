@@ -4,7 +4,11 @@ import type {
   Filters as FilterValues,
   StudyData,
 } from "../core/model";
-import { assessmentInfo, sectionLabel } from "../core/assessments";
+import {
+  assessmentInfo,
+  offersProtection,
+  sectionLabel,
+} from "../core/assessments";
 import { selectedSections } from "../core/practice";
 import { domainKey, skillKey, taxonomyOptions } from "../core/taxonomy";
 import { useAssessment, useT } from "./i18n";
@@ -26,7 +30,8 @@ export const Filters = ({
   advanced = false,
 }: FiltersProps) => {
   const t = useT();
-  const info = assessmentInfo(useAssessment());
+  const assessment = useAssessment();
+  const info = assessmentInfo(assessment);
   const sections = selectedSections(value);
   const relevant = data.questions.filter(
     (q) => !sections.length || sections.includes(q.section),
@@ -198,7 +203,7 @@ export const Filters = ({
             />{" "}
             {t("Bookmarked only")}
           </label>
-          {info.protectedTests && (
+          {offersProtection(data, assessment) && (
             <label className="check-filter">
               <input
                 type="checkbox"

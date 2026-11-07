@@ -12,9 +12,15 @@ import {
   type ExportReader,
   type ReadableFile,
 } from "../src/importing/pdf/prepare.ts";
-import { preparePaaLibrary } from "../src/importing/pdf/preparePaa.ts";
+import {
+  prepareSatLibrary,
+  preparePaaLibrary,
+} from "../src/importing/pdf/preparePaa.ts";
+import { accessChecker } from "../src/importing/pdf/access.ts";
+import { sha256Hex } from "../src/importing/pdf/panels.ts";
 import { parseQuestions } from "../src/importing/json.ts";
 import type { RasterImage } from "../src/importing/pdf/raster.ts";
+import type { Assessment } from "../src/core/model.ts";
 
 const run = (
   text: string,
@@ -49,6 +55,10 @@ interface Spec {
   scaled?: boolean;
   /** A page of some other document: no question ID, no metadata table. */
   unrelated?: boolean;
+  /** The access code printed bottom left after "Ref.". */
+  ref?: string;
+  /** The SAT's ACTIVE / INACTIVE badge, top right. */
+  badge?: "ACTIVE" | "INACTIVE";
 }
 
 /** A synthetic page in the PAA export's layout (original text, no real questions). */
@@ -104,6 +114,8 @@ function page(spec: Spec) {
       key,
       rationaleLabel,
       ...rationale,
+      ...(spec.ref ? [run("Ref. " + spec.ref, 28, 777, 5)] : []),
+      ...(spec.badge ? [run(spec.badge, 511, 33, 9)] : []),
     ],
     792,
     612,
@@ -319,7 +331,13 @@ describe("groupPassages", () => {
 });
 
 /** Fake PDF readers, keyed by the file's own bytes (as in the SAT tests). */
-function fixtures(pdfs: Record<string, Spec[]>) {
+function fixtures(
+  pdfs: Record<string, Spec[]>,
+  access: (
+    assessment: Assessment,
+    token?: string,
+  ) => Promise<boolean> = async () => true,
+) {
   const readers = new Map<string, ExportReader>();
   const stored = new Map<string, Blob>();
   const files: ReadableFile[] = [];
@@ -360,6 +378,7 @@ function fixtures(pdfs: Record<string, Spec[]>) {
           }),
         put: async (key: string, blob: Blob) => void stored.set(key, blob),
       },
+      access,
     },
   };
 }
@@ -475,5 +494,169 @@ describe("preparePaaLibrary", () => {
     await expect(preparePaaLibrary(files, {}, deps)).rejects.toThrow(
       "No se pudo preparar ninguna pregunta",
     );
+  });
+});
+
+describe("access codes and the SAT badge", () => {
+  // Test-only codes: the real ones are never in this repository.
+  const CODES = {
+    PAA: "PAA-TEST-0000-0000-0001",
+    SAT: "SAT-TEST-0000-0000-0002",
+  };
+  const check = async () =>
+    accessChecker({
+      PAA: await sha256Hex(new TextEncoder().encode(CODES.PAA)),
+      SAT: await sha256Hex(new TextEncoder().encode(CODES.SAT)),
+    });
+
+  it("reads the access line and the badge by position, and keeps them out of the rationale", () => {
+    const [record] = records({
+      id: "abc12345",
+      assessment: "SAT",
+      test: "Math",
+      ref: CODES.SAT,
+      badge: "INACTIVE",
+      rationale: ["Una explicación."],
+    });
+    expect(record.ref).toBe(CODES.SAT);
+    expect(record.badge).toBe("inactive");
+    expect(record.rationaleLines).toEqual(["Una explicación."]);
+    const [plain] = records({ id: "abc12346" });
+    expect(plain.ref).toBeUndefined();
+    expect(plain.badge).toBeUndefined();
+  });
+
+  it("accepts a code only for its own test, in its exact shape", async () => {
+    const ok = await check();
+    expect(await ok("PAA", CODES.PAA)).toBe(true);
+    expect(await ok("SAT", CODES.PAA)).toBe(false);
+    expect(await ok("PAA", CODES.SAT)).toBe(false);
+    expect(await ok("PAA", "PAA-TEST-0000-0000-0002")).toBe(false);
+    expect(await ok("PAA", "paa-test-0000-0000-0001")).toBe(false);
+    expect(await ok("PAA", "")).toBe(false);
+    expect(await ok("PAA", undefined)).toBe(false);
+    // TSI has no hash in this checker, so nothing passes.
+    expect(await ok("TSI", "TSI-TEST-0000-0000-0003")).toBe(false);
+  });
+
+  it("imports pages with the code, and lists the others as left out", async () => {
+    const { files, deps } = fixtures(
+      {
+        "banco.pdf": [
+          { id: "ok000001", ref: CODES.PAA },
+          { id: "no000002" },
+          { id: "bad00003", ref: "PAA-TEST-0000-0000-0009" },
+          { id: "sat00004", ref: CODES.SAT },
+          { id: "ok000005", ref: CODES.PAA },
+        ],
+      },
+      await check(),
+    );
+    const prepared = await preparePaaLibrary(files, {}, deps);
+    expect(prepared.report.importedQuestions).toBe(2);
+    expect(prepared.report.quarantined.map((q) => q.sourceId).sort()).toEqual([
+      "bad00003",
+      "no000002",
+      "sat00004",
+    ]);
+    expect(prepared.report.quarantined[0].reason).toMatch(/código de acceso/);
+    const ids = parseQuestions(JSON.parse(prepared.questionsJson)).map(
+      (q) => q.id,
+    );
+    expect(ids).toEqual(["paa-ok000001", "paa-ok000005"]);
+  });
+
+  it("refuses a PDF where no page carries the code, and says why", async () => {
+    const { files, deps } = fixtures(
+      { "banco.pdf": [{ id: "a0000001" }, { id: "a0000002" }] },
+      await check(),
+    );
+    await expect(preparePaaLibrary(files, {}, deps)).rejects.toThrow(
+      /código de acceso de la PAA.*banco\.pdf/,
+    );
+  });
+
+  it("takes the SAT from one file, with its status from the badge", async () => {
+    const { files, deps } = fixtures(
+      {
+        "cualquier nombre.pdf": [
+          {
+            id: "act00001",
+            assessment: "SAT",
+            test: "Math",
+            domain: "Algebra",
+            skill: "Linear functions",
+            ref: CODES.SAT,
+            badge: "ACTIVE",
+          },
+          {
+            id: "ina00002",
+            assessment: "SAT",
+            test: "Reading and Writing",
+            domain: "Craft and Structure",
+            skill: "Words in Context",
+            ref: CODES.SAT,
+            badge: "INACTIVE",
+          },
+          {
+            id: "unk00003",
+            assessment: "SAT",
+            test: "Math",
+            ref: CODES.SAT,
+          },
+          { id: "paa00004", ref: CODES.PAA },
+        ],
+      },
+      await check(),
+    );
+    const prepared = await prepareSatLibrary(files, {}, deps);
+    const questions = parseQuestions(JSON.parse(prepared.questionsJson));
+    // The earlier SAT reader's IDs and source, so old imports are recognised.
+    expect(questions.map((q) => [q.id, q.testStatus, q.section])).toEqual([
+      ["cb-act00001", "active", "math"],
+      ["cb-ina00002", "inactive", "reading-writing"],
+      ["cb-unk00003", "unknown", "math"],
+    ]);
+    expect(
+      questions.every((q) => q.source === "College Board SAT question bank"),
+    ).toBe(true);
+    // The PAA question in the same file is not an SAT question.
+    expect(prepared.report.quarantined.map((q) => q.sourceId)).toEqual([
+      "paa00004",
+    ]);
+  });
+
+  it("leaves out an ID printed ACTIVE in one place and INACTIVE in another", async () => {
+    const sat = { assessment: "SAT", test: "Math", ref: CODES.SAT } as const;
+    const { files, deps } = fixtures(
+      {
+        "a.pdf": [{ id: "dup00001", ...sat, badge: "ACTIVE" }],
+        "b.pdf": [
+          { id: "dup00001", ...sat, badge: "INACTIVE" },
+          { id: "fine0002", ...sat, badge: "ACTIVE" },
+        ],
+      },
+      await check(),
+    );
+    const prepared = await prepareSatLibrary(files, {}, deps);
+    expect(prepared.report.quarantined.map((q) => q.sourceId)).toEqual([
+      "dup00001",
+    ]);
+    expect(prepared.report.importedQuestions).toBe(1);
+  });
+
+  it("ends the explanation image above the access line", () => {
+    const [record] = records({ id: "crop0001", ref: CODES.PAA });
+    const layout = page({ id: "crop0001", ref: CODES.PAA });
+    const plans = planCrops(record, [layout], "es");
+    const explanation = plans.find((plan) => plan.kind === "rationale")!;
+    const line = layout.lines.find((l) => l.text.startsWith("Ref."))!;
+    expect(explanation.rect.y1).toBeLessThan(line.words[0].y0);
+    const without = planCrops(
+      records({ id: "crop0002" })[0],
+      [page({ id: "crop0002" })],
+      "es",
+    ).find((plan) => plan.kind === "rationale")!;
+    expect(without.rect.y1).toBe(792);
   });
 });

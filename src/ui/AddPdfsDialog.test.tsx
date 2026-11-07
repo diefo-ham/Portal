@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Assessment } from "../core/model";
 import type { PrepareReport } from "../importing/pdf/prepare";
-import { AddPdfsDialog, type PrepareFiles } from "./AddPdfsDialog";
+import { AddPdfsDialog, type Kind, type PrepareFiles } from "./AddPdfsDialog";
 import { AssessmentProvider, translator } from "./i18n";
 
 // jsdom has no modal <dialog>: opening one just marks it open.
@@ -21,29 +21,29 @@ afterEach(cleanup);
 const pdf = (name: string) =>
   new File(["%PDF"], name, { type: "application/pdf" });
 
-const SAT_NAMES = [
-  "read_write_inactive.pdf",
-  "read_write_active.pdf",
-  "math_inactive.pdf",
-  "math_active.pdf",
-];
-
-const prepared = (questions: number): ReturnType<PrepareFiles> =>
+const prepared = (
+  questions: number,
+  extra: Partial<PrepareReport> = {},
+): ReturnType<PrepareFiles> =>
   Promise.resolve({
     report: {
       importedQuestions: questions,
       quarantined: [],
-      conflicts: [],
-      interpretation: {},
       ignored: [],
       counts: { section: {}, testStatus: {}, difficulty: {} },
+      ...extra,
     } as unknown as PrepareReport,
     result: { unchanged: false },
   });
 
-const setup = (assessment: Assessment) => {
-  const prepareSat = vi.fn<PrepareFiles>(() => prepared(8));
-  const preparePaa = vi.fn<PrepareFiles>(() => prepared(5));
+const setup = (
+  assessment: Assessment,
+  kinds: Record<string, Kind | undefined>,
+) => {
+  const prepareSat = vi.fn<PrepareFiles>(() => prepared(120));
+  const preparePaa = vi.fn<PrepareFiles>(() => prepared(60));
+  const prepareTsi = vi.fn<PrepareFiles>(() => prepared(90));
+  const detect = vi.fn(async (file: File) => kinds[file.name]);
   const t = translator(assessment);
   render(
     <AssessmentProvider value={assessment}>
@@ -52,128 +52,181 @@ const setup = (assessment: Assessment) => {
         onClose={vi.fn()}
         prepareSat={prepareSat}
         preparePaa={preparePaa}
+        prepareTsi={prepareTsi}
+        detect={detect}
       />
     </AssessmentProvider>,
   );
-  return { prepareSat, preparePaa, t, user: userEvent.setup() };
+  return {
+    prepareSat,
+    preparePaa,
+    prepareTsi,
+    detect,
+    t,
+    user: userEvent.setup(),
+  };
 };
 
 const names = (call: unknown[] | undefined) =>
   (call?.[0] as File[]).map((file) => file.name).sort();
 
-describe.each<Assessment>(["SAT", "PAA"])(
-  "adding all five PDFs at once, from the %s portal",
+describe.each<Assessment>(["SAT", "PAA", "TSI"])(
+  "adding the three PDFs from the %s portal",
   (assessment) => {
-    it("reads the four SAT exports as SAT and the rest as PAA", async () => {
-      const { prepareSat, preparePaa, t, user } = setup(assessment);
+    it("sorts each PDF by the test named inside it, whatever its file name", async () => {
+      const { prepareSat, preparePaa, prepareTsi, detect, t, user } = setup(
+        assessment,
+        {
+          "uno.pdf": "SAT",
+          "dos.pdf": "PAA",
+          "tres.pdf": "TSI",
+          "carta.pdf": undefined,
+        },
+      );
       await user.upload(screen.getByLabelText(t("PDF export files")), [
-        ...SAT_NAMES.map(pdf),
-        pdf("banco-paa.pdf"),
+        pdf("uno.pdf"),
+        pdf("dos.pdf"),
+        pdf("tres.pdf"),
+        pdf("carta.pdf"),
       ]);
+      // Every PDF is looked at, and none is read by its name.
+      await waitFor(() => expect(detect).toHaveBeenCalledTimes(4));
+      expect(await screen.findByText(t("SAT questions"))).toBeTruthy();
+      expect(screen.getByText(t("PAA questions"))).toBeTruthy();
+      expect(screen.getByText(t("TSI questions"))).toBeTruthy();
+      expect(
+        screen.getByText(
+          t("Not an SAT, PAA or TSI question PDF: it will be set aside"),
+        ),
+      ).toBeTruthy();
       await user.click(
         screen.getByRole("button", { name: t("Add questions") }),
       );
+      await waitFor(() => expect(prepareTsi).toHaveBeenCalledTimes(1));
+      expect(names(prepareSat.mock.calls[0])).toEqual(["uno.pdf"]);
+      expect(names(preparePaa.mock.calls[0])).toEqual(["dos.pdf"]);
+      expect(names(prepareTsi.mock.calls[0])).toEqual(["tres.pdf"]);
 
-      await waitFor(() => expect(preparePaa).toHaveBeenCalledTimes(1));
-      expect(prepareSat).toHaveBeenCalledTimes(1);
-      expect(names(prepareSat.mock.calls[0])).toEqual([...SAT_NAMES].sort());
-      expect(names(preparePaa.mock.calls[0])).toEqual(["banco-paa.pdf"]);
-
-      // Each report says which test it is for, and the other test's is pointed out.
-      expect(await screen.findByRole("heading", { name: "SAT" })).toBeTruthy();
-      expect(screen.getByRole("heading", { name: "PAA" })).toBeTruthy();
-      const other = assessment === "SAT" ? "PAA" : "SAT";
+      // Each report says which test it is for, and the other tests' are pointed out.
+      for (const kind of ["SAT", "PAA", "TSI"] as const)
+        expect(await screen.findByRole("heading", { name: kind })).toBeTruthy();
       expect(
-        screen.getAllByText(
+        screen.queryAllByText(
           t(
             "These are {test} questions. Use the switch at the top to open them.",
-            { test: other },
+            { test: "SAT" },
           ),
         ),
-      ).toHaveLength(1);
+      ).toHaveLength(assessment === "SAT" ? 0 : 1);
     });
 
-    it("adds only the PAA export when the SAT set is not there", async () => {
-      const { prepareSat, preparePaa, t, user } = setup(assessment);
+    it("adds only the test that was dropped", async () => {
+      const { prepareSat, preparePaa, prepareTsi, t, user } = setup(
+        assessment,
+        { "solo.pdf": "PAA" },
+      );
       await user.upload(screen.getByLabelText(t("PDF export files")), [
-        pdf("banco-paa.pdf"),
+        pdf("solo.pdf"),
       ]);
+      await screen.findByText(t("PAA questions"));
       await user.click(
         screen.getByRole("button", { name: t("Add questions") }),
       );
       await waitFor(() => expect(preparePaa).toHaveBeenCalledTimes(1));
       expect(prepareSat).not.toHaveBeenCalled();
+      expect(prepareTsi).not.toHaveBeenCalled();
     });
   },
 );
 
-describe("adding TSI exports", () => {
-  const setupTsi = (kinds: Record<string, "PAA" | "TSI" | undefined>) => {
-    const prepareSat = vi.fn<PrepareFiles>(() => prepared(8));
-    const preparePaa = vi.fn<PrepareFiles>(() => prepared(5));
-    const prepareTsi = vi.fn<PrepareFiles>(() => prepared(170));
-    const detect = vi.fn(async (file: File) => kinds[file.name]);
+describe("the access code", () => {
+  it("says which files were refused and why, in the report", async () => {
+    const prepareSat = vi.fn<PrepareFiles>(() =>
+      prepared(100, {
+        refused: ["viejo.pdf"],
+        quarantined: [
+          {
+            sourceId: "ab12cd34",
+            file: "sat.pdf",
+            pages: [7],
+            reason: "The SAT access code is missing or not the right one",
+          },
+        ],
+      }),
+    );
     render(
-      <AssessmentProvider value="TSI">
+      <AssessmentProvider value="SAT">
         <AddPdfsDialog
           open
           onClose={vi.fn()}
           prepareSat={prepareSat}
-          preparePaa={preparePaa}
-          prepareTsi={prepareTsi}
-          detect={detect}
+          preparePaa={vi.fn<PrepareFiles>(() => prepared(0))}
+          prepareTsi={vi.fn<PrepareFiles>(() => prepared(0))}
+          detect={async () => "SAT"}
         />
       </AssessmentProvider>,
     );
-    return {
-      prepareSat,
-      preparePaa,
-      prepareTsi,
-      detect,
-      user: userEvent.setup(),
-    };
-  };
-
-  it("sorts PDFs by the test named inside them, not by file name", async () => {
-    const { prepareSat, preparePaa, prepareTsi, detect, user } = setupTsi({
-      "ELAR.pdf": "TSI",
-      "Math.pdf": "TSI",
-      "banco-paa.pdf": "PAA",
-      "carta.pdf": undefined,
-    });
+    const user = userEvent.setup();
     await user.upload(screen.getByLabelText("PDF export files"), [
-      ...SAT_NAMES.map(pdf),
-      pdf("ELAR.pdf"),
-      pdf("Math.pdf"),
-      pdf("banco-paa.pdf"),
-      pdf("carta.pdf"),
+      pdf("sat.pdf"),
     ]);
-    // The four SAT exports are recognised by name and never opened.
-    expect(detect).toHaveBeenCalledTimes(4);
-    expect(await screen.findAllByText("TSI export")).toHaveLength(2);
-    expect(screen.getByText("PAA export")).toBeTruthy();
+    await screen.findByText("SAT questions");
+    await user.click(screen.getByRole("button", { name: "Add questions" }));
     expect(
-      screen.getByText(
-        "Not a PAA or TSI question export: it will be set aside",
+      await screen.findByText(
+        /Not added, because no page carries the access code for this test: viejo\.pdf/,
       ),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Add questions" }));
-    await waitFor(() => expect(prepareTsi).toHaveBeenCalledTimes(1));
-    expect(names(prepareTsi.mock.calls[0])).toEqual(["ELAR.pdf", "Math.pdf"]);
-    expect(names(preparePaa.mock.calls[0])).toEqual([
-      "banco-paa.pdf",
-      "carta.pdf",
-    ]);
-    expect(names(prepareSat.mock.calls[0])).toEqual([...SAT_NAMES].sort());
-    expect(await screen.findByRole("heading", { name: "TSI" })).toBeTruthy();
+    expect(screen.getByText(/1 could not be read safely/)).toBeTruthy();
   });
 
-  it("waits for the check before it lets the PDFs be added", async () => {
-    let release: (kind: "TSI") => void = () => {};
-    const prepareTsi = vi.fn<PrepareFiles>(() => prepared(90));
-    const detect = vi.fn(
-      () => new Promise<"TSI">((resolve) => (release = resolve)),
+  it("shows a refusal from the reader as the result for that test", async () => {
+    const prepareSat = vi.fn<PrepareFiles>(() =>
+      Promise.reject(
+        new Error("Nothing was added: no page carries the SAT access code."),
+      ),
     );
+    render(
+      <AssessmentProvider value="SAT">
+        <AddPdfsDialog
+          open
+          onClose={vi.fn()}
+          prepareSat={prepareSat}
+          preparePaa={vi.fn<PrepareFiles>(() => prepared(0))}
+          prepareTsi={vi.fn<PrepareFiles>(() => prepared(0))}
+          detect={async () => "SAT"}
+        />
+      </AssessmentProvider>,
+    );
+    const user = userEvent.setup();
+    await user.upload(screen.getByLabelText("PDF export files"), [
+      pdf("sat.pdf"),
+    ]);
+    await screen.findByText("SAT questions");
+    await user.click(screen.getByRole("button", { name: "Add questions" }));
+    expect(
+      await screen.findByText(
+        "Nothing was added: no page carries the SAT access code.",
+      ),
+    ).toBeTruthy();
+  });
+});
+
+describe("checking each PDF", () => {
+  it("looks at one PDF at a time and waits for the check before adding", async () => {
+    let release: (kind: Kind) => void = () => {};
+    let active = 0;
+    let most = 0;
+    const detect = vi.fn(async (file: File) => {
+      active++;
+      most = Math.max(most, active);
+      const kind = await new Promise<Kind>((resolve) => {
+        release = resolve;
+        void file;
+      });
+      active--;
+      return kind;
+    });
     render(
       <AssessmentProvider value="TSI">
         <AddPdfsDialog
@@ -181,32 +234,28 @@ describe("adding TSI exports", () => {
           onClose={vi.fn()}
           prepareSat={vi.fn<PrepareFiles>(() => prepared(0))}
           preparePaa={vi.fn<PrepareFiles>(() => prepared(0))}
-          prepareTsi={prepareTsi}
+          prepareTsi={vi.fn<PrepareFiles>(() => prepared(90))}
           detect={detect}
         />
       </AssessmentProvider>,
     );
     const user = userEvent.setup();
     await user.upload(screen.getByLabelText("PDF export files"), [
-      pdf("ELAR.pdf"),
+      pdf("a.pdf"),
+      pdf("b.pdf"),
     ]);
-    expect(screen.getByText("Checking…")).toBeTruthy();
-    expect(
-      (
-        screen.getByRole("button", {
-          name: "Add questions",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(true);
+    const button = () =>
+      screen.getByRole("button", {
+        name: "Add questions",
+      }) as HTMLButtonElement;
+    expect(screen.getAllByText("Checking…")).toHaveLength(2);
+    expect(button().disabled).toBe(true);
+    await waitFor(() => expect(detect).toHaveBeenCalledTimes(1));
     release("TSI");
-    await waitFor(() =>
-      expect(
-        (
-          screen.getByRole("button", {
-            name: "Add questions",
-          }) as HTMLButtonElement
-        ).disabled,
-      ).toBe(false),
-    );
+    await waitFor(() => expect(detect).toHaveBeenCalledTimes(2));
+    expect(button().disabled).toBe(true);
+    release("TSI");
+    await waitFor(() => expect(button().disabled).toBe(false));
+    expect(most).toBe(1);
   });
 });

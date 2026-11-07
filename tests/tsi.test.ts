@@ -465,6 +465,8 @@ function fixtures(pdfs: Record<string, Spec[]>) {
           }),
         put: async (key: string, blob: Blob) => void stored.set(key, blob),
       },
+      // Pages here carry no access code (see paa.test.ts for the check itself).
+      access: async () => true,
     },
   };
 }

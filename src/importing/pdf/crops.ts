@@ -6,6 +6,7 @@
  * is quarantined instead of imported with answer text in its question image.
  */
 import { findPhrase, type Box, type PageLayout } from "./layout.ts";
+import { accessLine } from "./marks.ts";
 import type { SourceRecord } from "./segment.ts";
 
 export type PanelKind = "question" | "rationale";
@@ -57,7 +58,9 @@ export function planCrops(
       if (!heading) throw new Error("Cannot locate question crop boundary");
       start = heading.y1 + BELOW_HEADING;
     }
-    const end = page.height;
+    // The access line at the bottom left is not part of the explanation.
+    const access = accessLine(page);
+    const end = access ? access.y0 - 1 : page.height;
     const rect = (y0: number, y1: number): Box => ({
       x0: SIDE_MARGIN,
       y0,

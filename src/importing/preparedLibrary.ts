@@ -163,15 +163,48 @@ export async function ingestLibrary(
   }
   const updated = await updateData((d) => {
     if (d.imports.some((x) => x.id === id)) return;
+    // A question is never stored twice: one test's source ID is one question.
+    // A real (imported) question replaces a bundled example with the same ID, and
+    // an example is not added where a real question already has it. Identity is
+    // by ID only, never by similar wording.
+    const idOf = (q: StudyData["questions"][number]) =>
+      [assessmentOf(q), q.sourceId ?? ""].join("\u0000");
+    const hasId = (q: StudyData["questions"][number]) => !!q.sourceId;
+    const realIds = new Set(
+      [...d.questions, ...incoming]
+        .filter((q) => q.bundled !== true && hasId(q))
+        .map(idOf),
+    );
+    const replaced = new Set(
+      d.questions
+        .filter((q) => q.bundled === true && hasId(q) && realIds.has(idOf(q)))
+        .map((q) => q.id),
+    );
+    if (replaced.size) {
+      d.questions = d.questions.filter((q) => !replaced.has(q.id));
+      // A session that used a replaced example ends; its answers stay.
+      const ended = new Set(
+        d.sessions
+          .filter((s) => s.questionIds.some((qid) => replaced.has(qid)))
+          .map((s) => s.id),
+      );
+      d.sessions = d.sessions.filter((s) => !ended.has(s.id));
+      for (const attempt of d.attempts)
+        if (attempt.sessionId && ended.has(attempt.sessionId))
+          delete attempt.sessionId;
+    }
+    const candidates = incoming.filter(
+      (q) => q.bundled !== true || !hasId(q) || !realIds.has(idOf(q)),
+    );
     const result = mergeQuestions(
       d.questions,
-      incoming,
+      candidates,
       label || "PDF question library",
     );
     // Prepared revisions may repair source layout/classification while stable IDs
     // preserve attempts, notes, bookmarks, and session membership.
     const revisions = new Map(
-      incoming
+      candidates
         .filter((q) => q.source && q.sourceId)
         .map((q) => [sourceKey(q), q]),
     );

@@ -28,6 +28,8 @@ The official items are College Board's copyright. Whether and when to distribute
 
 ## Importing the TSI PDFs
 
+**Update:** every page of a TSI PDF must now carry the TSI access code (see [pdf-import.md](pdf-import.md)); the notes below on layout still apply.
+
 The **Add your question PDFs** pop-up takes the TSI exports with any file names, alongside SAT and PAA exports in the same drop. A PDF that is not one of the four SAT file names is looked at (its first question page) and sorted by the **Assessment** value inside it: `PAA` or `TSIA2` (`TSI` also works); anything else is set aside and named. The tag beside each file says what it was taken for.
 
 `src/importing/pdf/tsi.ts` is the reading profile; `preparePaa.ts` runs it through the same pipeline as the PAA (`prepareBankLibrary` with `TSI_PROFILE`), and the page layout is the PAA export's, so header columns, positional reading and reading sets are shared code (`paa.ts`).

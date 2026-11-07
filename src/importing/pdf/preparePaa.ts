@@ -6,6 +6,7 @@
  * number of PDFs is accepted, and a question ID seen twice must agree with
  * itself or the question is left out.
  */
+import type { Assessment } from "../../core/model.ts";
 import { planCrops } from "./crops.ts";
 import {
   convertPaaRecord,
@@ -19,11 +20,14 @@ import {
   type PassageGroup,
 } from "./paa.ts";
 import type { ReviewedOverride } from "./record.ts";
+import { accessChecker } from "./access.ts";
+import { KNOWN_EXCEPTIONS } from "./exceptions.ts";
 import {
-  convertSatExampleRecord,
+  convertSatRecord,
   isSatBankRecord,
-  satExampleSignature,
-} from "./satExamples.ts";
+  satSignature,
+  satStatus,
+} from "./sat.ts";
 import {
   CALCULATOR_TAG_PHRASES,
   convertTsiRecord,
@@ -56,6 +60,15 @@ export interface BankProfile {
   language: "en" | "es";
   /** Whether a page's Assessment column names this test. */
   accepts(record: PaaRecord): boolean;
+  /**
+   * The test whose access code every page must carry (see `access.ts`). Only
+   * the bundled-examples generator leaves it out, through `forExamples`.
+   */
+  accessCode?: Assessment;
+  /** Reviewed exceptions known for this test's source IDs (a file can add more). */
+  knownExceptions?: Record<string, ReviewedOverride>;
+  /** The question's status when the page says so (the SAT badge); else unknown. */
+  status?(record: PaaRecord): "active" | "inactive" | "unknown";
   group(records: readonly PaaRecord[]): Map<string, PassageGroup>;
   signature(record: PaaRecord): string;
   /** Text fields of one question, plus short notes for the import report. */
@@ -71,6 +84,10 @@ export interface BankProfile {
     converting(done: number, total: number): string;
     checking: string;
     noneQualified(ignored: string[]): string;
+    /** No page of any chosen PDF carried this test's access code. */
+    noAccess(refused: string[]): string;
+    /** Why one question was left out of an otherwise accepted PDF. */
+    noAccessReason: string;
     nothingPrepared(firstProblem: string | undefined): string;
   };
 }
@@ -81,6 +98,7 @@ export const PAA_PROFILE: BankProfile = {
   idPrefix: "paa-",
   language: "es",
   accepts: isPaaRecord,
+  accessCode: "PAA",
   group: (records) => groupPassages(records),
   signature: paaSignature,
   convert: (record, group, override) => ({
@@ -97,6 +115,9 @@ export const PAA_PROFILE: BankProfile = {
     checking: "Comprobando la biblioteca preparada…",
     noneQualified: (ignored) =>
       `Ninguno de los PDF es una exportación de preguntas de la PAA, así que no se agregó nada. Se ignoraron: ${ignored.join(", ")}.`,
+    noAccess: (refused) =>
+      `No se agregó nada: en ninguna página aparece el código de acceso de la PAA. Archivos: ${refused.join(", ")}.`,
+    noAccessReason: "Falta el código de acceso de la PAA, o no es el correcto",
     nothingPrepared: (first) =>
       "No se pudo preparar ninguna pregunta. Comprueba que sean exportaciones de preguntas de la PAA." +
       (first ? ` Primer problema: ${first}` : ""),
@@ -109,6 +130,7 @@ export const TSI_PROFILE: BankProfile = {
   idPrefix: "tsi-",
   language: "en",
   accepts: isTsiRecord,
+  accessCode: "TSI",
   group: groupTsiPassages,
   signature: tsiSignature,
   convert: (record, group, override) => {
@@ -122,6 +144,9 @@ export const TSI_PROFILE: BankProfile = {
     checking: "Checking the prepared library…",
     noneQualified: (ignored) =>
       `None of the PDFs is a TSIA2 question export, so nothing was added. Set aside: ${ignored.join(", ")}.`,
+    noAccess: (refused) =>
+      `Nothing was added: no page carries the TSI access code. Files: ${refused.join(", ")}.`,
+    noAccessReason: "The TSI access code is missing or not the right one",
     nothingPrepared: (first) =>
       "No question could be prepared. Check that these are TSIA2 question exports." +
       (first ? ` First problem: ${first}` : ""),
@@ -129,19 +154,24 @@ export const TSI_PROFILE: BankProfile = {
 };
 
 /**
- * The bundled SAT examples: one bank-layout PDF with Assessment = SAT. Only
- * `scripts/build-examples.mjs` uses it; the Add-PDFs dialog does not.
+ * SAT questions: one PDF with every SAT question, both tests, and the ACTIVE /
+ * INACTIVE badge on each page. IDs and source match what the earlier four-file
+ * reader produced, so questions imported that way are recognised and keep their
+ * answers and bookmarks.
  */
-export const SAT_EXAMPLES_PROFILE: BankProfile = {
-  parser: "sat-examples-pdf-v1",
-  label: "SAT examples",
-  idPrefix: "example-",
+export const SAT_PROFILE: BankProfile = {
+  parser: "sat-pdf-browser-v1",
+  label: "SAT: questions prepared from PDF",
+  idPrefix: "cb-",
   language: "en",
   accepts: isSatBankRecord,
+  accessCode: "SAT",
+  knownExceptions: KNOWN_EXCEPTIONS,
+  status: satStatus,
   group: () => new Map(),
-  signature: satExampleSignature,
+  signature: satSignature,
   convert: (record, _group, override) => {
-    const { text, notes } = convertSatExampleRecord(record, override);
+    const { text, notes } = convertSatRecord(record, override);
     return { text: text as unknown as Record<string, unknown>, notes };
   },
   say: {
@@ -149,12 +179,26 @@ export const SAT_EXAMPLES_PROFILE: BankProfile = {
     converting: (done, total) => `Preparing questions: ${done} of ${total}`,
     checking: "Checking the prepared library…",
     noneQualified: (ignored) =>
-      `None of the PDFs holds SAT questions in this layout. Set aside: ${ignored.join(", ")}.`,
+      `None of the PDFs is an SAT question export, so nothing was added. Set aside: ${ignored.join(", ")}.`,
+    noAccess: (refused) =>
+      `Nothing was added: no page carries the SAT access code. Files: ${refused.join(", ")}.`,
+    noAccessReason: "The SAT access code is missing or not the right one",
     nothingPrepared: (first) =>
-      "No question could be prepared." +
+      "No question could be prepared. Check that this is the SAT question PDF." +
       (first ? ` First problem: ${first}` : ""),
   },
 };
+
+/**
+ * The same reading without the access check, for the bundled examples: the
+ * example PDFs are the portal's own and carry no code. Only
+ * `scripts/build-examples.mjs` uses this; every import path uses the profiles
+ * above as they are.
+ */
+export const forExamples = (profile: BankProfile): BankProfile => ({
+  ...profile,
+  accessCode: undefined,
+});
 
 const tally = (values: readonly string[]) => {
   const counts: Record<string, number> = {};
@@ -181,6 +225,12 @@ export const prepareTsiLibrary = (
   deps: PrepareDeps,
 ) => prepareBankLibrary(chosen, options, deps, TSI_PROFILE);
 
+export const prepareSatLibrary = (
+  chosen: readonly ReadableFile[],
+  options: PrepareOptions,
+  deps: PrepareDeps,
+) => prepareBankLibrary(chosen, options, deps, SAT_PROFILE);
+
 export async function prepareBankLibrary(
   chosen: readonly ReadableFile[],
   options: PrepareOptions,
@@ -188,15 +238,20 @@ export async function prepareBankLibrary(
   profile: BankProfile,
 ): Promise<PreparedLibrary> {
   const { signal, progress } = options;
-  const overrides = options.overrides ?? {};
+  const overrides = { ...profile.knownExceptions, ...options.overrides };
   // A fixed order keeps the library revision the same for the same PDFs.
   const files = [...chosen].sort((a, b) => a.name.localeCompare(b.name));
   if (!files.length) throw new Error("Choose at least one PDF.");
 
   const indexed: Indexed[] = [];
-  // A chosen PDF that is not an export of PAA questions (a letter, a study guide,
-  // an SAT export) is set aside instead of stopping the others.
+  // A chosen PDF that is not an export of this test's questions (a letter, a
+  // study guide, another test's export) is set aside instead of stopping the others.
   const ignored: string[] = [];
+  // PDFs of this test where no page carried its access code.
+  const refused: string[] = [];
+  // Questions left out of an accepted PDF because their page lacked the code.
+  const quarantined: QuarantinedQuestion[] = [];
+  const hasAccess = deps.access ?? accessChecker();
   for (const [position, file] of files.entries()) {
     signal?.throwIfAborted();
     const bytes = new Uint8Array(await file.arrayBuffer());
@@ -232,17 +287,45 @@ export async function prepareBankLibrary(
             message: profile.say.reading(file.name, page, reader.pageCount),
           });
       }
-      const records = indexPaaExport(file.name, layouts);
-      if (!records.some(profile.accepts)) {
+      const found = indexPaaExport(file.name, layouts);
+      if (!found.some(profile.accepts)) {
         ignored.push(file.name);
         continue;
+      }
+      // Every question's page must carry this test's access code.
+      let records = found;
+      if (profile.accessCode) {
+        records = [];
+        for (const record of found) {
+          if (
+            !profile.accepts(record) ||
+            (await hasAccess(profile.accessCode, record.ref))
+          )
+            records.push(record);
+          else
+            quarantined.push({
+              sourceId: record.id,
+              file: file.name,
+              pages: record.pages,
+              reason: profile.say.noAccessReason,
+            });
+        }
+        if (!records.some(profile.accepts)) {
+          refused.push(file.name);
+          continue;
+        }
       }
       indexed.push({ file, sha256, pages: reader.pageCount, records });
     } finally {
       await reader.close();
     }
   }
-  if (!indexed.length) throw new Error(profile.say.noneQualified(ignored));
+  if (!indexed.length)
+    throw new Error(
+      refused.length
+        ? profile.say.noAccess(refused)
+        : profile.say.noneQualified(ignored),
+    );
 
   // The ID printed on the page establishes identity; the first copy is used.
   const collected = new Map<string, { at: Indexed; record: PaaRecord }[]>();
@@ -255,7 +338,6 @@ export async function prepareBankLibrary(
   const ordered = [...collected.values()].map((list) => list[0].record);
   const groups = profile.group(ordered);
 
-  const quarantined: QuarantinedQuestion[] = [];
   const warnings: string[] = [];
   const questions: Record<string, unknown>[] = [];
   const usedAssets = new Set<string>();
@@ -295,8 +377,8 @@ export async function prepareBankLibrary(
             text;
           questions.push({
             ...rest,
-            // There is no active/inactive concept in the PAA.
-            testStatus: "unknown",
+            // Only the SAT says whether a question is in a live practice test.
+            testStatus: profile.status?.(record) ?? "unknown",
             document: {
               question: panels.question,
               rationale: panels.rationale,
@@ -359,17 +441,14 @@ export async function prepareBankLibrary(
   const report: PrepareReport = {
     parser: profile.parser,
     createdAt: new Date().toISOString(),
-    activeMode: "unknown",
-    interpretation: {},
     files: indexed.map((at) => ({
       filename: at.file.name,
       sha256: at.sha256,
       pages: at.pages,
       questions: at.records.length,
     })),
-    comparison: {},
-    conflicts: [],
     ...(ignored.length ? { ignored } : {}),
+    ...(refused.length ? { refused } : {}),
     ...(warnings.length ? { warnings } : {}),
     quarantined,
     uniqueSourceIds: collected.size,

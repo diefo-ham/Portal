@@ -102,22 +102,43 @@ export const App = () => {
   );
   const bothKinds = useMemo(() => {
     if (!info.hasOrigins || !data) return false;
-    const mine = scopeStudyData(data, assessment).questions;
+    // The bundled examples are Original; they never decide whether the switch is offered.
+    const mine = scopeStudyData(data, assessment).questions.filter(
+      (question) => question.bundled !== true,
+    );
     return (
       mine.some((question) => question.origin === "official") &&
       mine.some((question) => question.origin === "original")
     );
   }, [data, assessment, info.hasOrigins]);
   const hideOrigin = bothKinds && !includeOriginal ? "original" : undefined;
-  const scoped = useMemo(
-    () => (data ? scopeStudyData(data, assessment, { hideOrigin }) : undefined),
-    [data, assessment, hideOrigin],
-  );
   // Tests are built from the person's own questions only, and stay locked until
   // there are some: the bundled examples are for studying.
   const ownQuestions = useMemo(
     () => (data ? hasImportedQuestions(data, assessment) : false),
     [data, assessment],
+  );
+  // Once a test has questions of the person's own, its bundled examples are
+  // hidden unless they ask for them. A test with none keeps its examples, so it
+  // is never empty. Nothing is deleted either way.
+  const [showExamples, setShowExamples] = usePersistedBoolean(
+    "sat-show-examples",
+    false,
+  );
+  const hideBundled = ownQuestions && !showExamples;
+  const offerExamples = useMemo(
+    () =>
+      !!data &&
+      data.questions.some((question) => question.bundled === true) &&
+      ASSESSMENTS.some((id) => hasImportedQuestions(data, id)),
+    [data],
+  );
+  const scoped = useMemo(
+    () =>
+      data
+        ? scopeStudyData(data, assessment, { hideOrigin, hideBundled })
+        : undefined,
+    [data, assessment, hideOrigin, hideBundled],
   );
   const testView = useMemo(
     () =>
@@ -206,14 +227,14 @@ export const App = () => {
     }
   };
   // The PDF reader is loaded only when someone prepares a library from PDFs.
-  const preparePdfs = async (
+  const prepareSatPdfs = async (
     files: File[],
     options: Parameters<
-      (typeof import("../../importing/pdf/run"))["prepareFromPdfs"]
+      (typeof import("../../importing/pdf/run"))["prepareFromSatPdfs"]
     >[1],
   ) => {
-    const { prepareFromPdfs } = await import("../../importing/pdf/run");
-    return adoptLibrary(() => prepareFromPdfs(files, options));
+    const { prepareFromSatPdfs } = await import("../../importing/pdf/run");
+    return adoptLibrary(() => prepareFromSatPdfs(files, options));
   };
   const prepareTsiPdfs = async (
     files: File[],
@@ -510,7 +531,10 @@ export const App = () => {
             onShowCorrectExplanations: setShowCorrectExplanations,
             deleteRemovesAnswers,
             onDeleteRemovesAnswers: setDeleteRemovesAnswers,
-            offerProtection: info.protectedTests,
+            offerProtection: ownQuestions && info.protectedTests,
+            exampleQuestions: offerExamples
+              ? { checked: showExamples, onChange: setShowExamples }
+              : undefined,
             originalQuestions: bothKinds
               ? { checked: includeOriginal, onChange: setIncludeOriginal }
               : undefined,
@@ -537,7 +561,7 @@ export const App = () => {
       <AddPdfsDialog
         open={addOpen}
         onClose={() => setAddOpen(false)}
-        prepareSat={preparePdfs}
+        prepareSat={prepareSatPdfs}
         preparePaa={preparePaaPdfs}
         prepareTsi={prepareTsiPdfs}
         detect={detectPdf}

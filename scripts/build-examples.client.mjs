@@ -6,15 +6,17 @@
 import { openExport, encodeWebp } from "/src/importing/pdf/pdfjsAdapter.ts";
 import {
   PAA_PROFILE,
-  SAT_EXAMPLES_PROFILE,
+  SAT_PROFILE,
   TSI_PROFILE,
+  forExamples,
   prepareBankLibrary,
 } from "/src/importing/pdf/preparePaa.ts";
 
+// The example PDFs are the portal's own and carry no access code.
 const PROFILES = {
-  sat: SAT_EXAMPLES_PROFILE,
-  paa: PAA_PROFILE,
-  tsi: TSI_PROFILE,
+  sat: forExamples(SAT_PROFILE),
+  paa: forExamples(PAA_PROFILE),
+  tsi: forExamples(TSI_PROFILE),
 };
 
 const toBase64 = async (blob) => {
