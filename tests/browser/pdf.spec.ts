@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { ACCESS_HASHES } from "../../src/core/accessCodes";
 import sample from "../fixtures/synthetic.json" with { type: "json" };
 
 test("version-one study data survives the image-store migration", async ({
@@ -83,7 +84,13 @@ test("PDF image storage, spoiler separation and progress reset", async ({
       rationale: [{ ...panel, alt: "Synthetic explanation" }],
       textIsApproximate: true,
       provenance: [
-        { filename: "synthetic.pdf", sha256: "a".repeat(64), pages: [1] },
+        {
+          filename: "synthetic.pdf",
+          sha256: "a".repeat(64),
+          pages: [1],
+          // A PDF whose access code is accepted; one with none is removed on load.
+          access: ACCESS_HASHES.SAT[0],
+        },
       ],
     },
   };
