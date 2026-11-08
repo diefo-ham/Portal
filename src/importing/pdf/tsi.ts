@@ -6,7 +6,7 @@
  * adds what TSI needs on top:
  *
  *  - Official / Original: the last "Source:" line of the rationale says whether
- *    an item is a College Board sample or an original practice item.
+ *    an item is a sample from the test publisher or an original practice item.
  *  - Calculator: a Math stem ends with [basic], [square root] or [graphing],
  *    which is the on-screen calculator the real test offers for that item.
  *  - Reading sets: several questions share one passage. The instruction printed
@@ -112,7 +112,7 @@ export function originOf(lines: readonly string[]): {
     return { origin: "official", recognized: true };
   if (source && /\boriginal\b/i.test(source))
     return { origin: "original", recognized: true };
-  // The safe side for a version that must carry no College Board items.
+  // The safe side for a version that must carry no items from the test publisher.
   return { origin: "official", recognized: false };
 }
 
@@ -157,7 +157,7 @@ export function convertTsiRecord(
   const { origin, recognized } = originOf(record.rationaleLines);
   if (origin === "official" && !OFFICIAL_ITEMS_ALLOWED)
     throw new Error(
-      "College Board sample item left out: this build includes original items only",
+      "Official sample item left out: this build includes original items only",
     );
   const notes: string[] = [];
   if (!recognized)

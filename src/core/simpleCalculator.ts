@@ -2,7 +2,7 @@
  * The two small on-screen calculators of the TSIA2: Basic (add, subtract,
  * multiply, divide) and Square root (the same, plus a square-root key). They
  * work like a pocket calculator: each operator is carried out as soon as the next
- * one is pressed, so 2 + 3 × 4 gives 20. College Board does not publish how its
+ * one is pressed, so 2 + 3 × 4 gives 20. The test publisher does not publish how its
  * own calculators order operations, so this is the ordinary pocket-calculator
  * behaviour, not a copy. No UI and no network: the keypad component only
  * sends keys here.

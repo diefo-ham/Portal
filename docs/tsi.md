@@ -1,6 +1,6 @@
 # TSI Portal
 
-The portal serves three tests from one codebase: the **SAT**, the **PAA** and the **TSI** (the Texas Success Initiative Assessment 2.0, TSIA2). The header switch (**SAT · PAA · TSI**) moves between them from anywhere, and `#/tsi` links straight to the TSI. Everything below is what differs for the TSI. Content is always the person's own: the app and the website build contain **no College Board TSI questions** (only the original examples described in [examples.md](examples.md)), and no College Board item is ever committed.
+The portal serves three tests from one codebase: the **SAT**, the **PAA** and the **TSI** (the Texas Success Initiative Assessment 2.0, TSIA2). The header switch (**SAT · PAA · TSI**) moves between them from anywhere, and `#/tsi` links straight to the TSI. Everything below is what differs for the TSI. Content is always the person's own: the app and the website build contain **no the test publisher TSI questions** (only the original examples described in [examples.md](examples.md)), and no the test publisher item is ever committed.
 
 ## How the TSI differs
 
@@ -13,18 +13,18 @@ The portal serves three tests from one codebase: the **SAT**, the **PAA** and th
 | Calculator         | Bundled Offline (graphing) calculator on Math | None                                    | **One of three, per question** (below)                                                                                      |
 | Reading sets       | One passage per question                      | Questions share a reading               | Questions share a reading (sets of 4 in the literary and essay items, paired passages in some informational items)          |
 | Spoiler protection | Active practice-test questions hidden         | None                                    | None: everything imports as `unknown` and nothing is hidden. Unknown is not a promise that a question is safe from spoilers |
-| Label              | none                                          | none                                    | **Official** (a College Board sample item) or **Original** (written for this portal)                                        |
+| Label              | none                                          | none                                    | **Official** (a sample item from the test publisher) or **Original** (written for this portal)                                        |
 
 ## The questions, and what is Official or Original
 
-Every TSI question is labelled in its own rationale: the last line is `Source: official College Board TSIA2 sample question…` or `Source: original practice item written…`. The importer reads that line and stores it as `origin` on the question.
+Every TSI question is labelled in its own rationale: the last line is `Source: official TSIA2 sample question…` or `Source: original practice item written…`. The importer reads that line and stores it as `origin` on the question.
 
 - **Where it shows.** Not in a practice session (the question is central) and not as a filter. Browse and the question-details panel say Official or Original.
 - **Include original questions** (Settings → Study preferences). Off hides every Original question from practice, Browse, Review and progress (their answers and bookmarks too) and leaves the Official ones. Nothing is deleted, and turning it on brings them back. It is only offered when the bank holds both kinds. A **session keeps working**: one that contains hidden questions stays, without those questions (it continues from the question it was on, or the next one still shown), and only a session with nothing else in it is left out. Implemented once, in the scoped view (`scopeStudyData(..., { hideOrigin })` in `src/core/assessments.ts`), so no screen has a rule of its own; the stored session is untouched.
-- **Build.** A build made with `VITE_INCLUDE_OFFICIAL=false` refuses Official items at import (each is left out with the reason "College Board sample item left out: this build includes original items only"). One constant (`src/core/buildFlags.ts`), not a fork.
+- **Build.** A build made with `VITE_INCLUDE_OFFICIAL=false` refuses Official items at import (each is left out with the reason "Official sample item left out: this build includes original items only"). One constant (`src/core/buildFlags.ts`), not a fork.
 - A question with a missing or unrecognized Source line is **treated as Official** and listed under "Noted" in the import report.
 
-The official items are College Board's copyright. Whether and when to distribute them is a decision for the owner of the portal. The app ships only the 60 + 60 original examples in `public/examples/` ([examples.md](examples.md)); delivering the full original bank would be a separate decision.
+The official items are the test publisher's copyright. Whether and when to distribute them is a decision for the owner of the portal. The app ships only the 60 + 60 original examples in `public/examples/` ([examples.md](examples.md)); delivering the full original bank would be a separate decision.
 
 ## Importing the TSI PDFs
 
@@ -56,7 +56,7 @@ Look at these by eye after any change to the reader: a literary set (4 questions
 
 ## Calculators
 
-What College Board says (TSIA2 [Administrator's Manual](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-administrators-manual.pdf), "Use of Calculators"; [Mathematics sample questions](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-mathematics-sample-questions.pdf); [Student brochure](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-student-informational-brochure.pdf)): handheld calculators are not permitted online. Some, but not all, Math questions have a pop-up calculator; a calculator icon appears with the question, and the sample packet tags each item with the one it allows. There are three: **Basic** (4 function), **Square Root** (4 function with a square-root button) and **Graphing** (TI-84). The calculator can be moved around the screen and closed with the X; a question that offers several shows a drop-down menu, and only one is on screen at a time.
+What the test publisher says (TSIA2 [Administrator's Manual](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-administrators-manual.pdf), "Use of Calculators"; [Mathematics sample questions](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-mathematics-sample-questions.pdf); [Student brochure](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-student-informational-brochure.pdf)): handheld calculators are not permitted online. Some, but not all, Math questions have a pop-up calculator; a calculator icon appears with the question, and the sample packet tags each item with the one it allows. There are three: **Basic** (4 function), **Square Root** (4 function with a square-root button) and **Graphing** (TI-84). The calculator can be moved around the screen and closed with the X; a question that offers several shows a drop-down menu, and only one is on screen at a time.
 
 The portal follows that per question (`src/core/calculators.ts`):
 
@@ -69,11 +69,11 @@ The portal follows that per question (`src/core/calculators.ts`):
 
 The keypads are one four-column grid (the operators stay in the right-hand column; the Square-root one adds √ beside the decimal point, and on the Basic one Equals takes the last two cells). They take typed keys (digits, `.`, `+ - * /`, Enter, Backspace, `C`, and `R` for √ on the Square-root one), show `Error` for division by zero or the root of a negative number, make no network request, and open in the same movable window as the graphing calculator (their own default size and saved position).
 
-**How the √ key works.** The square root is taken of the number on the display, as soon as √ is pressed: type `9`, press √, and the display shows `3` (the result can then be used in the next operation, `16 √ + 4 =` gives 8). This is how an ordinary four-function calculator with a square-root key behaves, and is the best reading of "4 function with square root button". There is no separate "Ans" key: nothing College Board publishes mentions one, and a four-function calculator has only `=`.
+**How the √ key works.** The square root is taken of the number on the display, as soon as √ is pressed: type `9`, press √, and the display shows `3` (the result can then be used in the next operation, `16 √ + 4 =` gives 8). This is how an ordinary four-function calculator with a square-root key behaves, and is the best reading of "4 function with square root button". There is no separate "Ans" key: nothing the test publisher publishes mentions one, and a four-function calculator has only `=`.
 
-**Not verified:** College Board's own tutorials (in the TSIA2 Student Portal) show the real keys, but they are not public, and none of the documents above says in which order √ is pressed, how operations are ordered or how numbers are formatted. The keypads carry out each operator as the next one is pressed, like a pocket calculator (`2 + 3 × 4` gives 20). The graphing one is the Offline engine, not a TI-84.
+**Not verified:** The test publisher's own tutorials (in the TSIA2 Student Portal) show the real keys, but they are not public, and none of the documents above says in which order √ is pressed, how operations are ordered or how numbers are formatted. The keypads carry out each operator as the next one is pressed, like a pocket calculator (`2 + 3 × 4` gives 20). The graphing one is the Offline engine, not a TI-84.
 
-## The real test, as College Board describes it
+## The real test, as the test publisher describes it
 
 Source: the TSIA2 [Student brochure](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-student-informational-brochure.pdf) and [Technical Manual](https://accuplacer.collegeboard.org/accuplacer/pdf/tsia2-technical-manual.pdf), chapter 3.
 
@@ -84,11 +84,11 @@ Source: the TSIA2 [Student brochure](https://accuplacer.collegeboard.org/accupla
 - **ELAR CRC: 30 questions**: 1 Literary Text Analysis set (4 questions on one passage), 11 discrete reading questions (2 Synthesis on paired argumentative passages and 9 Informational Text Analysis), 1 Essay Revision and Editing set (4 questions on one draft), and 11 discrete Sentence Revision, Editing, and Completion questions.
 - **ELAR Diagnostic: 48 questions**, in one run with no break: 24 reading-focused (3 Literary sets of 4, 2 Synthesis, 10 other informational) then 24 writing-focused (3 Essay Revision and Editing sets of 4, 12 Sentence Revision questions).
 - **Essay.** A separate test of one randomly chosen prompt, 300 to 600 words, scored on several qualities; it must be started and finished in one sitting.
-- **Scores.** Reported on College Board's scales with college-readiness benchmarks and diagnostic levels. The portal shows none of this: the conversion depends on the adaptive model and is not published for practice answers.
+- **Scores.** Reported on the test publisher's scales with college-readiness benchmarks and diagnostic levels. The portal shows none of this: the conversion depends on the adaptive model and is not published for practice answers.
 
 ## Practice tests (the Tests tab)
 
-The Tests tab builds a practice test with the composition College Board publishes (see "The real test" above): **Mathematics or ELAR**, as the **College Readiness** test (20 or 30 questions) or the **Diagnostic** (48). Each is a session (`session.tsiTest`, `src/core/tsiTest.ts`) taken on the ordinary Practice screen with these differences: no answer is shown until the end, the test is untimed, **Exit** saves your place (the real test has "save and finish later"), and **you can go back to any question and change its answer** until you finish. (College Board's documents do not say whether the real test allows going back; a student who took it says it does, so the portal does. Answers are kept as drafts and scored when the test is finished.) The last question leads to the question map, which shows which questions are answered, and **Finish test** is there. At the end the results show percent correct and each domain, with the usual review of every question; there is no score and no pass or fail. Tests stay out of the ordinary session lists and out of "left unanswered" while they are in progress, and are listed under **Your tests** (open, rename, delete).
+The Tests tab builds a practice test with the composition the test publisher publishes (see "The real test" above): **Mathematics or ELAR**, as the **College Readiness** test (20 or 30 questions) or the **Diagnostic** (48). Each is a session (`session.tsiTest`, `src/core/tsiTest.ts`) taken on the ordinary Practice screen with these differences: no answer is shown until the end, the test is untimed, **Exit** saves your place (the real test has "save and finish later"), and **you can go back to any question and change its answer** until you finish. (the test publisher's documents do not say whether the real test allows going back; a student who took it says it does, so the portal does. Answers are kept as drafts and scored when the test is finished.) The last question leads to the question map, which shows which questions are answered, and **Finish test** is there. At the end the results show percent correct and each domain, with the usual review of every question; there is no score and no pass or fail. Tests stay out of the ordinary session lists and out of "left unanswered" while they are in progress, and are listed under **Your tests** (open, rename, delete).
 
 - **What a test is made of.** Mathematics: Quantitative 6, Algebraic 7, Geometric 3, Probabilistic 4 (Diagnostic: 12 each). ELAR CRC: 1 literary set of 4, 2 paired-passage (Synthesis) questions, 9 other informational, 1 essay-revision set of 4, 11 sentence questions; ELAR Diagnostic: 3 literary sets, 2 Synthesis, 10 informational, 3 essay sets, 12 sentence questions. Reading-focused questions come first, each half starting with its sets, as the Diagnostic does. Sets stay together in the bank's order.
 - **How questions are chosen.** From the questions the Settings currently show (so **Include original questions** applies), preferring those answered least, then at random. Nothing is routed by difficulty: the real test is adaptive, but a bank of this size cannot be, so the portal keeps the real content balance instead.
@@ -103,7 +103,7 @@ Both the TSI and the PAA import any number of PDFs with any file names, so a lon
 - A unique **Question ID** of 8 hex characters.
 - The header table: `Assessment` = `TSIA2`, `Test` = `ELAR` or `Mathematics`, `Domain` (one of the eight names above, spelled exactly), `Skill` (free text), `Difficulty` = Easy, Medium or Hard.
 - `Question` with the stem, `Answer` with choices `A.` to `D.`, `Correct Answer: X`, and `Rationale`.
-- A last rationale line `Source: official College Board TSIA2 sample question…` or `Source: original practice item…` (anything else counts as Official).
+- A last rationale line `Source: official TSIA2 sample question…` or `Source: original practice item…` (anything else counts as Official).
 - Math: the stem ends with `[basic]`, `[square root]` or `[graphing]`.
 - ELAR sets: the four questions of a set on consecutive pages, each repeating the same passage (in smaller type than the question); a paired passage has its two columns headed `Passage 1` and `Passage 2`, with Skill `Synthesis`.
 
@@ -119,4 +119,4 @@ Both the TSI and the PAA import any number of PDFs with any file names, so a lon
 - A "choose your test" screen on first visit: the header switch and `#/tsi` are the ways in for now.
 - Shipping the original items inside the app (see above).
 - Routing a test by difficulty, and the essay test.
-- The Python preparation tool (`scripts/import_college_board.py`) reads SAT exports only; the TSI is prepared in the browser.
+- The Python preparation tool (`scripts/import_question_bank.py`) reads SAT exports only; the TSI is prepared in the browser.

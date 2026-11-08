@@ -108,7 +108,7 @@ describe("Settings", () => {
     );
     await userEvent.click(screen.getByLabelText("Include original questions"));
     expect(onChange).toHaveBeenCalledWith(false);
-    expect(screen.queryByText("Include College Board sample items")).toBeNull();
+    expect(screen.queryByText("Include official sample items")).toBeNull();
   });
 
   it("no longer offers to remove the official items", () => {
@@ -126,7 +126,7 @@ describe("Settings", () => {
         />
       </AssessmentProvider>,
     );
-    expect(screen.queryByText("College Board sample items")).toBeNull();
+    expect(screen.queryByText("Official sample items")).toBeNull();
     expect(
       screen.queryByRole("button", { name: /official items/i }),
     ).toBeNull();

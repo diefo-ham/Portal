@@ -86,7 +86,7 @@ labels were compared by value only.
 ## Not covered
 
 Touch gestures, Desmos' on-screen keypad (Offline has none), saving and sharing graphs, and anything on the real
-test app (Bluebook) that differs from the public Desmos calculator.
+test app (the official one) that differs from the public Desmos calculator.
 
 ## After the comparison
 

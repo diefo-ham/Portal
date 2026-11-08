@@ -6,7 +6,7 @@ export type PaaSection = "lectura" | "redaccion" | "matematicas" | "ingles";
 export type TsiSection = "tsi-elar" | "tsi-math";
 /** A part of a test. Ids are unique across assessments. */
 export type Section = SatSection | PaaSection | TsiSection;
-/** Whether a TSI item is a College Board sample item or an original practice item. */
+/** Whether a TSI item is a sample item from the test publisher or an original practice item. */
 export type QuestionOrigin = "official" | "original";
 /** The on-screen calculator the real TSIA2 offers for an item. */
 export type CalculatorTier = "basic" | "sqrt" | "graphing";
@@ -37,7 +37,7 @@ export interface Question {
   /** The skill as the source printed it, when `skill` is a grouped label (PAA). */
   skillDetail?: string;
   difficulty?: Difficulty;
-  /** TSI only: College Board sample item or original practice item. */
+  /** TSI only: a sample item from the test publisher, or an original practice item. */
   origin?: QuestionOrigin;
   /** TSI Math only: which on-screen calculator the item allows. Absent means none. */
   calculator?: CalculatorTier;

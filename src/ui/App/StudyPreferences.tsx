@@ -89,7 +89,7 @@ export const StudyPreferences = ({
           checked={protectedTests}
           onChange={onProtectedTests}
           label="Protect unused practice-test questions"
-          hint="Active questions are hidden by default. You can override this for a session in Refine selection. Unknown status is not a guarantee against future College Board test spoilers."
+          hint="Active questions are hidden by default. You can override this for a session in Refine selection. Unknown status is not a guarantee against future official test spoilers."
         />
       )}
     </section>

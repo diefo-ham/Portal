@@ -56,7 +56,7 @@ describe("the bundled example library (public/examples)", () => {
     }
   });
 
-  it("has no active/inactive information and no College Board item", () => {
+  it("has no active/inactive information and no item from the test publisher", () => {
     expect(questions.every((q) => q.testStatus === "unknown")).toBe(true);
     expect(questions.filter((q) => q.origin === "official")).toEqual([]);
     expect(

@@ -630,7 +630,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
       };
     }
   /**
-   * Desmos' `~` always yields one parameter set, found by a local fit that
+   * The reference calculator's `~` always yields one parameter set, found by a local fit that
    * starts every parameter at 1. When exact solving finds several, every
    * solution is still listed, but dependent rows use the one closest to that
    * starting point (so `x_1^2~5` gives +√5), ties going to the larger value.
@@ -876,7 +876,7 @@ export function calculateWorkspace(state: CalculatorState): Workspace {
             };
           } else {
             // A unique exact solution of a `~` vector is a zero-residual fit,
-            // reported with RMSE like Desmos' regression parameters.
+            // reported with RMSE like the reference calculator's regression parameters.
             let fit: EntryResult["fit"];
             if (
               solved.kind === "determined" &&

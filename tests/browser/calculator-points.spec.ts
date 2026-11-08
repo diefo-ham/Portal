@@ -37,7 +37,7 @@ test("a list of points shows chips, and mean gives one point", async ({
   ).toHaveText(["(1.5, 2)"]);
 });
 
-test("a subscripted nonlinear system solves like Desmos regression", async ({
+test("a subscripted nonlinear system solves like the reference calculator regression", async ({
   page,
 }) => {
   await open(page);

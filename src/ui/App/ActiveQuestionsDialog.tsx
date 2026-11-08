@@ -25,7 +25,7 @@ export const ActiveQuestionsDialog = ({
         <h2 id={headingId}>Practice these questions again?</h2>
         <p>
           This session includes active practice-test questions and may spoil a
-          future Bluebook test.
+          future official test.
         </p>
         <div className="modal-actions">
           <button onClick={onCancel}>Cancel</button>

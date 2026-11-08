@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-spec=importlib.util.spec_from_file_location('importer',Path(__file__).with_name('import_college_board.py'))
+spec=importlib.util.spec_from_file_location('importer',Path(__file__).with_name('import_question_bank.py'))
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 fitz=module.fitz
 

@@ -1,6 +1,6 @@
 # PAA Portal
 
-The portal serves two tests from one codebase: the **SAT** and the **PAA** (Prueba de Aptitud Académica, College Board Puerto Rico y América Latina). The header toggle (**SAT ⇄** / **PAA ⇄**) swaps between them from anywhere. Everything below is what differs for the PAA. The study guide (`Guía de estudio PAA.pdf`, section "Estructura y contenido de la PAA") is the evidence for the test facts.
+The portal serves two tests from one codebase: the **SAT** and the **PAA** (Prueba de Aptitud Académica, the test publisher's Puerto Rico y América Latina office). The header toggle (**SAT ⇄** / **PAA ⇄**) swaps between them from anywhere. Everything below is what differs for the PAA. The study guide (`Guía de estudio PAA.pdf`, section "Estructura y contenido de la PAA") is the evidence for the test facts.
 
 ## How the PAA differs
 
@@ -19,7 +19,7 @@ What the PAA Portal shows instead of a score: percent correct and attempt counts
 
 ## The real test: what is sourced and what is not
 
-- **Questions per part** (70 Lectura y Redacción, 55 Matemáticas, 50 Inglés; 175 in all), four choices each, some Matemáticas items answer-supplied, no calculator: College Board Puerto Rico y América Latina, [PAA revisada: Preguntas y respuestas](https://latam.collegeboard.org/wp-content/uploads/2017/10/PAA-Preguntas-y-Respuestas-Puerto-Rico-2017.pdf) (October 2017).
+- **Questions per part** (70 Lectura y Redacción, 55 Matemáticas, 50 Inglés; 175 in all), four choices each, some Matemáticas items answer-supplied, no calculator: the test publisher's Puerto Rico y América Latina office, [PAA revisada: Preguntas y respuestas](https://latam.collegeboard.org/wp-content/uploads/2017/10/PAA-Preguntas-y-Respuestas-Puerto-Rico-2017.pdf) (October 2017).
 - **Times:** that 2017 document gives 75 / 60 / 50 minutes (3 h 5 min). The study guide (2018 onwards) gives 2 h 20 min for Lectura, Redacción and Matemáticas and 40 min for Inglés, and a 2024 [comparison of the SAT and the PAA](https://www.elnuevodia.com/suplementos/college-board/notas/cuales-son-las-diferencias-entre-el-sat-y-la-paa/) (a paid press release) splits that as 80 / 60 / 40 for 175 questions in 3 hours. The newer figures are used.
 - **Order:** Parts 1–2 Lectura y Redacción, Part 3 Matemáticas, Part 4 Inglés (same article).
 - **Not found:** how the 70 are divided between Lectura and Redacción, and where the answer-supplying items sit on the real test. The guide's own examples and practice sets put them after the multiple-choice items, so test mode does too.
@@ -66,7 +66,7 @@ The **Add your question PDFs** pop-up (from the empty screens, or **Add PDFs** i
 - **Choices.** Image or typeset choices have no useful text, so choices are the generic "Opción A–D" and the original layout is shown, as for the SAT. Image choices laid out two to a row put two labels on one line; labels are found in sequence.
 - **Grid-ins** have no Answer section, only `Correct Answer:`; `15/2, 7.5` becomes two accepted forms.
 - **Domains** are the guide's own categories, kept as printed (no English sentence-casing). **Skills** are grouped: the bank labels almost every question with a skill of its own (96 skills for 154 questions), which makes the skill filter and results useless, so `src/core/paaTaxonomy.ts` groups them under their domain (35 skills, none used once). The printed label is kept as `skillDetail` and shown beside the skill; it stays searchable. A label that is not listed stays as it is, so a new bank never loses a skill, and a bank saved before the grouping gets it on read. Redacción already has one skill per domain and is left alone.
-- Rationale, Difficulty and Question ID in the supplied files were written for this study set, not by the College Board. The portal shows them as given and adds no note.
+- Rationale, Difficulty and Question ID in the supplied files were written for this study set, not by the test publisher. The portal shows them as given and adds no note.
 
 The supplied combined file (154 questions) converts completely: 49 Lectura, 18 Redacción, 45 Matemáticas, 42 Inglés; 144 multiple choice and 10 grid-ins; 16 shared readings covering 83 questions. The file does not mark which 56 are worked examples and which 98 are practice, so they form one pool. Splitting the file is not needed.
 
@@ -82,10 +82,10 @@ Riskiest pages in the supplied file, to look at by eye after any change to the r
 
 ## Why there is no estimated PAA score
 
-The SAT's estimate (200 + 600 × weighted accuracy) is a labelled heuristic, and a PAA one was considered and left out. What is sourced: the guide says the total of correct answers is "transformed into scaled scores", there is no penalty for wrong answers, and each part is scaled 200-800 (10-40 per subpart); the score is equated, so the same number correct can give different scores on different forms. No raw-to-scaled table for the current PAA was found: College Board does not publish one, the ETS research found is from 1973 and 1988 (an older generation, about linking to the SAT), and third-party converters start from a scaled score instead. The only way to produce a number would be to make up a curve, applied to a study bank that is not a real form (154 questions, self-selected, tests of any length). A made-up figure on a high-stakes scale does more harm than the percent correct the portal shows, so it does not. If College Board publishes a table, `src/core/timedTest.ts` summarizes per part and is where a conversion would go.
+The SAT's estimate (200 + 600 × weighted accuracy) is a labelled heuristic, and a PAA one was considered and left out. What is sourced: the guide says the total of correct answers is "transformed into scaled scores", there is no penalty for wrong answers, and each part is scaled 200-800 (10-40 per subpart); the score is equated, so the same number correct can give different scores on different forms. No raw-to-scaled table for the current PAA was found: the test publisher does not publish one, the ETS research found is from 1973 and 1988 (an older generation, about linking to the SAT), and third-party converters start from a scaled score instead. The only way to produce a number would be to make up a curve, applied to a study bank that is not a real form (154 questions, self-selected, tests of any length). A made-up figure on a high-stakes scale does more harm than the percent correct the portal shows, so it does not. If the test publisher publishes a table, `src/core/timedTest.ts` summarizes per part and is where a conversion would go.
 
 ## Not covered
 
 - Adaptive practice-test modules and score estimates for the PAA: the bank is by part, not full-length tests. Test mode is a timed run, not a simulation of a full form.
 - Spanish for the long SAT help text; the PAA portal has its own Spanish help. A phrase without a Spanish entry falls back to English, and a test (`tests/i18n.test.ts`) fails if a phrase passed to `t()` has none.
-- The Python preparation tool (`scripts/import_college_board.py`) reads SAT exports only; the PAA is prepared in the browser.
+- The Python preparation tool (`scripts/import_question_bank.py`) reads SAT exports only; the PAA is prepared in the browser.

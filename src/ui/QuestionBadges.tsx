@@ -1,7 +1,7 @@
 import type { Question } from "../core/model";
 import { useT } from "./i18n";
 
-/** "Official" (a College Board sample item) or "Original" (written for this portal), TSI only. */
+/** "Official" (a sample item from the test publisher) or "Original" (written for this portal), TSI only. */
 export const OriginBadge = ({ question }: { question: Question }) => {
   const t = useT();
   if (!question.origin) return null;
@@ -9,9 +9,7 @@ export const OriginBadge = ({ question }: { question: Question }) => {
   return (
     <span
       className={`origin-badge ${question.origin}`}
-      title={t(
-        official ? "College Board sample item" : "Original practice item",
-      )}
+      title={t(official ? "Official sample item" : "Original practice item")}
     >
       {t(official ? "Official" : "Original")}
     </span>

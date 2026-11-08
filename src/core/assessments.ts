@@ -140,7 +140,7 @@ const PAA: AssessmentInfo = {
 
 /**
  * TSIA2 practice: fixed-order sets with no clock, no modules and no score (the
- * real test is adaptive and College Board publishes no conversion). Every item
+ * real test is adaptive and the test publisher publishes no conversion). Every item
  * is "unknown" for spoiler purposes, so nothing is hidden.
  */
 const TSI: AssessmentInfo = {

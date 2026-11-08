@@ -63,7 +63,7 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
       {tsi && report.counts.origin && (
         <p className="small muted">
           {t(
-            "{official} College Board sample items and {original} original items.",
+            "{official} official sample items and {original} original items.",
             {
               official: report.counts.origin.official ?? 0,
               original: report.counts.origin.original ?? 0,

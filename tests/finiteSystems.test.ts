@@ -478,7 +478,7 @@ describe("finite-system regression compatibility", () => {
 
 describe("subscripted unknowns", () => {
   const run = workspace;
-  it("solves the repeated-root Desmos regression with x_1 and y_1", () => {
+  it("solves the repeated-root the reference calculator regression with x_1 and y_1", () => {
     const [a, b, c] = run(
       "x^2+y+7=7",
       "20x+100-y=0",

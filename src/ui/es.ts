@@ -22,8 +22,8 @@ export const es: Record<string, string> = {
     "Hay una versión nueva del portal lista.",
   "Made for focused, independent study.":
     "Hecho para estudiar con calma y por tu cuenta.",
-  "Personal practice · Not affiliated with College Board":
-    "Práctica personal · Sin relación con el College Board",
+  "Personal practice · Not affiliated with any test publisher":
+    "Práctica personal · Sin relación con ninguna entidad que publique pruebas",
   SAT: "SAT",
 
   // Home
@@ -32,7 +32,7 @@ export const es: Record<string, string> = {
   "Choose a focus, settle in, and take it one question at a time.":
     "Elige un tema, ponte cómodo y ve una pregunta a la vez.",
   "Add your questions to begin.": "Agrega tus preguntas para empezar.",
-  "This portal comes with no questions. Add your own College Board question PDFs and they are prepared on this device; nothing is uploaded.":
+  "This portal comes with no questions. Add your own question PDFs and they are prepared on this device; nothing is uploaded.":
     "Este portal no trae preguntas. Agrega tus propios PDF de preguntas y se preparan en este dispositivo; no se envía nada.",
   "Add your question PDFs": "Agrega tus PDF de preguntas",
   TESTS: "PRUEBAS",
@@ -356,7 +356,7 @@ export const es: Record<string, string> = {
     "Es el porcentaje de respuestas que acertaste en la práctica. No es una puntuación de la PAA: la puntuación real se convierte a partir de la prueba completa.",
 
   // Browse
-  "This question belongs to an active practice test and may spoil a future Bluebook test. View it anyway?":
+  "This question belongs to an active practice test and may spoil a future official test. View it anyway?":
     "Esta pregunta pertenece a una prueba de práctica activa y podría arruinar una prueba futura. ¿Verla de todos modos?",
   "← Back to questions": "← Volver a las preguntas",
   "{n} of {total} matching questions": "{n} de {total} preguntas coincidentes",
@@ -373,7 +373,7 @@ export const es: Record<string, string> = {
   "Search the question bank, inspect individual questions, and save the ones you want to revisit.":
     "Busca en el banco de preguntas, abre cada pregunta y marca las que quieras repasar.",
   "Your question library is empty.": "Tu banco de preguntas está vacío.",
-  "Add your own College Board question PDFs; they are prepared on this device and nothing is uploaded.":
+  "Add your own question PDFs; they are prepared on this device and nothing is uploaded.":
     "Agrega tus propios PDF de preguntas; se preparan en este dispositivo y no se envía nada.",
   "Find a question": "Buscar una pregunta",
   "Search questions": "Buscar preguntas",
@@ -433,21 +433,21 @@ export const es: Record<string, string> = {
     "{n} no se pudieron leer con seguridad y se dejaron fuera.",
   "How this was worked out": "Cómo se hizo",
   "Download report": "Descargar el informe",
-  "{official} College Board sample items and {original} original items.":
-    "{official} preguntas de muestra de College Board y {original} preguntas originales.",
+  "{official} official sample items and {original} original items.":
+    "{official} preguntas de muestra oficiales y {original} preguntas originales.",
   "Noted: {warning}": "Nota: {warning}",
   "Include original questions": "Incluir las preguntas originales",
   "When off, the original questions are hidden everywhere (practice, Browse, Review and your progress) and nothing is deleted. Sessions that contain them stay, without those questions. Turn it on to bring them back.":
     "Si está apagado, las preguntas originales se ocultan en todas partes (práctica, Explorar, Repaso y tu progreso) y no se borra nada. Las sesiones que las contienen se conservan, sin esas preguntas. Enciéndelo para recuperarlas.",
   Official: "Oficial",
   Original: "Original",
-  "College Board sample item": "Pregunta de muestra de College Board",
+  "Official sample item": "Pregunta de muestra oficial",
   "Original practice item": "Pregunta de práctica original",
   "Basic calculator": "Calculadora básica",
   "Square root calculator": "Calculadora con raíz cuadrada",
   "Graphing calculator": "Calculadora gráfica",
-  "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and College Board publishes no conversion, so this portal shows no score and no pass or fail.":
-    "Es la proporción de respuestas correctas en tu práctica. No es una puntuación de la TSI: la TSIA2 real se adapta a cada estudiante y College Board no publica una conversión, así que este portal no muestra puntuación ni aprobado o reprobado.",
+  "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and no official conversion is published, so this portal shows no score and no pass or fail.":
+    "Es la proporción de respuestas correctas en tu práctica. No es una puntuación de la TSI: la TSIA2 real se adapta a cada estudiante y no se publica una conversión oficial, así que este portal no muestra puntuación ni aprobado o reprobado.",
   "Finish test": "Terminar la prueba",
   "Review and finish →": "Revisar y terminar →",
   "Reset study progress": "Reiniciar el progreso de estudio",

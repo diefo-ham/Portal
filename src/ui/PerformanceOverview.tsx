@@ -330,7 +330,7 @@ export const PerformanceOverview = ({
       {info.id === "TSI" && (
         <p className="small muted performance-note">
           {t(
-            "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and College Board publishes no conversion, so this portal shows no score and no pass or fail.",
+            "This is the share of answers you got right in practice. It is not a TSI score: the real TSIA2 adapts to each student and no official conversion is published, so this portal shows no score and no pass or fail.",
           )}
         </p>
       )}

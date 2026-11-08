@@ -1,6 +1,6 @@
 # Calculator providers and input
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 Current stabilization changes and live-key verification are documented in [Calculator stabilization](calculator-stabilization.md); those details supersede earlier interaction limits below.
 
@@ -8,7 +8,7 @@ Updated 2026-10-27. The official online API and the local offline engine share o
 Practice surface, with separate session-owned workspaces. Question, attempt,
 review and timer rules are independent of the calculator provider.
 
-## Official Desmos configuration
+## Official reference calculator configuration
 
 Obtain your own browser-side API key at https://www.desmos.com/my-api following
 the [official API documentation](https://www.desmos.com/api/v1.12/docs/index.html).
@@ -23,19 +23,19 @@ An administrator can alternatively supply a local `/calculator-config.json`
 containing `{ "desmosApiKey": "your-own-key" }`. The build-time key takes
 precedence. The checked-in runtime configuration is blank.
 
-Without a key, Offline opens immediately. With a key, Desmos loads only when
+Without a key, Offline opens immediately. With a key, the reference calculator loads only when
 Calculator opens in that mode. A local bridge instantiates official API v1.12
 with documented `getState`, `setState`, `setBlank`, change observation, focus and
 destruction methods. No proprietary hosted bundle is redistributed, reverse
 engineered, or placed in an offline cache.
 
 Loading has a **6.5-second deadline**. Script/constructor failure or timeout stays
-inside the selected Desmos tab with Retry and Use Offline actions. The Desmos tab
+inside the selected reference calculator tab with Retry and Use Offline actions. The reference calculator tab
 always remains selectable, including without a key. Selecting it after failure
 starts a fresh attempt. Use Offline interrupts loading immediately; there are no
-background probes, reconnect listeners, or periodic retries. A loaded Desmos
+background probes, reconnect listeners, or periodic retries. A loaded reference calculator
 instance is not destroyed merely because the browser reports an internet outage. `navigator.onLine` alone never declares the
-API available. Official Desmos uses its own readable presentation inside the
+API available. Official reference calculator uses its own readable presentation inside the
 portal's themed frame; this is not a claim to reproduce the restricted SAT app.
 
 ## Privacy and local operation
@@ -43,9 +43,9 @@ portal's themed frame; this is not a claim to reproduce the restricted SAT app.
 Offline uses local JavaScript, fonts and storage, with zero external requests.
 Its configuration request is to the running local server only. The portal keeps
 its restrictive network policy; a local iframe has the separate policy needed
-for official Desmos. Only the API key and opaque calculator state cross that
+for official reference calculator. Only the API key and opaque calculator state cross that
 bridge. No question content, PDFs, session identifiers/names, answers or study
-history are supplied to Desmos.
+history are supplied to the reference calculator.
 
 ## Structural editor and notebook workflow
 
@@ -68,7 +68,7 @@ upstream revision and in this project.
   and focuses a neighbor. A usable blank expression always remains.
 - Clear calculator acts immediately, clears only the active engine, and preserves
   the other workspace. Offline returns to default view/radians and one blank row;
-  Desmos uses official `setBlank()`.
+  the reference calculator uses official `setBlank()`.
 
 The editor supplies spoken math and ARIA feedback, stable control labels, and
 visible focus. Assistive-technology acceptance remains useful. Math.js still
@@ -109,7 +109,7 @@ scaled QR least squares from ml-matrix, conditioning checks and stable evaluatio
 Exponential fitting now minimizes **original-y SSE**: solve amplitude exactly for
 each normalized rate (variable projection), then use a bounded coarse search and
 golden-section refinement. Positive y and distinct x are required. This replaces
-the earlier log-linear method; it is not Desmos's general nonlinear optimizer.
+the earlier log-linear method; it is not the reference calculator's general nonlinear optimizer.
 
 Fits expose coefficients, residuals (observed minus fitted), RMSE and R²:
 `RMSE=sqrt(SSE/n)`, `R²=1−SSE/SST`, always on original y. Constant-y R² is undefined.
@@ -145,7 +145,7 @@ close, exit, finish, visibility changes and unmount. Abrupt termination may lose
 the final unsaved fraction of a second. API keys are configuration, not progress.
 
 Native calculator keys never reach Practice: E does not bookmark, arrows do not
-move questions, and Enter/Space do not submit. Desmos handles its own keys inside
+move questions, and Enter/Space do not submit. The reference calculator handles its own keys inside
 the iframe. Closing restores question/result-trigger focus. The floating window
 is nonmodal and allows keyboard focus back into Practice.
 
@@ -156,7 +156,7 @@ network. They cover success/failure/timeout/disconnection, switching, independen
 state, completion, reset recovery, structural input, lists, fits, trig, keyboard
 isolation, persistence, themes and responsive layouts. **No real API key was supplied**,
 so the live embed with the user's key still needs acceptance testing. The public
-Desmos calculator was used directly for [manual comparison](calculator-parity.md).
+The reference calculator was used directly for [manual comparison](calculator-parity.md).
 
 1. **Intentionally out of scope:** CAS, arbitrary precision, complex/matrix/calculus
    tools, accounts/cloud saves, animations, automatic cross-engine translation.
@@ -172,7 +172,7 @@ Desmos calculator was used directly for [manual comparison](calculator-parity.md
 Conservative limits: 24 working entries plus a blank row, 200 table/list values,
 1,200 characters per scalar source, 1,500 per structural source, bounded AST
 depth/size, ±10¹⁰ graph bounds, 10⁻⁷ minimum spans, IEEE-754 numbers with 10-significant-
-digit display. Desmos state is limited to 2 MB. The lazy local calculator is about
+digit display. The reference calculator state is limited to 2 MB. The lazy local calculator is about
 200 KB gzip JS and 21 KB gzip CSS; the initial study-screen load excludes it.
 
 ## Floating-window follow-up

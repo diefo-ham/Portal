@@ -22,7 +22,7 @@ import {
 } from "../src/importing/pdf/tsi.ts";
 import { parseQuestions } from "../src/importing/json.ts";
 
-// Everything here is invented: no College Board text, only the page layout.
+// Everything here is invented: no text from the test publisher, only the page layout.
 
 const run = (
   text: string,
@@ -59,7 +59,7 @@ interface Spec {
   unrelated?: boolean;
 }
 
-const OFFICIAL = "Source: official College Board TSIA2 sample question.";
+const OFFICIAL = "Source: official TSIA2 sample question.";
 const ORIGINAL = "Source: original practice item written for this portal.";
 
 function page(spec: Spec): PageLayout {
@@ -236,7 +236,7 @@ describe("Official and Original", () => {
       vi.resetModules();
     });
 
-    it("leaves College Board sample items out with a clear reason", async () => {
+    it("leaves official sample items out with a clear reason", async () => {
       vi.stubEnv("VITE_INCLUDE_OFFICIAL", "false");
       vi.resetModules();
       const flags = await import("../src/core/buildFlags.ts");
