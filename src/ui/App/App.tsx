@@ -63,6 +63,7 @@ import type { Page } from "@/src/types/ui";
 /** Which test the person last used; a fresh browser starts on the SAT. */
 const LAST_KEY = "sat-last-assessment";
 const PROTECT_KEY = "sat-protect-tests";
+const EXAMPLES_KEY = "sat-show-examples";
 /** Hash routes work on any static host; no server rewrite is needed. */
 const routeOf = (): Assessment | undefined => {
   const hash = location.hash.toLowerCase();
@@ -121,12 +122,21 @@ export const App = () => {
     [data, assessment],
   );
   // Once a test has questions of the person's own, its bundled examples are
-  // hidden unless they ask for them. A test with none keeps its examples, so it
-  // is never empty. Nothing is deleted either way.
-  const [showExamples, setShowExamples] = usePersistedBoolean(
-    "sat-show-examples",
-    false,
+  // hidden unless they ask for them (the TSI shows them unless they ask it not
+  // to). A test with none keeps its examples, so it is never empty. Nothing is
+  // deleted either way. One choice covers all three tests; until it is made,
+  // each test follows its own default.
+  const [chosenExamples, setChosenExamples] = useState<boolean | undefined>(
+    () => {
+      const stored = readStorage(EXAMPLES_KEY);
+      return stored === "true" ? true : stored === "false" ? false : undefined;
+    },
   );
+  const showExamples = chosenExamples ?? info.examplesByDefault;
+  const setShowExamples = (next: boolean) => {
+    setChosenExamples(next);
+    writeStorage(EXAMPLES_KEY, String(next));
+  };
   const hideBundled = ownQuestions && !showExamples;
   const offerExamples = useMemo(
     () =>

@@ -41,6 +41,12 @@ export interface AssessmentInfo {
   hasOrigins: boolean;
   /** Practice tests with a fixed composition, taken in order (TSI). */
   fixedTests: boolean;
+  /**
+   * Whether the bundled example questions stay shown after the person has added
+   * questions of their own, until they switch them off. Elsewhere they are
+   * hidden then, until switched on.
+   */
+  examplesByDefault: boolean;
 }
 
 const SAT: AssessmentInfo = {
@@ -73,6 +79,7 @@ const SAT: AssessmentInfo = {
   idPrefix: "",
   hasOrigins: false,
   fixedTests: false,
+  examplesByDefault: false,
 };
 
 const PAA: AssessmentInfo = {
@@ -121,6 +128,7 @@ const PAA: AssessmentInfo = {
   idPrefix: "paa-",
   hasOrigins: false,
   fixedTests: false,
+  examplesByDefault: false,
 };
 
 /**
@@ -159,6 +167,7 @@ const TSI: AssessmentInfo = {
   idPrefix: "tsi-",
   hasOrigins: true,
   fixedTests: true,
+  examplesByDefault: true,
 };
 
 const INFO: Record<Assessment, AssessmentInfo> = { SAT, PAA, TSI };
