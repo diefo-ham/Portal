@@ -157,7 +157,7 @@ function ScoreEstimate({
       )}
       <p className="estimate-accuracy">Actual scored accuracy: <strong>{percentage}</strong></p>
       <p className="small muted estimate-note">
-        Unofficial practice estimate, not official College Board scoring. It uses the existing difficulty-weighted heuristic and avoids claiming exact score precision.
+        Unofficial practice estimate, not official scoring. It uses the existing difficulty-weighted heuristic and avoids claiming exact score precision.
       </p>
       <details className="estimate-method">
         <summary>How this estimate is calculated</summary>

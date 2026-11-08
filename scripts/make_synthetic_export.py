@@ -1,6 +1,6 @@
 """Writes a small synthetic PDF in the layout of the supported export.
 
-Original content only: no College Board material. It is used to test the PDF
+Original content only: no material from the test publisher. It is used to test the PDF
 preparation code, including the cases that matter most:
 
 * a yellow highlight annotation over the correct option (must never appear in an image),

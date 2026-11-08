@@ -27,7 +27,7 @@ actions after exiting; there is no live rename or duplicate finish menu control.
 
 ## Routing and estimates
 
-Routing excludes the two simulated unscored items. A correct answer earns difficulty weight 0.8/1/1.2 for Easy/Medium/Hard. Unanswered scored questions earn zero. Route metric = 70% weighted accuracy + 30% mean domain accuracy. Higher begins at metric >= 0.65, before rounding. The route is persisted as soon as the next module is constructed. This is deterministic and approximate, not official College Board routing.
+Routing excludes the two simulated unscored items. A correct answer earns difficulty weight 0.8/1/1.2 for Easy/Medium/Hard. Unanswered scored questions earn zero. Route metric = 70% weighted accuracy + 30% mean domain accuracy. Higher begins at metric >= 0.65, before rounding. The route is persisted as soon as the next module is constructed. This is deterministic and approximate, not official the test publisher routing.
 
 Scored percentage uses correct / all scored questions, including unanswered. Results use long division with overlined repeating digits to retain exact percentages and also show the exact fraction. Incorrect, unanswered, domain, skill, section and module counts exclude simulated unscored items; detailed review retains every item's actual correctness and identifies its simulated scoring status.
 

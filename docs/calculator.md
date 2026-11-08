@@ -1,12 +1,12 @@
 # Offline graphing calculator
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 > Historical notes from the first calculator implementation. Current behavior,
 > configuration, and limits are documented in [Calculator providers and input](calculator-providers.md).
 
 Implemented 2026-10-26. This replaces the original two-number arithmetic panel.
-It is an independent local calculator, with no Desmos code, assets, branding,
+It is an independent local calculator, with no reference calculator code, assets, branding,
 API key, assessment certification, or runtime service.
 
 ## Architecture and dependency decision
@@ -114,7 +114,7 @@ conditioning checks reject undetermined/unstable fits. Evaluation uses the scale
 polynomial to reduce cancellation; displayed coefficients are converted back to
 ordinary x. Exponential fitting solves ln(y)=ln(a)+x ln(b) via the same QR path.
 **It minimizes squared log residuals, unlike a nonlinear least-squares fit in y.**
-The UI explicitly labels that distinction. It does not imply Desmos-equivalent
+The UI explicitly labels that distinction. It does not imply reference-calculator-equivalent
 noisy exponential estimates.
 
 The fitted curve, coefficients, observed-minus-predicted residuals, RMSE, and R²
@@ -156,7 +156,7 @@ and appearance preferences retain their existing behavior.
 
 ## Deliberate limitations
 
-- This is not the licensed Desmos SAT assessment calculator or a feature-complete
+- This is not the licensed the reference calculator SAT assessment calculator or a feature-complete
   clone. No proprietary source, assets, branding, website, or API is included.
 - No CAS/exact symbolic algebra, proof of all solutions, arbitrary precision,
   complex numbers, matrices, units, calculus commands, piecewise/domain-brace

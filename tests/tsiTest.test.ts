@@ -19,7 +19,7 @@ import {
   TSI_SUBJECTS,
 } from "../src/core/tsiTest";
 
-// Invented questions: nothing here is College Board material.
+// Invented questions: nothing here is material from the test publisher.
 const D = {
   literary: "Literary Text Analysis",
   info: "Informational Text Analysis and Synthesis",
@@ -96,7 +96,7 @@ const byDomain = (data: StudyData, ids: string[]) => {
 };
 
 describe("the real test's composition", () => {
-  it("has the sizes College Board publishes", () => {
+  it("has the sizes the test publisher publishes", () => {
     const total = (kind: "crc" | "diagnostic", subject: "elar" | "math") =>
       plannedTotal(tsiTestSlots(kind, subject));
     expect(total("crc", "math")).toBe(20);

@@ -23,7 +23,7 @@ import {
 import { parseQuestions } from "../src/importing/json";
 import sample from "./fixtures/synthetic.json";
 
-// Invented questions: nothing here is College Board material.
+// Invented questions: nothing here is material from the test publisher.
 const tsi = (id: string, extra: Record<string, unknown> = {}) => ({
   id: `tsi-${id}`,
   assessment: "TSI",

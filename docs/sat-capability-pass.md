@@ -1,6 +1,6 @@
 # SAT affine inequalities and protection verification
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 ## Affine inequalities
 
@@ -80,7 +80,7 @@ could be handled without optimization, but require a separate, substantial
 elimination/solution-family design rather than a regression patch.
 
 For this pass, SAT utility does not justify that complexity. The existing clear
-unsupported-result message remains tested; **Use Desmos** remains the intended
+unsupported-result message remains tested; **Use the reference calculator** remains the intended
 secondary escape hatch when available. A hosted fitter's output must still be
 interpreted in light of underdetermination. No proprietary bundle is cached,
 no new dependencies are introduced, and ordinary linear/table/list fitting,

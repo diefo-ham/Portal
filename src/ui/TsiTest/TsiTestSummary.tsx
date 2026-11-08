@@ -8,7 +8,7 @@ export type TsiTestSummaryProps = { data: StudyData; session: Session };
 /**
  * The headline of a finished TSI practice test: percent correct and how each
  * domain went. There is no scaled score and no pass or fail: the real TSIA2
- * adapts to each student and College Board publishes no conversion. The TSI
+ * adapts to each student and no official conversion is published. The TSI
  * portal is in English, so this is written plainly.
  */
 export const TsiTestSummary = ({ data, session }: TsiTestSummaryProps) => {
@@ -80,8 +80,8 @@ export const TsiTestSummary = ({ data, session }: TsiTestSummaryProps) => {
       </section>
       <p className="small muted">
         This is practice accuracy, not a TSIA2 score. The real test adapts to
-        each student and College Board publishes no way to convert practice
-        answers into a score, so there is no score and no pass or fail here.
+        each student and no official way to convert practice answers into a
+        score is published, so there is no score and no pass or fail here.
       </p>
       {session.tsiTest?.shortfall?.length ? (
         <p className="small muted">

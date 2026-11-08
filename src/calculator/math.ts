@@ -149,7 +149,7 @@ export const normalize = (text: string) => {
     .replace(/\|([^|]+)\|/g, "abs($1)")
     .replace(/\b([a-zA-Z])([a-zA-Z]_\d+)\b/g, "$1*$2")
     .replace(/\b(?:arc)(sin|cos|tan|sec|csc|cot)\b/g, "a$1");
-  // Bounded Desmos-like shorthand: a single variable, pi, or numeric atom.
+  // Bounded reference-calculator-like shorthand: a single variable, pi, or numeric atom.
   // Longer identifiers (e.g. sinwave) remain identifiers rather than being split.
   text = text.replace(
     /\b(sin|cos|tan|sec|csc|cot|asin|acos|atan|log|ln|sqrt|abs)\s*((?:pi|[a-z](?:_\d+)?|\d+(?:\.\d+)?)(?:\^(?:\(-?\d+\)|-?\d+))?)(?![\w.(^])/g,

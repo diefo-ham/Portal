@@ -1,7 +1,7 @@
 /**
  * Reading profile for SAT questions in the Educator Question Bank layout (the
  * layout the PAA and TSI exports use) with `Assessment` = SAT: one PDF with
- * both tests and every status. Whether a question is in a live College Board
+ * both tests and every status. Whether a question is in a live official
  * practice test comes from the ACTIVE / INACTIVE badge at the top right of its
  * page (`marks.ts`); a page without one is `unknown`, which is not a promise
  * that the question is safe from spoilers.
@@ -12,6 +12,11 @@ import { extractAnswer, type Answer } from "./answers.ts";
 import { choiceLabels, flat, isLineNumber, type PaaRecord } from "./paa.ts";
 import { cleanSkill, type ReviewedOverride } from "./record.ts";
 
+/**
+ * Stored on every imported SAT question and part of how a question is
+ * recognised again (with its test and source ID). It keeps the value earlier
+ * imports were saved with, so do not change it.
+ */
 export const SAT_SOURCE = "College Board SAT question bank";
 
 const SECTIONS: Record<string, "math" | "reading-writing"> = {

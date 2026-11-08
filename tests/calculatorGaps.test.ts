@@ -19,7 +19,7 @@ const workspace = (...texts: string[]) =>
     entries: texts.map((text, i) => entry("e" + i, text)),
   });
 
-describe("features checked against Desmos", () => {
+describe("features checked against the reference calculator", () => {
   it("evaluates factorials of whole numbers only", () => {
     expect(evaluate("5!")).toBe(120);
     expect(evaluate("0!")).toBe(1);
@@ -151,7 +151,7 @@ describe("features checked against Desmos", () => {
     expect(result.parameters?.a).toBeCloseTo(2.0608714, 5);
   });
 });
-describe("list handling checked against Desmos", () => {
+describe("list handling checked against the reference calculator", () => {
   const list = (text: string) => scalar(text).evaluate({}, {}, "radians");
 
   it("picks items by position, one-based", () => {

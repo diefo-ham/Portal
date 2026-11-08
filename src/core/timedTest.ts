@@ -32,10 +32,10 @@ export const PART_ORDER: readonly Section[] = [
   "ingles",
 ];
 /**
- * The real test (College Board Puerto Rico y América Latina). Questions per
+ * The real test (the test publisher's Puerto Rico y América Latina office). Questions per
  * part: "Preguntas y respuestas" of the revised PAA, October 2017 (70, 55, 50;
  * 175 in all). Times: the study guide's 2 h 20 min for the first three parts and
- * 40 min for Inglés, split 80 / 60 as in College Board's 2024 comparison with the
+ * 40 min for Inglés, split 80 / 60 as in the test publisher's 2024 comparison with the
  * SAT. (The 2017 document gave 75 / 60 / 50 minutes; the guide is newer.)
  * Lectura and Redacción are timed together, so they share one pace.
  */

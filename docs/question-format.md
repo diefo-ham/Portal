@@ -68,7 +68,7 @@ Numeric response questions omit choices:
 4. Emit the versioned normalized envelope and pass it through `parseQuestions`.
 5. Provide an import preview and warnings before committing when extraction is imperfect.
 
-The supplied PDF exports are handled by `scripts/import_college_board.py`. Their active-only meaning was confirmed by the user; the preparation report retains the classification mode and source file hashes. Keep sources and generated question material outside Git. Paired inclusive/exclusive comparison must first establish identical export filter scope and reliable question identity.
+The supplied PDF exports are handled by `scripts/import_question_bank.py`. Their active-only meaning was confirmed by the user; the preparation report retains the classification mode and source file hashes. Keep sources and generated question material outside Git. Paired inclusive/exclusive comparison must first establish identical export filter scope and reliable question identity.
 
 ## Original PDF representation
 

@@ -1,25 +1,25 @@
 # Floating calculator follow-up — 2026-10-27
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 Current stabilization changes and live-key verification are documented in [Calculator stabilization](calculator-stabilization.md); those details supersede earlier interaction limits below.
 
-## Desmos is primary; Offline is local fallback
+## The reference calculator is primary; Offline is local fallback
 
 - With a configured key and no explicit saved engine choice, opening Calculator
-  selects Desmos. This selected tab is the request to load the official API.
+  selects the reference calculator. This selected tab is the request to load the official API.
 - A saved explicit Offline selection wins, including after close/reopen or resume.
-  No Desmos script/frame is mounted while Offline is selected, and there are no
+  No reference calculator script/frame is mounted while Offline is selected, and there are no
   availability probes or connectivity polling. Reading `/calculator-config.json`
-  is a local request to the portal, not to Desmos.
+  is a local request to the portal, not to the reference calculator.
 - Both engine buttons always exist and remain enabled. With no key, Offline is
-  initially selected; choosing Desmos explains the configuration requirement.
-- Script errors or the 6.5-second deadline stay in Desmos with Retry / Use Offline.
-  Selecting Desmos again after failure retries once. Switching away aborts the
+  initially selected; choosing the reference calculator explains the configuration requirement.
+- Script errors or the 6.5-second deadline stay in the reference calculator with Retry / Use Offline.
+  Selecting the reference calculator again after failure retries once. Switching away aborts the
   frame's work. Reconnecting never switches engines or starts a request.
-- An already loaded Desmos instance is retained if the browser reports offline;
+- An already loaded reference calculator instance is retained if the browser reports offline;
   it can continue working as far as the hosted calculator itself allows. Returning
-  to Desmos after switching engines creates a new instance from saved opaque state.
+  to the reference calculator after switching engines creates a new instance from saved opaque state.
 - Keys still use `.env.local` / `VITE_DESMOS_API_KEY` or local runtime configuration;
   see [setup](calculator-providers.md). No key is checked into this repository.
 
@@ -43,7 +43,7 @@ There is no backdrop and clicking Practice does not close Calculator.
   toolbar row of its own.
 - Expand/Reduce and modal focus trapping were removed. Tab can return to Practice;
   keyboard events inside the window remain isolated. Closing restores the question
-  or completed-results trigger's focus. Official Desmos keeps its native keyboard
+  or completed-results trigger's focus. Official reference calculator keeps its native keyboard
   handling inside the iframe; the portal Close control remains reachable by Tab.
 - Default width is 58% of usable viewport width, capped at 760 px; default height
   is up to 590 px. Initial placement is right-aligned with a 24 px margin and
@@ -64,7 +64,7 @@ clamped. The same recoverable geometry applies to completed-session workspaces.
 
 Clear acts immediately on the selected engine, with no confirmation. Offline
 returns to radians, the default graph viewport and one blank expression; all
-tables, lists, fits and sliders disappear. Desmos calls official `setBlank()`.
+tables, lists, fits and sliders disappear. The reference calculator calls official `setBlank()`.
 The other engine's saved work and all SAT study/session data remain intact.
 Offline has no Undo yet.
 
@@ -88,7 +88,7 @@ Temporary traces never add expressions or change slider values. Explicit points
 use separate graph metadata and a parameter-update callback. Tables/list points
 remain mathematical data, not draggable arbitrary coordinates. Implicit/vertical
 curve tracing and arbitrary constrained/two-dimensional draggable points are not
-implemented; native Desmos provides its richer interactions.
+implemented; native reference calculator provides its richer interactions.
 
 ## Offline regression additions and limits
 
@@ -102,14 +102,14 @@ and residuals still use original y values.
 
 This is not a general nonlinear optimizer. Arbitrary custom nonlinear fits,
 optimizer starting guesses/constraints, exact proprietary convergence rules and
-advanced residual tools remain native Desmos features. Offline exponential fits
+advanced residual tools remain native reference calculator features. Offline exponential fits
 still require positive y and have a bounded rate search. Numerical graph sampling
 and POI searches remain approximate; they do not prove every solution is found.
 
 ## Compatibility and scope
 
 No calculator/session database schema migration, new dependency, or license change.
-Existing Offline text/LaTeX state and opaque Desmos state remain separate in the
+Existing Offline text/LaTeX state and opaque reference calculator state remain separate in the
 same version-1 session workspace; reset/archive behavior is unchanged.
 
 Checklist utility labels and skill phrases use sentence case; established SAT

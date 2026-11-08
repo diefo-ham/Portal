@@ -89,7 +89,7 @@ export const Home = ({
           <h2>{t("Add your questions to begin.")}</h2>
           <p>
             {t(
-              "This portal comes with no questions. Add your own College Board question PDFs and they are prepared on this device; nothing is uploaded.",
+              "This portal comes with no questions. Add your own question PDFs and they are prepared on this device; nothing is uploaded.",
             )}
           </p>
           <button className="primary" onClick={onAddQuestions}>

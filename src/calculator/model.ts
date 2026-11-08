@@ -106,7 +106,7 @@ export function validateCalculator(raw: unknown): CalculatorState {
     (typeof s.activeEntryId !== "string" || !ids.has(s.activeEntryId))
   )
     throw new Error("Invalid active calculator entry.");
-  // Sessions saved while Desmos was offered may carry its fields; they are dropped.
+  // Sessions saved while the reference calculator was offered may carry its fields; they are dropped.
   const {
     mode: _mode,
     desmos: _desmos,

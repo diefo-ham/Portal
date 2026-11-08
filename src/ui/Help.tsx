@@ -116,11 +116,12 @@ function TsiHelp() {
           <details>
             <summary>Official and original questions</summary>
             <p>
-              Some questions are College Board sample questions (Official) and
-              the rest were written for this portal (Original); Browse shows
-              which. In Settings, &ldquo;Include original questions&rdquo; turns
-              the original ones off and on without deleting anything. Sessions
-              that contain them stay, without those questions.
+              Some questions are the test publisher's own sample questions
+              (Official) and the rest were written for this portal (Original);
+              Browse shows which. In Settings, &ldquo;Include original
+              questions&rdquo; turns the original ones off and on without
+              deleting anything. Sessions that contain them stay, without those
+              questions.
             </p>
           </details>
           <details>
@@ -140,9 +141,9 @@ function TsiHelp() {
               (the same, plus a square-root key) or Graphing. This portal does
               the same: the chip beside the domain names the calculator for that
               question, and the Calculator button (or the \ key) opens it. They
-              are modelled on the features College Board describes, not copied
-              from its software; the Basic and Square-root ones carry out each
-              operation as you press the next, like a pocket calculator.
+              are modelled on the features the test publisher describes, not
+              copied from its software; the Basic and Square-root ones carry out
+              each operation as you press the next, like a pocket calculator.
             </p>
           </details>
           <details>
@@ -150,8 +151,8 @@ function TsiHelp() {
             <p>
               The portal shows the percent of answers you got right, by test,
               domain and skill. It does not show a TSI score or a pass or fail:
-              the real TSIA2 adapts to each student and College Board publishes
-              no way to convert practice answers into a score.
+              the real TSIA2 adapts to each student and no official way to
+              convert practice answers into a score is published.
             </p>
           </details>
           <details>
@@ -454,10 +455,10 @@ function SatHelp() {
               status, so there is nothing to protect.
             </p>
             <p>
-              Active questions may belong to current or future official Bluebook
-              practice material. With protection enabled, ordinary Practice
-              hides them by default; Tests intentionally use active questions.
-              Disabling protection can expose them in ordinary Practice.
+              Active questions may belong to current or future official practice
+              material. With protection enabled, ordinary Practice hides them by
+              default; Tests intentionally use active questions. Disabling
+              protection can expose them in ordinary Practice.
             </p>
             <p>
               Inactive questions remain available. Unknown status stays explicit

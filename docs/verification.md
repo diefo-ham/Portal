@@ -11,7 +11,7 @@ Verified on 2026-10-25 using Node 24.22.1 and Microsoft Edge on Windows.
 - Visual inspection in the in-app browser confirmed the library and practice layouts. Timing resumed from saved data and the pause control worked. A screenshot is in `screenshots/practice.png`.
 - Dependency installation audit reported zero known vulnerabilities after updating Vitest to a patched version.
 
-The local server must run during study. No PWA/service-worker caching claim is made. No College Board content is used as tracked repository fixtures. A licensed offline graphing integration remains future work.
+The local server must run during study. No PWA/service-worker caching claim is made. No test-publisher content is used as tracked repository fixtures. A licensed offline graphing integration remains future work.
 
 ## PDF import verification
 

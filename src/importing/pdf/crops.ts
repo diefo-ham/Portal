@@ -1,6 +1,6 @@
 /**
  * Where to cut each question's pages into a question image and an explanation
- * image. Ported from `convert` in scripts/import_college_board.py: the question
+ * image. Ported from `convert` in scripts/import_question_bank.py: the question
  * ends just above the "Correct Answer:" label, and the explanation starts just
  * below it. Pages are never guessed at; unclear boundaries throw so the question
  * is quarantined instead of imported with answer text in its question image.

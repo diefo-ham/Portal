@@ -2,7 +2,7 @@ import type { PointValue, Value } from "@/src/types/calculator";
 
 // Point values for the calculator core: no parsing, React or DOM. A point is
 // {x, y}; a list of points stores equal-length coordinate lists, which is also
-// how ([1,2],[3,4]) reads in Desmos.
+// how ([1,2],[3,4]) reads in the reference calculator.
 
 export const MAX_POINTS = 200;
 
