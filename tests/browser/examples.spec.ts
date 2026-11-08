@@ -145,3 +145,49 @@ test("adding your own questions opens the tests; removing them leaves the exampl
     }),
   ).toBeVisible();
 });
+
+test("the SAT and the PAA share the example-questions setting, and the TSI does not", async ({
+  page,
+}) => {
+  await page.goto("/#/sat");
+  await openSettings(page);
+  await expect(stored(page)).toContainText("120 questions");
+  await addOwnQuestions(page);
+
+  // Switch the examples on in the SAT.
+  await openSettings(page);
+  const sat = page.getByRole("checkbox", { name: "Include example questions" });
+  await expect(sat).not.toBeChecked();
+  await sat.check();
+
+  // The PAA follows it (and offers it, because the SAT has questions of its own).
+  await page.goto("/#/paa");
+  await page.getByRole("button", { name: "Ajustes", exact: true }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Incluir preguntas de ejemplo" }),
+  ).toBeChecked();
+
+  // Switch it off from the PAA: the SAT is off too.
+  await page
+    .getByRole("checkbox", { name: "Incluir preguntas de ejemplo" })
+    .uncheck();
+  await page.goto("/#/sat");
+  await openSettings(page);
+  await expect(
+    page.getByRole("checkbox", { name: "Include example questions" }),
+  ).not.toBeChecked();
+  expect(
+    await page.evaluate(() => localStorage.getItem("sat-show-examples")),
+  ).toBe("false");
+
+  // The TSI has no questions of its own here, so it offers nothing, and its own
+  // setting was never touched.
+  await page.goto("/#/tsi");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(
+    page.getByRole("checkbox", { name: "Include example questions" }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() => localStorage.getItem("sat-show-examples-tsi")),
+  ).toBeNull();
+});

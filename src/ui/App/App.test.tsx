@@ -311,44 +311,114 @@ describe("Settings with and without questions of your own", () => {
     return { data, own };
   };
 
+  /** The person's own PAA questions, plus two bundled PAA examples. */
+  const paaMixed = () => {
+    const data = testCorpus(2);
+    data.questions = data.questions.map((q) => ({
+      ...q,
+      id: `paa-${q.id}`,
+      assessment: "PAA" as const,
+      section: "matematicas" as const,
+    }));
+    const own = data.questions.length;
+    data.questions.push(
+      ...data.questions.slice(0, 2).map((q, i) => ({
+        ...q,
+        id: `paa-example-${i}`,
+        bundled: true as const,
+      })),
+    );
+    return { data, own };
+  };
+  const checkbox = () =>
+    screen.getByRole("checkbox", {
+      name: "Include example questions",
+    }) as HTMLInputElement;
+
   it("shows the TSI examples by default even with questions of your own, and lets you turn them off", async () => {
     location.hash = "#/tsi";
     const { data, own } = tsiMixed();
     study.useStudy.mockImplementation(() => answer({ data }));
     const user = await openSettings();
-    const toggle = screen.getByRole("checkbox", {
-      name: "Include example questions",
-    }) as HTMLInputElement;
-    expect(toggle.checked).toBe(true);
+    expect(checkbox().checked).toBe(true);
     expect(stored()).toMatch(new RegExp(`^${own + 2} questions`));
-    await user.click(toggle);
+    await user.click(checkbox());
     expect(stored()).toMatch(new RegExp(`^${own} questions`));
-    expect(localStorage.getItem("sat-show-examples")).toBe("false");
+    // The TSI has a setting of its own: the one the SAT and PAA share is untouched.
+    expect(localStorage.getItem("sat-show-examples-tsi")).toBe("false");
+    expect(localStorage.getItem("sat-show-examples")).toBeNull();
   });
 
-  it("keeps the TSI choice to turn the examples off for the other tests too, which already hide them", async () => {
-    localStorage.setItem("sat-show-examples", "false");
+  it("keeps the TSI's own choice: off there leaves the SAT as it was, and on in the SAT leaves the TSI as it was", async () => {
+    // The TSI is switched off; the SAT and PAA are switched on.
+    localStorage.setItem("sat-show-examples-tsi", "false");
+    localStorage.setItem("sat-show-examples", "true");
     location.hash = "#/tsi";
-    const { data, own } = tsiMixed();
-    study.useStudy.mockImplementation(() => answer({ data }));
+    let mixedTsi = tsiMixed();
+    study.useStudy.mockImplementation(() => answer({ data: mixedTsi.data }));
     await openSettings();
+    expect(checkbox().checked).toBe(false);
+    expect(stored()).toMatch(new RegExp(`^${mixedTsi.own} questions`));
+    cleanup();
+    location.hash = "#/sat";
+    const mixedSat = mixed();
+    study.useStudy.mockImplementation(() => answer({ data: mixedSat.data }));
+    await openSettings();
+    expect(checkbox().checked).toBe(true);
+    expect(stored()).toMatch(new RegExp(`^${mixedSat.own + 2} questions`));
+  });
+
+  it("shares one setting between the SAT and the PAA", async () => {
+    // Switched on in the SAT, it is on in the PAA too.
+    location.hash = "#/sat";
+    const sat = mixed();
+    study.useStudy.mockImplementation(() => answer({ data: sat.data }));
+    const user = await openSettings();
+    expect(checkbox().checked).toBe(false);
+    await user.click(checkbox());
+    expect(localStorage.getItem("sat-show-examples")).toBe("true");
+    expect(localStorage.getItem("sat-show-examples-tsi")).toBeNull();
+    cleanup();
+
+    location.hash = "#/paa";
+    const paa = paaMixed();
+    study.useStudy.mockImplementation(() => answer({ data: paa.data }));
+    const t = translator("PAA");
+    const spanish = userEvent.setup();
+    render(<App />);
+    await spanish.click(screen.getByRole("button", { name: t("Settings") }));
     expect(
       (
         screen.getByRole("checkbox", {
-          name: "Include example questions",
+          name: t("Include example questions"),
         }) as HTMLInputElement
       ).checked,
-    ).toBe(false);
-    expect(stored()).toMatch(new RegExp(`^${own} questions`));
+    ).toBe(true);
   });
 
-  it("leaves the other tests hiding their examples until asked", async () => {
-    // The choice made here is the one for every test: on in the SAT too.
-    localStorage.setItem("sat-show-examples", "true");
-    const { data, own } = mixed();
+  it("offers the SAT and PAA setting when either of them has questions of its own, but not for the TSI's", async () => {
+    // Questions of your own for the PAA only: the SAT view offers the shared setting.
+    const data = paaMixed().data;
+    data.questions.push(
+      ...mixed()
+        .data.questions.filter((q) => q.bundled === true)
+        .map((q) => ({ ...q, id: `sat-${q.id}` })),
+      ...tsiMixed()
+        .data.questions.filter((q) => q.bundled === true)
+        .map((q) => ({ ...q, id: `tsi-${q.id}-x` })),
+    );
+    study.useStudy.mockImplementation(() => answer({ data }));
+    location.hash = "#/sat";
+    await openSettings();
+    expect(checkbox()).toBeTruthy();
+    cleanup();
+    // The TSI has examples but none of its own questions, so it offers nothing.
+    location.hash = "#/tsi";
     study.useStudy.mockImplementation(() => answer({ data }));
     await openSettings();
-    expect(stored()).toMatch(new RegExp(`^${own + 2} questions`));
+    expect(
+      screen.queryByRole("checkbox", { name: "Include example questions" }),
+    ).toBeNull();
   });
 
   it("keeps the examples of a test that has no questions of your own", async () => {

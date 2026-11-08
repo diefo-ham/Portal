@@ -47,6 +47,11 @@ export interface AssessmentInfo {
    * hidden then, until switched on.
    */
   examplesByDefault: boolean;
+  /**
+   * Which "Include example questions" setting this test follows. Tests with the
+   * same value share one setting (the SAT and the PAA); the TSI has its own.
+   */
+  examplesSetting: "main" | "tsi";
 }
 
 const SAT: AssessmentInfo = {
@@ -80,6 +85,7 @@ const SAT: AssessmentInfo = {
   hasOrigins: false,
   fixedTests: false,
   examplesByDefault: false,
+  examplesSetting: "main",
 };
 
 const PAA: AssessmentInfo = {
@@ -129,6 +135,7 @@ const PAA: AssessmentInfo = {
   hasOrigins: false,
   fixedTests: false,
   examplesByDefault: false,
+  examplesSetting: "main",
 };
 
 /**
@@ -168,6 +175,7 @@ const TSI: AssessmentInfo = {
   hasOrigins: true,
   fixedTests: true,
   examplesByDefault: true,
+  examplesSetting: "tsi",
 };
 
 const INFO: Record<Assessment, AssessmentInfo> = { SAT, PAA, TSI };
