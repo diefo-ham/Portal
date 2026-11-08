@@ -57,7 +57,13 @@ export interface Question {
     textIsApproximate: boolean;
     answerKeyOrigin?: "answer-key" | "rationale";
     extractionWarnings?: string[];
-    provenance: { filename: string; sha256: string; pages: number[] }[];
+    provenance: {
+      filename: string;
+      sha256: string;
+      pages: number[];
+      /** SHA-256 of the access code the PDF carried (see `core/accessCodes.ts`). */
+      access?: string;
+    }[];
   };
   importMetadata?: { importedAt?: string; filename?: string; parser?: string };
 }

@@ -207,13 +207,17 @@ export function parseQuestions(input: unknown): Question[] {
           !/^([a-f0-9]{64})$/.test(p.sha256) ||
           !Array.isArray(p.pages) ||
           !p.pages.length ||
-          p.pages.some((n) => !Number.isInteger(n) || n < 1)
+          p.pages.some((n) => !Number.isInteger(n) || n < 1) ||
+          (p.access !== undefined &&
+            (typeof p.access !== "string" ||
+              !/^([a-f0-9]{64})$/.test(p.access)))
         )
           return fail("Invalid PDF provenance.");
         return {
           filename: p.filename,
           sha256: p.sha256,
           pages: p.pages as number[],
+          ...(typeof p.access === "string" ? { access: p.access } : {}),
         };
       });
       q.document = {

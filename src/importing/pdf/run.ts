@@ -8,7 +8,6 @@ import { deleteAssetsExcept, writeAssets } from "../../storage/database.ts";
 import { referencedAssetKeys } from "../documents.ts";
 import { encodeWebp, openExport } from "./pdfjsAdapter.ts";
 import {
-  parseOverrides,
   type PrepareDeps,
   type PrepareReport,
   type PreparedLibrary,
@@ -22,8 +21,6 @@ import {
 } from "./preparePaa.ts";
 
 export interface RunOptions {
-  /** Optional JSON file of reviewed exceptions. */
-  overridesFile?: File;
   signal?: AbortSignal;
   progress?: (progress: Progress) => void;
 }
@@ -44,18 +41,12 @@ const deps: PrepareDeps = {
   },
 };
 
-const overridesOf = async (options: RunOptions) =>
-  options.overridesFile
-    ? parseOverrides(JSON.parse(await options.overridesFile.text()))
-    : undefined;
-
 /** SAT question PDF(s): one file with both tests and the ACTIVE / INACTIVE badges. */
 export async function prepareFromSatPdfs(files: File[], options: RunOptions) {
   return adopt(
     await prepareSatLibrary(
       files,
       {
-        overrides: await overridesOf(options),
         signal: options.signal,
         progress: options.progress,
       },
@@ -71,7 +62,6 @@ export async function prepareFromPaaPdfs(files: File[], options: RunOptions) {
     await preparePaaLibrary(
       files,
       {
-        overrides: await overridesOf(options),
         signal: options.signal,
         progress: options.progress,
       },
@@ -87,7 +77,6 @@ export async function prepareFromTsiPdfs(files: File[], options: RunOptions) {
     await prepareTsiLibrary(
       files,
       {
-        overrides: await overridesOf(options),
         signal: options.signal,
         progress: options.progress,
       },

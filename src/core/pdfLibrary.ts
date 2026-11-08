@@ -1,4 +1,5 @@
-import { assessmentOfId, scopeStudyData } from "./assessments";
+import type { AccessHashes } from "./accessCodes";
+import { assessmentOfId } from "./assessments";
 import type { Assessment, Question, StudyData, TestStatus } from "./model";
 
 /** What the person added, one entry per PDF, read from the questions' own provenance. */
@@ -66,6 +67,61 @@ export function summarizePdfs(
 }
 
 /**
+ * Ends the saved sessions that used removed questions; their answers stay,
+ * without a session.
+ */
+function endSessionsOf(data: StudyData, removed: ReadonlySet<string>) {
+  const ended = new Set(
+    data.sessions
+      .filter((session) => session.questionIds.some((id) => removed.has(id)))
+      .map((session) => session.id),
+  );
+  data.sessions = data.sessions.filter((session) => !ended.has(session.id));
+  for (const attempt of data.attempts)
+    if (attempt.sessionId && ended.has(attempt.sessionId))
+      delete attempt.sessionId;
+}
+
+/**
+ * Whether a question came from a PDF whose access code is no longer accepted: it
+ * has a PDF behind it (not an example, not a question with no file), and none of
+ * its PDFs recorded a code that is in the accepted list. A PDF added before the
+ * access code existed recorded none, so it counts too.
+ */
+export const isUnverified = (
+  question: Question,
+  accepted: Readonly<AccessHashes>,
+): boolean => {
+  const provenance = question.document?.provenance;
+  if (question.bundled === true || !provenance?.length) return false;
+  const list = accepted[questionAssessment(question)] ?? [];
+  return !provenance.some(
+    (item) => !!item.access && list.includes(item.access),
+  );
+};
+
+/**
+ * Removes, in place, every question that came from a PDF whose access code is
+ * no longer accepted. Answers and bookmarks stay (adding a valid PDF again
+ * brings the questions back under the same IDs); saved sessions that used a
+ * removed question end. Returns the number of questions removed.
+ */
+export function revokeUnverifiedPdfs(
+  data: StudyData,
+  accepted: Readonly<AccessHashes>,
+): number {
+  const removed = new Set(
+    data.questions
+      .filter((question) => isUnverified(question, accepted))
+      .map((question) => question.id),
+  );
+  if (!removed.size) return 0;
+  data.questions = data.questions.filter((q) => !removed.has(q.id));
+  endSessionsOf(data, removed);
+  return removed.size;
+}
+
+/**
  * Takes one PDF out of one test's library, in place. A question that came from
  * several PDFs stays until the last of them is removed. Answers and bookmarks
  * are kept, as with removing all questions; saved sessions that used a removed
@@ -95,20 +151,8 @@ export function removePdfFromData(
     } else removed.add(question.id);
   }
   if (!removed.size) return 0;
-  const endedSessions = new Set(
-    scopeStudyData(data, assessment)
-      .sessions.filter((session) =>
-        session.questionIds.some((id) => removed.has(id)),
-      )
-      .map((session) => session.id),
-  );
   data.questions = kept;
-  data.sessions = data.sessions.filter(
-    (session) => !endedSessions.has(session.id),
-  );
-  for (const attempt of data.attempts)
-    if (attempt.sessionId && endedSessions.has(attempt.sessionId))
-      delete attempt.sessionId;
+  endSessionsOf(data, removed);
   // Import receipts only record what was added; with nothing left they mean nothing.
   if (!data.questions.length) data.imports = [];
   return removed.size;

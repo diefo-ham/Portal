@@ -20,7 +20,6 @@ export const es: Record<string, string> = {
   "Dismiss message": "Cerrar el mensaje",
   "A new version of the portal is ready.":
     "Hay una versión nueva del portal lista.",
-  "Reload to update": "Recargar para actualizar",
   "Made for focused, independent study.":
     "Hecho para estudiar con calma y por tu cuenta.",
   "Personal practice · Not affiliated with College Board":
@@ -37,19 +36,23 @@ export const es: Record<string, string> = {
     "Este portal no trae preguntas. Agrega tus propios PDF de preguntas y se preparan en este dispositivo; no se envía nada.",
   "Add your question PDFs": "Agrega tus PDF de preguntas",
   TESTS: "PRUEBAS",
-  "SAT questions": "Preguntas del SAT",
-  "PAA questions": "Preguntas de la PAA",
-  "TSI questions": "Preguntas del TSI",
-  "Not an SAT, PAA or TSI question PDF: it will be set aside":
-    "No es un PDF de preguntas del SAT, la PAA o el TSI: se dejará aparte",
-  "Drop your SAT, PAA and TSI question PDFs, or the folder that holds them, together or one at a time. They are sorted for you, read in this browser and never uploaded. The SAT PDF is large and can take 10 minutes or more; keep this tab open while it works.":
-    "Suelta tus PDF de preguntas del SAT, la PAA y el TSI, o la carpeta que los contiene, juntos o de uno en uno. Se ordenan solos, se leen en este navegador y nunca se suben. El PDF del SAT es grande y puede tardar 10 minutos o más; mantén esta pestaña abierta mientras trabaja.",
-  "File names do not matter. Each PDF is sorted by the test named inside it, and only pages that carry the access code for that test are added.":
-    "Los nombres de archivo no importan. Cada PDF se ordena por la prueba que nombra por dentro, y solo se agregan las páginas que llevan el código de acceso de esa prueba.",
-  "Not added, because no page carries the access code for this test: {files}":
-    "No se agregó, porque ninguna página lleva el código de acceso de esta prueba: {files}",
-  "Set aside, because they are not SAT question exports: {files}":
-    "Se dejaron aparte porque no son PDF de preguntas del SAT: {files}",
+  "Not a question PDF: it will be set aside":
+    "No es un PDF de preguntas: se dejará aparte",
+  "Drop your question PDFs, or the folder that holds them, together or one at a time. They are sorted for you, read in this browser and never uploaded. Large PDFs can take 10 minutes or more; keep this tab open while it works.":
+    "Suelta tus PDF de preguntas, o la carpeta que los contiene, juntos o de uno en uno. Se ordenan solos, se leen en este navegador y nunca se suben. Los PDF grandes pueden tardar 10 minutos o más; mantén esta pestaña abierta mientras trabaja.",
+  "File names do not matter. Only PDFs that carry the access code are added.":
+    "Los nombres de archivo no importan. Solo se agregan los PDF que llevan el código de acceso.",
+  "Not added, because no page carries the access code: {files}":
+    "No se agregó, porque ninguna página lleva el código de acceso: {files}",
+  "Set aside, because they are not question PDFs: {files}":
+    "Se dejaron aparte porque no son PDF de preguntas: {files}",
+  UPDATE: "ACTUALIZACIÓN",
+  "Update now": "Actualizar ahora",
+  "Updating…": "Actualizando…",
+  "Updating checks your PDFs against the current access codes. Questions from a PDF without a valid code are removed; your answers and bookmarks stay.":
+    "Al actualizar se comprueban tus PDF con los códigos de acceso vigentes. Las preguntas de un PDF sin un código válido se quitan; tus respuestas y marcadores se quedan.",
+  "{n} questions from PDFs without a valid access code were removed. Your answers and bookmarks stay; add a current PDF to bring the questions back.":
+    "Se quitaron {n} preguntas de PDF sin un código de acceso válido. Tus respuestas y marcadores se quedan; agrega un PDF vigente para recuperar las preguntas.",
   "Each SAT question is marked active or inactive by the badge at the top right of its page; a page without a badge is marked unknown.":
     "Cada pregunta del SAT se marca como activa o inactiva por la insignia de la esquina superior derecha de su página; una página sin insignia queda como desconocida.",
   "Include example questions": "Incluir preguntas de ejemplo",
@@ -417,10 +420,6 @@ export const es: Record<string, string> = {
   "Choose the PDFs": "Elegir los PDF",
   "PDF export files": "Archivos PDF de preguntas",
   "Chosen exports": "Archivos elegidos",
-  Advanced: "Avanzado",
-  "Reviewed exceptions (optional JSON file)":
-    "Excepciones revisadas (archivo JSON opcional)",
-  "Reviewed exceptions": "Excepciones revisadas",
   "Add questions": "Agregar preguntas",
   Progress: "Progreso",
   "Starting…": "Empezando…",
@@ -434,10 +433,6 @@ export const es: Record<string, string> = {
     "{n} no se pudieron leer con seguridad y se dejaron fuera.",
   "How this was worked out": "Cómo se hizo",
   "Download report": "Descargar el informe",
-  "Set aside, because they are not PAA question exports: {files}":
-    "Se dejaron aparte porque no son exportaciones de preguntas de la PAA: {files}",
-  "Set aside, because they are not TSI question exports: {files}":
-    "Se dejaron aparte porque no son exportaciones de preguntas de la TSI: {files}",
   "{official} College Board sample items and {original} original items.":
     "{official} preguntas de muestra de College Board y {original} preguntas originales.",
   "Noted: {warning}": "Nota: {warning}",

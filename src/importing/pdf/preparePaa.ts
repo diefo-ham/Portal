@@ -20,7 +20,7 @@ import {
   type PassageGroup,
 } from "./paa.ts";
 import type { ReviewedOverride } from "./record.ts";
-import { accessChecker } from "./access.ts";
+import { accessChecker, accessDigest } from "./access.ts";
 import { KNOWN_EXCEPTIONS } from "./exceptions.ts";
 import {
   convertSatRecord,
@@ -84,10 +84,8 @@ export interface BankProfile {
     converting(done: number, total: number): string;
     checking: string;
     noneQualified(ignored: string[]): string;
-    /** No page of any chosen PDF carried this test's access code. */
+    /** No page of the chosen PDF(s) carried the access code. */
     noAccess(refused: string[]): string;
-    /** Why one question was left out of an otherwise accepted PDF. */
-    noAccessReason: string;
     nothingPrepared(firstProblem: string | undefined): string;
   };
 }
@@ -114,10 +112,9 @@ export const PAA_PROFILE: BankProfile = {
     converting: (done, total) => `Preparando preguntas: ${done} de ${total}`,
     checking: "Comprobando la biblioteca preparada…",
     noneQualified: (ignored) =>
-      `Ninguno de los PDF es una exportación de preguntas de la PAA, así que no se agregó nada. Se ignoraron: ${ignored.join(", ")}.`,
+      `Ninguno de los PDF es un PDF de preguntas, así que no se agregó nada. Se ignoraron: ${ignored.join(", ")}.`,
     noAccess: (refused) =>
-      `No se agregó nada: en ninguna página aparece el código de acceso de la PAA. Archivos: ${refused.join(", ")}.`,
-    noAccessReason: "Falta el código de acceso de la PAA, o no es el correcto",
+      `No se agregó nada: ninguna página lleva el código de acceso. Archivos: ${refused.join(", ")}.`,
     nothingPrepared: (first) =>
       "No se pudo preparar ninguna pregunta. Comprueba que sean exportaciones de preguntas de la PAA." +
       (first ? ` Primer problema: ${first}` : ""),
@@ -143,10 +140,9 @@ export const TSI_PROFILE: BankProfile = {
     converting: (done, total) => `Preparing questions: ${done} of ${total}`,
     checking: "Checking the prepared library…",
     noneQualified: (ignored) =>
-      `None of the PDFs is a TSIA2 question export, so nothing was added. Set aside: ${ignored.join(", ")}.`,
+      `None of the PDFs is a question PDF, so nothing was added. Set aside: ${ignored.join(", ")}.`,
     noAccess: (refused) =>
-      `Nothing was added: no page carries the TSI access code. Files: ${refused.join(", ")}.`,
-    noAccessReason: "The TSI access code is missing or not the right one",
+      `Nothing was added: no page carries the access code. Files: ${refused.join(", ")}.`,
     nothingPrepared: (first) =>
       "No question could be prepared. Check that these are TSIA2 question exports." +
       (first ? ` First problem: ${first}` : ""),
@@ -179,10 +175,9 @@ export const SAT_PROFILE: BankProfile = {
     converting: (done, total) => `Preparing questions: ${done} of ${total}`,
     checking: "Checking the prepared library…",
     noneQualified: (ignored) =>
-      `None of the PDFs is an SAT question export, so nothing was added. Set aside: ${ignored.join(", ")}.`,
+      `None of the PDFs is a question PDF, so nothing was added. Set aside: ${ignored.join(", ")}.`,
     noAccess: (refused) =>
-      `Nothing was added: no page carries the SAT access code. Files: ${refused.join(", ")}.`,
-    noAccessReason: "The SAT access code is missing or not the right one",
+      `Nothing was added: no page carries the access code. Files: ${refused.join(", ")}.`,
     nothingPrepared: (first) =>
       "No question could be prepared. Check that this is the SAT question PDF." +
       (first ? ` First problem: ${first}` : ""),
@@ -211,6 +206,8 @@ interface Indexed {
   sha256: string;
   pages: number;
   records: PaaRecord[];
+  /** SHA-256 of the access code this PDF carried; absent for the examples. */
+  access?: string;
 }
 
 export const preparePaaLibrary = (
@@ -247,9 +244,8 @@ export async function prepareBankLibrary(
   // A chosen PDF that is not an export of this test's questions (a letter, a
   // study guide, another test's export) is set aside instead of stopping the others.
   const ignored: string[] = [];
-  // PDFs of this test where no page carried its access code.
+  // PDFs where no page carried the access code.
   const refused: string[] = [];
-  // Questions left out of an accepted PDF because their page lacked the code.
   const quarantined: QuarantinedQuestion[] = [];
   const hasAccess = deps.access ?? accessChecker();
   for (const [position, file] of files.entries()) {
@@ -292,30 +288,32 @@ export async function prepareBankLibrary(
         ignored.push(file.name);
         continue;
       }
-      // Every question's page must carry this test's access code.
-      let records = found;
+      // The access code, found on any one page, accepts the whole PDF; none
+      // found refuses it. What the app keeps is the code's hash, so a later
+      // version can revoke the PDF if that code is replaced.
+      let access: string | undefined;
       if (profile.accessCode) {
-        records = [];
         for (const record of found) {
           if (
-            !profile.accepts(record) ||
+            profile.accepts(record) &&
             (await hasAccess(profile.accessCode, record.ref))
-          )
-            records.push(record);
-          else
-            quarantined.push({
-              sourceId: record.id,
-              file: file.name,
-              pages: record.pages,
-              reason: profile.say.noAccessReason,
-            });
+          ) {
+            access = await accessDigest(record.ref!);
+            break;
+          }
         }
-        if (!records.some(profile.accepts)) {
+        if (!access) {
           refused.push(file.name);
           continue;
         }
       }
-      indexed.push({ file, sha256, pages: reader.pageCount, records });
+      indexed.push({
+        file,
+        sha256,
+        pages: reader.pageCount,
+        records: found,
+        access,
+      });
     } finally {
       await reader.close();
     }
@@ -388,6 +386,7 @@ export async function prepareBankLibrary(
                 filename: o.at.file.name,
                 sha256: o.at.sha256,
                 pages: o.record.pages,
+                ...(o.at.access ? { access: o.at.access } : {}),
               })),
               ...(extractionWarnings ? { extractionWarnings } : {}),
             },

@@ -538,7 +538,7 @@ describe("prepareTsiLibrary", () => {
     expect(prepared.report.ignored).toEqual(["carta.pdf", "paa.pdf"]);
     const none = fixtures({ "carta.pdf": [{ id: "x", unrelated: true }] });
     await expect(prepareTsiLibrary(none.files, {}, none.deps)).rejects.toThrow(
-      "None of the PDFs is a TSIA2 question export",
+      "None of the PDFs is a question PDF",
     );
   });
 

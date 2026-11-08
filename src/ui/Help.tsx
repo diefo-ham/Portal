@@ -507,12 +507,12 @@ function SatHelp() {
             <p>
               Choose Add your question PDFs and drop your SAT, PAA and TSI PDFs
               into the window that opens. File names do not matter: each PDF is
-              sorted by the test named inside it, and only pages that carry the
-              access code for that test are added. They are read in this browser
-              and never uploaded; the SAT PDF is large and can take 10 minutes
-              or more. Each SAT question is marked active or inactive by the
-              badge on its page, and active questions stay hidden by default.
-              Settings lists every PDF you added and lets you remove one.
+              sorted by the test named inside it, and only PDFs that carry the
+              access code are added. They are read in this browser and never
+              uploaded; the SAT PDF is large and can take 10 minutes or more.
+              Each SAT question is marked active or inactive by the badge on its
+              page, and active questions stay hidden by default. Settings lists
+              every PDF you added and lets you remove one.
             </p>
             <p>
               Once a test has questions of your own, its example questions are

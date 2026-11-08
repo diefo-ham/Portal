@@ -48,22 +48,16 @@ export const PdfReport = ({ kind, report, unchanged }: PdfReportProps) => {
       </p>
       {!!report.refused?.length && (
         <p className="small">
-          {t(
-            "Not added, because no page carries the access code for this test: {files}",
-            { files: report.refused.join(", ") },
-          )}
+          {t("Not added, because no page carries the access code: {files}", {
+            files: report.refused.join(", "),
+          })}
         </p>
       )}
       {!!report.ignored?.length && (
         <p className="small">
-          {t(
-            tsi
-              ? "Set aside, because they are not TSI question exports: {files}"
-              : paa
-                ? "Set aside, because they are not PAA question exports: {files}"
-                : "Set aside, because they are not SAT question exports: {files}",
-            { files: report.ignored.join(", ") },
-          )}
+          {t("Set aside, because they are not question PDFs: {files}", {
+            files: report.ignored.join(", "),
+          })}
         </p>
       )}
       {tsi && report.counts.origin && (

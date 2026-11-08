@@ -1,4 +1,4 @@
-> **History.** This describes the original four-file SAT import. That path was removed: the app now takes one PDF per test, sorted by the Assessment column, checks an access code on every page and reads the SAT's ACTIVE / INACTIVE badge. See [pdf-import.md](pdf-import.md). The notes on layout, parity and limits below still apply to the reader.
+> **History.** This describes the original four-file SAT import. That path was removed: the app now takes one PDF per test, sorted by the Assessment column, checks an access code on each PDF and reads the SAT's ACTIVE / INACTIVE badge. See [pdf-import.md](pdf-import.md). The notes on layout, parity and limits below still apply to the reader.
 
 # Scope: preparing a question library from PDFs inside the browser
 
