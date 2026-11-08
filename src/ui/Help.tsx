@@ -163,10 +163,11 @@ function TsiHelp() {
             <p>
               Everything is stored in this browser and works offline. A fresh
               install comes with original example questions for each test; the
-              Tests tab opens once you have added question PDFs of your own. In
-              Settings you can add your question PDFs, reset TSI progress or
-              remove your questions (the examples stay). SAT, PAA and TSI
-              progress are kept separately.
+              Tests tab opens once you have added question PDFs of your own, and
+              the examples stay shown until you turn off Include example
+              questions in Settings. In Settings you can add your question PDFs,
+              reset TSI progress or remove your questions (the examples stay).
+              SAT, PAA and TSI progress are kept separately.
             </p>
           </details>
         </div>

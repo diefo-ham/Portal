@@ -291,6 +291,66 @@ describe("Settings with and without questions of your own", () => {
     expect(stored()).toMatch(new RegExp(`^${own + 2} questions`));
   });
 
+  /** The person's own TSI questions, plus two bundled examples. */
+  const tsiMixed = () => {
+    const data = testCorpus(2);
+    data.questions = data.questions.map((q) => ({
+      ...q,
+      id: `tsi-${q.id}`,
+      assessment: "TSI" as const,
+      section: "tsi-math" as const,
+    }));
+    const own = data.questions.length;
+    data.questions.push(
+      ...data.questions.slice(0, 2).map((q, i) => ({
+        ...q,
+        id: `tsi-example-${i}`,
+        bundled: true as const,
+      })),
+    );
+    return { data, own };
+  };
+
+  it("shows the TSI examples by default even with questions of your own, and lets you turn them off", async () => {
+    location.hash = "#/tsi";
+    const { data, own } = tsiMixed();
+    study.useStudy.mockImplementation(() => answer({ data }));
+    const user = await openSettings();
+    const toggle = screen.getByRole("checkbox", {
+      name: "Include example questions",
+    }) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    expect(stored()).toMatch(new RegExp(`^${own + 2} questions`));
+    await user.click(toggle);
+    expect(stored()).toMatch(new RegExp(`^${own} questions`));
+    expect(localStorage.getItem("sat-show-examples")).toBe("false");
+  });
+
+  it("keeps the TSI choice to turn the examples off for the other tests too, which already hide them", async () => {
+    localStorage.setItem("sat-show-examples", "false");
+    location.hash = "#/tsi";
+    const { data, own } = tsiMixed();
+    study.useStudy.mockImplementation(() => answer({ data }));
+    await openSettings();
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: "Include example questions",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(false);
+    expect(stored()).toMatch(new RegExp(`^${own} questions`));
+  });
+
+  it("leaves the other tests hiding their examples until asked", async () => {
+    // The choice made here is the one for every test: on in the SAT too.
+    localStorage.setItem("sat-show-examples", "true");
+    const { data, own } = mixed();
+    study.useStudy.mockImplementation(() => answer({ data }));
+    await openSettings();
+    expect(stored()).toMatch(new RegExp(`^${own + 2} questions`));
+  });
+
   it("keeps the examples of a test that has no questions of your own", async () => {
     // Own PAA questions exist, so the switch is offered, but the SAT has only examples.
     const data = testCorpus(2);

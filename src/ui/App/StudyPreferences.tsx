@@ -80,7 +80,7 @@ export const StudyPreferences = ({
           onChange={exampleQuestions.onChange}
           label={t("Include example questions")}
           hint={t(
-            "The portal's own example questions are hidden once you have added questions of your own. Turn this on to study them too. Nothing is deleted, and a test with no questions of your own keeps its examples.",
+            "The example questions that come with the portal. When this is off, they are hidden in a test once you have added questions of your own for it. Nothing is deleted, and a test with none of your own keeps its examples.",
           )}
         />
       )}

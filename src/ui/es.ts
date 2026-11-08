@@ -56,8 +56,8 @@ export const es: Record<string, string> = {
   "Each SAT question is marked active or inactive by the badge at the top right of its page; a page without a badge is marked unknown.":
     "Cada pregunta del SAT se marca como activa o inactiva por la insignia de la esquina superior derecha de su página; una página sin insignia queda como desconocida.",
   "Include example questions": "Incluir preguntas de ejemplo",
-  "The portal's own example questions are hidden once you have added questions of your own. Turn this on to study them too. Nothing is deleted, and a test with no questions of your own keeps its examples.":
-    "Las preguntas de ejemplo del portal se ocultan cuando ya agregaste preguntas propias. Activa esto para estudiarlas también. No se borra nada, y una prueba sin preguntas propias conserva sus ejemplos.",
+  "The example questions that come with the portal. When this is off, they are hidden in a test once you have added questions of your own for it. Nothing is deleted, and a test with none of your own keeps its examples.":
+    "Las preguntas de ejemplo que trae el portal. Si esto está desactivado, se ocultan en una prueba cuando ya agregaste preguntas propias para ella. No se borra nada, y una prueba sin preguntas propias conserva sus ejemplos.",
   "You are working with the example questions that come with the portal. Add your own question PDFs for more, and to open the tests.":
     "Estás trabajando con las preguntas de ejemplo que trae el portal. Agrega tus propios PDF de preguntas para tener más y para abrir las pruebas.",
   "Only the example questions are here so far. Add your PDFs below.":
