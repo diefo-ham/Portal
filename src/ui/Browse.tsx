@@ -56,7 +56,7 @@ export const Browse = ({
       question.testStatus === "active" &&
       !window.confirm(
         t(
-          "This question belongs to an active practice test and may spoil a future Bluebook test. View it anyway?",
+          "This question belongs to an active practice test and may spoil a future official test. View it anyway?",
         ),
       )
     )
@@ -216,7 +216,7 @@ export const Browse = ({
           <h2>{t("Your question library is empty.")}</h2>
           <p>
             {t(
-              "Add your own College Board question PDFs; they are prepared on this device and nothing is uploaded.",
+              "Add your own question PDFs; they are prepared on this device and nothing is uploaded.",
             )}
           </p>
           <button className="primary" onClick={onAddQuestions}>

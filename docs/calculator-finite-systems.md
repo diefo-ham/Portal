@@ -147,7 +147,7 @@ and maps solutions, bounds, free parameters and derived quantities back afterwar
 `[x_1^2+y_1+7,20x_1+100-y_1]~[7,0]` therefore solves like the same system in `a`
 and `b`, including its repeated root. When a `~` system has exactly one exact
 solution it is reported as a fit with `RMSE = 0` and its residuals, matching
-Desmos' regression parameters; systems with several solutions still list them all
+The reference calculator's regression parameters; systems with several solutions still list them all
 (a single scalar parameter with several roots also feeds the root nearest 1 to other rows).
 
 ## Concrete limits

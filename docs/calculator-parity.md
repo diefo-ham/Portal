@@ -1,6 +1,6 @@
-# Manual Desmos comparison — 2026-10-27
+# Manual reference calculator comparison — 2026-10-27
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 Reference: current https://www.desmos.com/calculator through its normal UI, using
 original synthetic math. No private question data, account, or proprietary source
@@ -26,7 +26,7 @@ in automated tests; no user key was available for a live-key integration check.
 | Edit list → Delete All                   | One blank expression, Undo offered                        | Immediate Clear affects active engine; no offline Undo yet    |
 
 Mouse cursor positioning, selection and structural deletion use upstream DesQuill;
-this is not exhaustive equivalence with every current Desmos input rule. Completion
+this is not exhaustive equivalence with every current reference calculator input rule. Completion
 uses mathematical autocommands/operators rather than an IDE menu. Advanced commands
 and every inverse-function boundary were not individually compared live. Local
 numeric/domain tests cover the supported subset. General feature parity is not claimed.

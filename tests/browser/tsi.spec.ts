@@ -5,7 +5,7 @@ import sample from "../fixtures/synthetic.json" with { type: "json" };
 
 // The TSI portal: reaching it, the Official / Original label and its filter, the
 // Settings switch that hides sample items, and the three calculators. Every
-// question here is invented; no College Board text is involved.
+// question here is invented; no text from the test publisher is involved.
 
 const tsi = (id: string, extra: Record<string, unknown> = {}) => ({
   id: `tsi-${id}`,
@@ -92,10 +92,8 @@ test("the Settings switch hides the original questions and brings them back", as
   await page.getByRole("button", { name: "Settings" }).click();
   const include = page.getByLabel("Include original questions");
   await expect(include).toBeChecked();
-  // No switch for the College Board sample items, and no button to remove them.
-  await expect(
-    page.getByText("Include College Board sample items"),
-  ).toHaveCount(0);
+  // No switch for the official sample items, and no button to remove them.
+  await expect(page.getByText("Include official sample items")).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: /Remove official items/ }),
   ).toHaveCount(0);

@@ -7,14 +7,16 @@ import { AppFooter } from "./AppFooter";
 afterEach(cleanup);
 
 describe("AppFooter", () => {
-  it("states the purpose and that it is not affiliated with College Board", () => {
+  it("states the purpose and that it is not affiliated with any test publisher", () => {
     render(<AppFooter />);
     expect(screen.getByRole("contentinfo")).toBeTruthy();
     expect(
       screen.getByText("Made for focused, independent study."),
     ).toBeTruthy();
     expect(
-      screen.getByText("Personal practice · Not affiliated with College Board"),
+      screen.getByText(
+        "Personal practice · Not affiliated with any test publisher",
+      ),
     ).toBeTruthy();
   });
 

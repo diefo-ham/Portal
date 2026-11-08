@@ -386,7 +386,7 @@ describe("Offline expression domain restrictions", () => {
   });
 
   it("lets other rows use a parameter fitted by a regression with several solutions", () => {
-    // Desmos fits one parameter set (+√5 here); the row still lists both roots.
+    // The reference calculator fits one parameter set (+√5 here); the row still lists both roots.
     const w = workspace(
       "a=3",
       "b=2",
@@ -404,7 +404,7 @@ describe("Offline expression domain restrictions", () => {
     ]);
     expect(rows[5].value).toBeCloseTo(4, 10);
     expect(rows[6].value).toBeCloseTo(Math.sqrt(5) + 1, 10);
-    // The chosen branch follows the sliders, like a Desmos regression would.
+    // The chosen branch follows the sliders, like a reference calculator regression would.
     expect(
       Object.values(workspace("a=5", "b=3", "x_1^2~a+b", "x_1").results)[3]
         .value,
@@ -441,7 +441,7 @@ const workspace = (...texts: string[]) =>
     entries: texts.map((t) => newExpression(t)),
   });
 describe("Offline expression semantics", () => {
-  it("evaluates range ASTs, inferred steps and descending lists like Desmos", () => {
+  it("evaluates range ASTs, inferred steps and descending lists like the reference calculator", () => {
     const list = (source: string) => scalar(source).evaluate({}, {}, "radians");
     expect(list("[1...10]")).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(list("[1...100]")).toHaveLength(100);
@@ -1101,7 +1101,7 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(evaluate("lcm(6,8)")).toBe(24);
     expect(evaluate("nCr(6,2)")).toBe(15);
     expect(evaluate("nPr(6,2)")).toBe(30);
-    expect(evaluate("nCr(2,6)")).toBe(0); // as in Desmos
+    expect(evaluate("nCr(2,6)")).toBe(0); // as in the reference calculator
     expect(scalarTex(scalar("nCr(6,2)"))).toContain("\\operatorname{nCr}");
   });
   it("converts supported structural LaTeX without evaluating commands", () => {
@@ -1126,7 +1126,7 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(evaluate(latexToText(textToLatex("log(8,2)")))).toBeCloseTo(3, 12);
     expect(evaluate(latexToText(textToLatex("floor(1.7)")))).toBe(1);
   });
-  it("uses Desmos-style percent-of syntax rather than modulo", () => {
+  it("uses reference-calculator-style percent-of syntax rather than modulo", () => {
     expect(evaluate("20% of 50")).toBe(10);
     expect(evaluate("80+15% of 80")).toBe(92);
     expect(evaluate("200-12.5% of 200")).toBe(175);
@@ -1134,7 +1134,7 @@ describe("offline calculator arithmetic and syntax", () => {
     expect(evaluate(latexToText("20\\%\\operatorname{of}50"))).toBe(10);
     expect(() => evaluate("20%3")).toThrow("operator");
   });
-  it("supports Desmos-style mod without changing percentage syntax", () => {
+  it("supports reference-calculator-style mod without changing percentage syntax", () => {
     expect(evaluate("mod(17,5)")).toBe(2);
     expect(evaluate("mod(20,4)")).toBe(0);
     expect(evaluate("mod(-17,5)")).toBe(3);
@@ -1448,7 +1448,7 @@ describe("regression uses numerical least squares", () => {
     expect(exponential.logSpace).toBe(false);
     expect(exponential.r2).toBeCloseTo(1, 11);
   });
-  it("matches the manually checked Desmos original-y exponential fit on noisy data", () => {
+  it("matches the manually checked the reference calculator original-y exponential fit on noisy data", () => {
     const fit = regression(
       [1, 2, 4, 9].map((y, x) => ({ x, y })),
       "exponential",
@@ -1551,13 +1551,13 @@ describe("tables and persisted calculator work", () => {
         entries: [{ ...state.entries[0], color: 10 }],
       }),
     ).toThrow();
-    // Sessions saved while Desmos was offered still load; its fields are dropped.
-    const withDesmos = {
+    // Sessions saved while the reference calculator was offered still load; its fields are dropped.
+    const withLegacyFields = {
       ...state,
       mode: "desmos",
       desmos: { version: 11, expressions: { list: [{ latex: "y=x^2" }] } },
     };
-    expect(validateCalculator(withDesmos)).toEqual(state);
+    expect(validateCalculator(withLegacyFields)).toEqual(state);
     const data = { ...emptyData(), questions: parseQuestions(sample) };
     const session = createSession([data.questions[0].id]);
     session.calculator = state;

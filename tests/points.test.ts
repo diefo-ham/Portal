@@ -102,7 +102,7 @@ describe("point variables in the workspace", () => {
       { kind: "points", points: [{ x: 3, y: 4 }] },
     ]);
   });
-  it("mirrors the Desmos list-of-points example", () => {
+  it("mirrors the reference calculator list-of-points example", () => {
     const { results, graphs } = sheet("a=[(3,4),(4,3)]", "mean(a)");
     expect(results.map((r) => r.error)).toEqual([undefined, undefined]);
     expect(results[0].pointValue).toEqual(a);

@@ -28,7 +28,7 @@ describe("ActiveQuestionsDialog", () => {
       name: "Practice these questions again?",
     });
     expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.textContent).toContain("may spoil a future Bluebook test");
+    expect(dialog.textContent).toContain("may spoil a future official test");
     expect(screen.getByText("ACTIVE PRACTICE-TEST QUESTIONS")).toBeTruthy();
   });
 

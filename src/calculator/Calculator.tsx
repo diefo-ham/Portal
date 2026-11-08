@@ -64,7 +64,7 @@ function ListResult({ values }: { values: number[] }) {
   );
 }
 
-/** A point reads as one chip, a list of points as a row of chips, like Desmos. */
+/** A point reads as one chip, a list of points as a row of chips, like the reference calculator. */
 function PointResult({ value }: { value: PointValue }) {
   const [open, setOpen] = useState(false);
   const points = pointsOf(value);
@@ -209,7 +209,7 @@ function CalculatorHelp() {
   const topics = [
     [
       "Expressions",
-      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list. 5! is a factorial, sum(n^2,n,1,4) adds up terms, {x<0:-x,x} gives a piecewise value, and L[2] picks an item from a list. Points work like Desmos: a=(3,4) or a=[(3,4),(4,3)], then a.x, a[1], mean(a), distance(P,Q) and midpoint(P,Q).",
+      "Type sqrt, /, ^ and _ for roots, fractions, powers and subscripts. sinx works for a single-variable argument. Enter inserts a blank row below; Backspace removes an empty one. a=2 adds a slider; p=3x+4 defines a reusable curve. [1...100] creates a list. 5! is a factorial, sum(n^2,n,1,4) adds up terms, {x<0:-x,x} gives a piecewise value, and L[2] picks an item from a list. Points work like the reference calculator: a=(3,4) or a=[(3,4),(4,3)], then a.x, a[1], mean(a), distance(P,Q) and midpoint(P,Q).",
     ],
     [
       "Tables & regressions",

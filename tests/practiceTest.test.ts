@@ -410,7 +410,7 @@ describe("Practice Test review marks and ordering", () => {
     completeTestModule(d, s.id, start + 1000);
     expect(s.practiceTest!.markedForReview).toEqual([]);
   });
-  it("orders R&W by Bluebook skill clusters and difficulty", () => {
+  it("orders R&W by official skill clusters and difficulty", () => {
     const base = testCorpus(1).questions.find(
       (q) => q.section === "reading-writing",
     )!;

@@ -91,7 +91,7 @@ export const PracticeTestSetup = ({
       <h1>A test, at your pace.</h1>
       <p className="muted">
         Use unused active questions for a full adaptive test or one module.
-        These questions may also appear in a future Bluebook test.
+        These questions may also appear in a future official test.
       </p>
       <PracticeTestOptions
         selection={selection}

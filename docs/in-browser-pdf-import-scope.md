@@ -6,7 +6,7 @@ Status: proposal and feasibility spike, 2026-11-02. Nothing in this document is 
 
 ## Goal
 
-Let a person choose their own PDF exports on the hosted site and get exactly the library that `scripts/import_college_board.py` produces today, with no Python, no install, and no upload. Everything stays in the browser, works offline, and ends in the same IndexedDB records the folder import already writes.
+Let a person choose their own PDF exports on the hosted site and get exactly the library that `scripts/import_question_bank.py` produces today, with no Python, no install, and no upload. Everything stays in the browser, works offline, and ends in the same IndexedDB records the folder import already writes.
 
 Non-goals: arbitrary PDF layouts, OCR, fetching anything from the network, and changing how questions are stored, scored, or hidden.
 
@@ -41,7 +41,7 @@ src/importing/pdf/
 ```
 
 - **Reuse the existing import path.** As assets are produced they are written to the `assets` store (hash-named, idempotent). Then `prepare.ts` hands an in-memory manifest and `questions.json` to the existing `ingestLibrary`, which already validates the revision hash, count, references, and every image hash. No new storage or merge code, and a rerun resumes cheaply because existing assets are skipped.
-- **Pure core in TypeScript, tested in Vitest.** The regular expressions and crop rules are ported one-to-one from `import_college_board.py` and `scripts/test_pdf_import.py`, with the same synthetic cases plus a highlight-leak case.
+- **Pure core in TypeScript, tested in Vitest.** The regular expressions and crop rules are ported one-to-one from `import_question_bank.py` and `scripts/test_pdf_import.py`, with the same synthetic cases plus a highlight-leak case.
 - **pdf.js is lazy-loaded** and never loaded for ordinary studying. `isEvalSupported: false` keeps the current CSP, so no `unsafe-eval` is added.
 - **UI:** Settings, Library & maintenance, "Prepare from PDF exports". Choose the four files, state whether the active files are active-only or inclusive (the existing `--active-mode` choices, with the same explanations), then run with phase progress, cancel, and a final report: imported, quarantined with reasons, and counts. Nothing is guessed: unrecognized metadata, ambiguous answers, or unsafe crop boundaries quarantine the question, as today.
 
@@ -70,7 +70,7 @@ Relative effort: phase 1 is the largest, phase 2 is medium, and phases 3 and 4 a
 
 - **Text spacing differences** change what the answer regular expressions see. Mitigated by the 100% answer parity requirement.
 - **Crop boundaries** are sensitive to fractions of a point. Mitigated by the calibrated offset, a pixel-level trim, and image parity checks.
-- **Format specificity.** The importer expects this College Board export layout and four named files. A different layout will quarantine questions rather than import wrongly.
+- **Format specificity.** The importer expects this export layout and four named files. A different layout will quarantine questions rather than import wrongly.
 - **Browser support.** WebP encoding is available in Chromium-based browsers. Elsewhere a PNG fallback would need the manifest check loosened from `.webp` to allow `.png`.
 - **Bundle size.** pdf.js adds about 1.8 MB (main and worker) plus font and CMap data. Lazy loading keeps it out of normal use.
 - **Memory.** One PDF at a time (up to 80 MB), with images streamed into IndexedDB rather than held in memory.

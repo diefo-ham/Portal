@@ -1,5 +1,5 @@
 /**
- * Answer keys and text normalization, ported from scripts/import_college_board.py.
+ * Answer keys and text normalization, ported from scripts/import_question_bank.py.
  * The importer never solves a question or guesses an absent key: anything it
  * cannot read as an explicit, machine-readable answer throws.
  */
