@@ -1,4 +1,4 @@
-"""Normalize user-owned College Board PDF exports into a private local library.
+"""Normalize user-owned question PDF exports into a private local library.
 
 No network use. Source PDFs are read-only. Generated content stays in private-data/.
 Install requirements-pdf.txt with the Python used to run this command.
@@ -265,7 +265,7 @@ def main():
     revision=hashlib.sha256(payload.encode()).hexdigest()
     (output/"questions.json").write_text(payload,encoding="utf-8")
     used_assets=sorted({p["src"].removeprefix("asset:") for q in questions for kind in ["question","rationale"] for p in q["document"][kind]})
-    manifest={"format":"sat-study-local-library-v1","revision":revision,"label":"College Board PDF imports","questionCount":len(questions),"assets":used_assets,"summary":report["counts"]}
+    manifest={"format":"sat-study-local-library-v1","revision":revision,"label":"PDF imports","questionCount":len(questions),"assets":used_assets,"summary":report["counts"]}
     (output/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     (output/"import-report.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
     print(json.dumps({"questions":len(questions),"quarantined":len(report["quarantined"]),"counts":report["counts"],"comparison":report["comparison"],"output":str(output)}),flush=True)

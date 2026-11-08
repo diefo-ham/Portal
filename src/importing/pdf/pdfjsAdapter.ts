@@ -49,7 +49,7 @@ const MAX_RENDER_PIXELS = 40_000_000;
 function checkPageSize(width: number, height: number) {
   if (width * height * RENDER_SCALE * RENDER_SCALE > MAX_RENDER_PIXELS)
     throw new Error(
-      "A page in this PDF is far larger than a College Board export, so it was not opened. Choose the exports as downloaded.",
+      "A page in this PDF is far larger than a normal question PDF, so it was not opened. Choose the exports as downloaded.",
     );
 }
 

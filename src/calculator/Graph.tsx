@@ -31,7 +31,7 @@ function ticks(min: number, max: number, minor = false) {
     values.push(Math.abs(v) < step * 1e-10 ? 0 : v);
   return values;
 }
-/** Zoom steps as in Desmos: the buttons halve or double the view, a wheel notch is gentle. */
+/** Zoom steps as in the reference calculator: the buttons halve or double the view, a wheel notch is gentle. */
 const BUTTON_ZOOM = 0.5;
 const WHEEL_ZOOM = 0.94;
 export function Graph({

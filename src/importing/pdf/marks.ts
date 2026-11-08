@@ -5,7 +5,7 @@
  *  - the access line, small gray text at the bottom left of every page
  *    ("Ref. SAT-XXXX-XXXX-XXXX-XXXX"), one code per test (`access.ts` checks it);
  *  - on SAT pages, an ACTIVE or INACTIVE badge at the top right, which says
- *    whether the question is in a live College Board practice test.
+ *    whether the question is in a live official practice test.
  *
  * Pure functions: no PDF library, no DOM, no storage.
  */

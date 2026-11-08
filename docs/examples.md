@@ -1,6 +1,6 @@
 # Example questions
 
-The portal is the same for everyone. The questions are what differ: a fresh install already holds **120 original example questions for each test** (SAT, PAA and TSI, 360 in all), written for this portal. They are not College Board items and are not the person's own material. The person's own PDFs (the ones they obtain and add themselves) are what unlock the Tests screens and bring the real banks.
+The portal is the same for everyone. The questions are what differ: a fresh install already holds **120 original example questions for each test** (SAT, PAA and TSI, 360 in all), written for this portal. They are not items from the test publisher and are not the person's own material. The person's own PDFs (the ones they obtain and add themselves) are what unlock the Tests screens and bring the real banks.
 
 ## What the examples are
 

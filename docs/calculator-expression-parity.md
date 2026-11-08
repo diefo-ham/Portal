@@ -1,6 +1,6 @@
 # Offline expression and graph refinement
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 ## Lists and dependencies
 
@@ -9,7 +9,7 @@ interpreter runs. Their values are generated at evaluation time, including when
 endpoints depend on scalar definitions. They are not expanded into source text.
 The existing Offline limit of 200 list elements applies before allocation.
 
-Live checks against official Desmos v1.12 on 2026-10-27 confirmed:
+Live checks against official reference calculator v1.12 on 2026-10-27 confirmed:
 
 | Input         | Result             |
 | ------------- | ------------------ |
@@ -36,8 +36,8 @@ their argument binding; undefined parameters and circular dependencies fail
 clearly. Adjacent defined one-letter names multiply, while existing explicit
 longer identifiers retain their meaning.
 
-Official Desmos and Offline both graph `p=3x+4`, `v=x+5`, and `pv-2p+v`.
-The resulting curve is `3x²+14x+17`. Live Desmos helper functions and Offline
+Official reference calculator and Offline both graph `p=3x+4`, `v=x+5`, and `pv-2p+v`.
+The resulting curve is `3x²+14x+17`. Live reference calculator helper functions and Offline
 unit tests agree at x = 2, 0, −2: 57, 17, 1. Changing either definition updates
 dependent graphs. No point-specific evaluation is cached as a global constant.
 
@@ -83,5 +83,5 @@ This does not add list comprehensions, filters such as `L[L>1]`, nested lists, a
 algebra system, or advanced custom-color expressions. List-valued outputs keep
 the previously supported contexts: numeric list arithmetic/function evaluation,
 paired point plotting, tables and regressions. General nonlinear custom fitting
-remains an official Desmos feature. The independent Desmos workspace/API boundary
+remains an official reference calculator feature. The independent reference calculator workspace/API boundary
 is unchanged.

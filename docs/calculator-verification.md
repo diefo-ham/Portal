@@ -1,6 +1,6 @@
 # Calculator pass verification — 2026-10-27
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 ## Expression and graph parity refinement
 
@@ -11,11 +11,11 @@
   resizing, equal circle geometry, narrow fallback, POI toggling/empty clearing/
   mode disable, radical trig intersections, color/visibility controls and color
   persistence after session exit/reload.
-- Existing mocked Desmos failure/retry, lazy loading, independent workspace,
+- Existing mocked reference calculator failure/retry, lazy loading, independent workspace,
   completion and reset/archive tests remain green. The run exposed a viewport
   effect overwriting an immediate Offline edit; viewport updates now merge with
   the latest workspace, and the original engine-switch test passes unchanged.
-- Live official Desmos v1.12 checks verified ascending/descending/stepped lists,
+- Live official reference calculator v1.12 checks verified ascending/descending/stepped lists,
   endpoint rounding and invalid steps, and the named-expression example's
   graphability and values. `p(2)=10`, `v(2)=7`; the combined curve gives 57, 17,
   and 1 at x=2, 0 and −2 respectively. Test math was synthetic; no question data
@@ -46,7 +46,7 @@
   scans found no copy of the real key.
 - Live synthetic checks verified native quadratic/noisy exponential/custom
   sine-basis regressions, table data, `sinx` typing, fraction/decimal conversion,
-  `(π/2,1)` POI labels and moving curve tracing while dragging. Desmos's native
+  `(π/2,1)` POI labels and moving curve tracing while dragging. The reference calculator's native
   trial-key notice remains visible and unmodified.
 - Light/dark laptop screenshots were visually inspected. Window checks cover
   desktop bounds, pointer/keyboard geometry, mobile fallback and unchanged
@@ -71,12 +71,12 @@
   visually inspected at laptop sizes, including attached coordinate labels.
   All 11 calculator-specific Edge workflows passed again after final coordinate
   rounding/focus styling, including POI hover/pinning/focus/dismissal checks.
-- Hosted API boundary mocks verify primary/default Desmos with a configured key,
-  the always-enabled Desmos button without a key, no external requests while
+- Hosted API boundary mocks verify primary/default the reference calculator with a configured key,
+  the always-enabled the reference calculator button without a key, no external requests while
   Offline is selected, retry-only connection attempts, failed/slow scripts,
   preservation of an already-loaded instance after an offline event, independent
   saved work, completed-session reopening and reset/archive recovery.
-- Live embedded Desmos regression/tracing/POI behavior still requires a real API
+- Live embedded reference calculator regression/tracing/POI behavior still requires a real API
   key for acceptance. No genuine key was supplied. Documented official options
   were checked against current API v1.12 docs; no claim of new live-key testing.
 - No new dependencies, source-PDF conversions or study logic changes.
@@ -85,7 +85,7 @@
 
 - Production TypeScript/Vite build passed.
 - 73 core/math/storage/import tests passed, including independent known fits,
-  noisy original-y exponential fitting checked against current Desmos, structural
+  noisy original-y exponential fitting checked against current reference calculator, structural
   LaTeX conversion, implicit multiplication, trig domains/units, lists and backup
   validation. Legacy named definitions remain readable.
 - The full 40-test Edge browser suite passed with two workers. The final focused
@@ -101,9 +101,9 @@
   network disappearance, explicit retries, separate native/opaque workspaces,
   unfinished-session exit/reload/resume while the hosted API is unavailable,
   reconnection, completed-session reopening, Clear, and reset-archive recovery.
-  The mock implements only the documented API boundary; it contains no Desmos code.
+  The mock implements only the documented API boundary; it contains no reference calculator code.
 - No genuine API key was supplied. Live loading of the embedded API with the user's
-  own key remains a manual acceptance check. The public Desmos website was used
+  own key remains a manual acceptance check. The public the reference calculator website was used
   for the representative comparisons recorded in `calculator-parity.md`.
 - The first high-concurrency full run had one intermittent pre-existing timing
   assertion fail: a submitted duration and the saved elapsed map differed by about
@@ -115,4 +115,4 @@
 Manual acceptance: supply an official key, compare both workspaces during a school
 network interruption, and evaluate structural cursor movement, fractions, table
 navigation and graph/expression density on the actual laptop. Screen-reader behavior
-and exhaustive Desmos equivalence are not claimed by these automated checks.
+and exhaustive the reference calculator equivalence are not claimed by these automated checks.

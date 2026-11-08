@@ -1,11 +1,11 @@
 # Calculator stabilization — 2026-10-27
 
-> **Desmos was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted Desmos mode are historical. See [Offline calculator vs Desmos](calculator-vs-desmos.md) for the comparison that led to this.
+> **The hosted reference calculator was retired on 2026-11-03.** The portal now has one calculator, the bundled Offline engine. Parts of this note that describe a hosted reference calculator mode are historical. See [Offline calculator vs the reference calculator](calculator-vs-desmos.md) for the comparison that led to this.
 
 The subsequent [expression and graph refinement](calculator-expression-parity.md)
 adds range syntax, x-dependent names, a split divider, colors and selection fixes.
 
-## Official Desmos and local key
+## Official reference calculator and local key
 
 The supplied personal-project key is stored only in ignored `.env.local` as
 `DESMOS_API_KEY`. The committed `.env.example` contains empty placeholders.
@@ -15,26 +15,26 @@ Close/reopen Calculator to reread a changed key; no rebuild is necessary.
 Existing `VITE_DESMOS_API_KEY` build-time configuration remains compatible.
 Automated test servers use `--no-local-config` and mock this boundary.
 
-The browser-side API key is naturally visible to the browser and to Desmos;
+The browser-side API key is naturally visible to the browser and to the reference calculator;
 this is the supported API model, not a new authentication/backend system.
 The environment file itself is never served. No real key appears in these docs.
 
 Official v1.12.0 successfully initialized with the supplied key in installed Edge.
 The [official changelog](https://www.desmos.com/api/changelog) identifies v1.12 as
-the current stable API; v1.13 is experimental until spring 2027. Desmos displays
+the current stable API; v1.13 is experimental until spring 2027. The reference calculator displays
 its own **Trial Key** notice for this key. The notice was not hidden or bypassed.
 
 Expression controls, Add Item, table input, custom `~`, regression templates,
 sliders, graph settings, POIs, tracing and fraction conversion remain native.
 `customRegressions`, `regressionTemplates`, `trace`, `pointsOfInterest` and
 `decimalToFraction` are enabled through documented options. No Offline parser
-intercepts Desmos expressions. Question content never enters the iframe.
+intercepts the reference calculator expressions. Question content never enters the iframe.
 
-Desmos stays the configured default for fresh workspaces. An explicit saved
-Offline choice is honored. Only selecting Desmos mounts its hosted frame/API;
-Offline makes no Desmos requests. Failures remain retryable in that tab with a
+The reference calculator stays the configured default for fresh workspaces. An explicit saved
+Offline choice is honored. Only selecting the reference calculator mounts its hosted frame/API;
+Offline makes no reference calculator requests. Failures remain retryable in that tab with a
 6.5-second deadline, no polling or automatic retries. Reconnection does not
-interrupt Offline; a loaded Desmos instance survives the browser's offline event.
+interrupt Offline; a loaded reference calculator instance survives the browser's offline event.
 
 ## Offline regressions
 
@@ -48,7 +48,7 @@ interrupt Offline; a loaded Desmos instance survives the browser's offline event
 - Exponential forms include `a b^x_1`, `a exp(b x_1)` and `a e^(b x_1)`.
   They use the same bounded, original-y least-squares variable-projection solver;
   the rate parameter is converted appropriately for exp/e notation. Positive y
-  remains required. This is not Desmos's proprietary general nonlinear optimizer.
+  remains required. This is not the reference calculator's proprietary general nonlinear optimizer.
 - New custom models may be nonlinear in x but must be **linear in their fitted
   parameters**, e.g. `a sin(x_1) + b` or `a/x_1 + b`. A bounded safe AST checks
   linearity structurally. Scaled QR solves up to five single-letter parameters,
@@ -157,18 +157,18 @@ inspection UI remain transient; both engine workspaces still save with sessions.
 
 ## Verification boundary
 
-See `calculator-verification.md` for automated results. Live Desmos tests used
+See `calculator-verification.md` for automated results. Live reference calculator tests used
 only synthetic math in a separate browser profile. They checked native tables,
 quadratic and exponential `~` fits, custom sine-basis fitting, actual `sinx`
 typing, fraction/decimal toggling, graph-local `(π/2,1)` inspection and native
-curve dragging. While the trace drag was held, Desmos displayed the moving
+curve dragging. While the trace drag was held, the reference calculator displayed the moving
 coordinate `(2.59,0.52404)` beside the curve; that temporary label disappeared on
 release. Offline retains its last single trace until cleared or replaced.
 Exhaustive native gesture equivalence is not claimed.
 
 Observed native parameters:
 
-| Synthetic case                | Official Desmos                    | Offline                                       |
+| Synthetic case                | Official reference calculator                    | Offline                                       |
 | ----------------------------- | ---------------------------------- | --------------------------------------------- |
 | x=1,2,3,4; y=x²               | a=1, b=0, c=0                      | same cleaned display; raw QR residue retained |
 | x=0,1,2,3; y=1,2,4,9; a·bˣ    | a=0.888120061686, b=2.160827144028 | same within checked displayed precision       |

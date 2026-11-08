@@ -6,7 +6,9 @@ export const AppFooter = () => {
   return (
     <footer className="app-footer">
       <span>{t("Made for focused, independent study.")}</span>
-      <span>{t("Personal practice · Not affiliated with College Board")}</span>
+      <span>
+        {t("Personal practice · Not affiliated with any test publisher")}
+      </span>
     </footer>
   );
 };
