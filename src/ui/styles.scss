@@ -2729,11 +2729,16 @@ figcaption {
   color: var(--warning);
 }
 .update-dialog {
+  width: min(27.5rem, calc(100vw - 2.5rem));
   max-width: none;
+  margin: auto;
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
+}
+.update-dialog .test-paused-card {
+  width: 100%;
 }
 .update-dialog::backdrop {
   background: color-mix(in srgb, var(--backdrop) 78%, transparent);
@@ -3107,7 +3112,6 @@ figcaption {
 .test-mode-page .practice-composer > .test-rules {
   margin-left: 0;
 }
-
 
 /* TSI: Official / Original badge and the calculator chip beside a question's domain. */
 .origin-badge,
