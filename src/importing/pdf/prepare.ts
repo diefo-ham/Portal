@@ -1,7 +1,6 @@
 /**
  * What preparing a question library from PDFs shares across the three tests:
- * the shapes of a reader, its progress and report, and the optional file of
- * reviewed exceptions. The reading itself is `preparePaa.ts` (`prepareBankLibrary`
+ * the shapes of a reader, its progress and report. The reading itself is `preparePaa.ts` (`prepareBankLibrary`
  * with one profile per test).
  */
 import type { AccessCheck } from "./access.ts";
@@ -93,37 +92,4 @@ export interface PreparedLibrary {
   /** The exact text whose SHA-256 is the manifest revision. */
   questionsJson: string;
   report: PrepareReport;
-}
-
-/** Validates an optional file of reviewed exceptions, keyed by source ID. */
-export function parseOverrides(raw: unknown): Record<string, ReviewedOverride> {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw))
-    throw new Error(
-      "Reviewed exceptions must be a JSON object keyed by source ID.",
-    );
-  const result: Record<string, ReviewedOverride> = {};
-  for (const [id, value] of Object.entries(raw)) {
-    if (!/^[a-z0-9]{4,32}$/.test(id))
-      throw new Error(`"${id.slice(0, 40)}" is not a valid source ID.`);
-    if (value === null || typeof value !== "object" || Array.isArray(value))
-      throw new Error(`The exception for ${id} must be an object.`);
-    const entry = value as Record<string, unknown>;
-    const override: ReviewedOverride = {};
-    if (entry.choiceLabelsVerified !== undefined) {
-      if (typeof entry.choiceLabelsVerified !== "boolean")
-        throw new Error(
-          `choiceLabelsVerified for ${id} must be true or false.`,
-        );
-      override.choiceLabelsVerified = entry.choiceLabelsVerified;
-    }
-    if (entry.warning !== undefined) {
-      if (typeof entry.warning !== "string" || entry.warning.length > 500)
-        throw new Error(
-          `The warning for ${id} must be text of at most 500 characters.`,
-        );
-      override.warning = entry.warning;
-    }
-    result[id] = override;
-  }
-  return result;
 }

@@ -91,14 +91,13 @@ describe.each<Assessment>(["SAT", "PAA", "TSI"])(
       ]);
       // Every PDF is looked at, and none is read by its name.
       await waitFor(() => expect(detect).toHaveBeenCalledTimes(4));
-      expect(await screen.findByText(t("SAT questions"))).toBeTruthy();
-      expect(screen.getByText(t("PAA questions"))).toBeTruthy();
-      expect(screen.getByText(t("TSI questions"))).toBeTruthy();
+      // The test is not named beside the files; only the one that is no question PDF is flagged.
       expect(
-        screen.getByText(
-          t("Not an SAT, PAA or TSI question PDF: it will be set aside"),
-        ),
+        await screen.findByText(t("Not a question PDF: it will be set aside")),
       ).toBeTruthy();
+      for (const label of ["SAT questions", "PAA questions", "TSI questions"])
+        expect(screen.queryByText(label)).toBeNull();
+      expect(screen.queryByText(/Advanced|Reviewed exceptions/)).toBeNull();
       await user.click(
         screen.getByRole("button", { name: t("Add questions") }),
       );
@@ -121,14 +120,23 @@ describe.each<Assessment>(["SAT", "PAA", "TSI"])(
     });
 
     it("adds only the test that was dropped", async () => {
-      const { prepareSat, preparePaa, prepareTsi, t, user } = setup(
+      const { prepareSat, preparePaa, prepareTsi, detect, t, user } = setup(
         assessment,
         { "solo.pdf": "PAA" },
       );
       await user.upload(screen.getByLabelText(t("PDF export files")), [
         pdf("solo.pdf"),
       ]);
-      await screen.findByText(t("PAA questions"));
+      await waitFor(() => expect(detect).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(
+          (
+            screen.getByRole("button", {
+              name: t("Add questions"),
+            }) as HTMLButtonElement
+          ).disabled,
+        ).toBe(false),
+      );
       await user.click(
         screen.getByRole("button", { name: t("Add questions") }),
       );
@@ -149,7 +157,7 @@ describe("the access code", () => {
             sourceId: "ab12cd34",
             file: "sat.pdf",
             pages: [7],
-            reason: "The SAT access code is missing or not the right one",
+            reason: "unused",
           },
         ],
       }),
@@ -170,11 +178,19 @@ describe("the access code", () => {
     await user.upload(screen.getByLabelText("PDF export files"), [
       pdf("sat.pdf"),
     ]);
-    await screen.findByText("SAT questions");
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Add questions",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
     await user.click(screen.getByRole("button", { name: "Add questions" }));
     expect(
       await screen.findByText(
-        /Not added, because no page carries the access code for this test: viejo\.pdf/,
+        /Not added, because no page carries the access code: viejo\.pdf/,
       ),
     ).toBeTruthy();
     expect(screen.getByText(/1 could not be read safely/)).toBeTruthy();
@@ -183,7 +199,7 @@ describe("the access code", () => {
   it("shows a refusal from the reader as the result for that test", async () => {
     const prepareSat = vi.fn<PrepareFiles>(() =>
       Promise.reject(
-        new Error("Nothing was added: no page carries the SAT access code."),
+        new Error("Nothing was added: no page carries the access code."),
       ),
     );
     render(
@@ -202,11 +218,19 @@ describe("the access code", () => {
     await user.upload(screen.getByLabelText("PDF export files"), [
       pdf("sat.pdf"),
     ]);
-    await screen.findByText("SAT questions");
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Add questions",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
     await user.click(screen.getByRole("button", { name: "Add questions" }));
     expect(
       await screen.findByText(
-        "Nothing was added: no page carries the SAT access code.",
+        "Nothing was added: no page carries the access code.",
       ),
     ).toBeTruthy();
   });

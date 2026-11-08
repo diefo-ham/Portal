@@ -137,12 +137,13 @@ test("reading a PDF keeps working offline once the reader has been used", async 
     await page.getByRole("button", { name: "Add PDFs" }).click();
     const dialog = page.getByRole("dialog", { name: "Add your question PDFs" });
     await dialog.getByLabel("PDF export files").setInputFiles(path);
-    await expect(dialog.getByText("SAT questions")).toBeVisible({
-      timeout: 90_000,
-    });
+    // The file has been looked at once the button opens.
+    await expect(
+      dialog.getByRole("button", { name: "Add questions" }),
+    ).toBeEnabled({ timeout: 90_000 });
     await dialog.getByRole("button", { name: "Add questions" }).click();
     await expect(
-      dialog.getByText(/no page carries the SAT access code/),
+      dialog.getByText(/no page carries the access code/),
     ).toBeVisible({ timeout: 90_000 });
     await dialog.getByRole("button", { name: "Close", exact: true }).click();
   };

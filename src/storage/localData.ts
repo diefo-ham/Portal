@@ -1,11 +1,17 @@
-import type { Assessment } from "../core/model";
-import { removePdfFromData } from "../core/pdfLibrary";
+import { ACCESS_HASHES, type AccessHashes } from "../core/accessCodes";
+import type { Assessment, StudyData } from "../core/model";
+import {
+  isUnverified,
+  removePdfFromData,
+  revokeUnverifiedPdfs,
+} from "../core/pdfLibrary";
 import { referencedAssetKeys } from "../importing/documents";
 import { EXAMPLES_RECEIPT } from "../importing/preparedLibrary";
 import {
   clearAssets,
   deleteAssetsExcept,
   deleteDatabase,
+  readData,
   updateData,
 } from "./database";
 
@@ -51,6 +57,34 @@ export async function removeQuestionLibrary(assessment?: Assessment) {
     await deleteAssetsExcept(referencedAssetKeys(data));
   else await clearAssets();
   return data;
+}
+
+/**
+ * Checks the stored PDFs against the access codes this version accepts and
+ * removes the questions of every PDF whose code is not among them (a replaced
+ * code, or a PDF added before codes existed). Answers and bookmarks stay; adding
+ * a valid PDF again brings the questions back. Runs whenever the app loads, so a
+ * newly installed version applies a replaced code at once. Returns how many
+ * questions were removed and the data as it now stands.
+ */
+export async function revokeUnverifiedQuestions(
+  accepted: Readonly<AccessHashes> = ACCESS_HASHES,
+): Promise<{ removed: number; data: StudyData }> {
+  const current = await readData();
+  if (!current.questions.some((q) => isUnverified(q, accepted)))
+    return { removed: 0, data: current };
+  let removed = 0;
+  const data = await updateData((d) => {
+    removed = revokeUnverifiedPdfs(d, accepted);
+    // With none of the person's own questions left, their import receipts mean
+    // nothing; the examples' receipt stays so the examples are not copied again.
+    if (!d.questions.some((q) => q.bundled !== true))
+      d.imports = d.imports.filter((x) => x.id.startsWith(EXAMPLES_RECEIPT));
+  });
+  if (data.questions.length)
+    await deleteAssetsExcept(referencedAssetKeys(data));
+  else await clearAssets();
+  return { removed, data };
 }
 
 /** Removes one PDF's questions (see `removePdfFromData`); answers and bookmarks stay. */

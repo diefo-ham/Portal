@@ -37,6 +37,6 @@ test("PDFs with any file names are sorted by test and added", async ({
   await expect(dialog.getByText(/Added \d+ questions\./).first()).toBeVisible({
     timeout: 25 * 60_000,
   });
-  await expect(dialog.getByText(/access code/)).toHaveCount(0);
+  await expect(dialog.getByText(/Nothing was added/)).toHaveCount(0);
   expect(errors).toEqual([]);
 });

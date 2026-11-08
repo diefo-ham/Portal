@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { loadSample, seedStudyData } from "./seed";
 import { enterExpression } from "./math-input";
+import { ACCESS_HASHES } from "../../src/core/accessCodes";
 import sample from "../fixtures/synthetic.json" with { type: "json" };
 
 const overflow = (page: Page) =>
@@ -249,7 +250,12 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
       ],
       textIsApproximate: true,
       provenance: [
-        { filename: "synthetic.pdf", sha256: "b".repeat(64), pages: [1] },
+        {
+          filename: "synthetic.pdf",
+          sha256: "b".repeat(64),
+          pages: [1],
+          access: ACCESS_HASHES.SAT[0],
+        },
       ],
     },
   };

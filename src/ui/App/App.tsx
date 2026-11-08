@@ -43,6 +43,7 @@ import { AddPdfsDialog } from "../AddPdfsDialog";
 import { AssessmentProvider, translator } from "../i18n";
 import { TimedTestRun, TimedTestSetup } from "../TimedTest";
 import { TestsLocked } from "../TestsLocked";
+import { UpdateDialog } from "./UpdateDialog";
 import { TsiTests } from "../TsiTest/TsiTests";
 import { usePersistedBoolean } from "@/src/helpers/usePersistedBoolean";
 import { readStorage, writeStorage } from "@/src/utils/storage";
@@ -92,6 +93,7 @@ export const App = () => {
     error,
     setError,
     loadingMessage,
+    revoked,
   } = useStudy(assessment);
   // TSI questions labelled Original can be hidden, leaving the Official ones. The
   // choice is only offered when both kinds are stored, and only applies then, so
@@ -175,6 +177,17 @@ export const App = () => {
   const [addOpen, setAddOpen] = useState(false);
   const newVersion = useSyncExternalStore(subscribeToUpdates, updateReady);
   const [message, setMessage] = useState("");
+  // Said once, when the app opens and removes questions of a PDF whose access
+  // code is no longer accepted.
+  useEffect(() => {
+    if (revoked)
+      setMessage(
+        t(
+          "{n} questions from PDFs without a valid access code were removed. Your answers and bookmarks stay; add a current PDF to bring the questions back.",
+          { n: revoked },
+        ),
+      );
+  }, [revoked]);
   const [busy, setBusy] = useState(false);
   const [limit, setLimit] = useState("10");
   const [visible, setVisible] = useState(40);
@@ -400,11 +413,10 @@ export const App = () => {
           onSwitchAssessment={choose}
         />
       )}
+      {newVersion && <UpdateDialog onUpdate={applyUpdate} />}
       <Banners
         error={error}
         onDismissError={() => setError("")}
-        updateReady={newVersion}
-        onUpdate={applyUpdate}
         message={message}
         onDismissMessage={() => setMessage("")}
       />

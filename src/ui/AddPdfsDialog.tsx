@@ -8,7 +8,6 @@ import { containsTarget } from "@/src/utils/dom";
 export type PrepareFiles = (
   files: File[],
   options: {
-    overridesFile?: File;
     signal: AbortSignal;
     progress: (progress: Progress) => void;
   },
@@ -74,7 +73,6 @@ function OpenDialog({
   const controller = useRef<AbortController | undefined>(undefined);
   const [files, setFiles] = useState<File[]>([]);
   const [notPdf, setNotPdf] = useState<string[]>([]);
-  const [overrides, setOverrides] = useState<File>();
   const [over, setOver] = useState(false);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState<Progress>();
@@ -168,7 +166,6 @@ function OpenDialog({
     for (const job of jobs) {
       try {
         const result = await job.run(job.files, {
-          overridesFile: overrides,
           signal,
           progress: (next) =>
             setProgress(
@@ -220,13 +217,12 @@ function OpenDialog({
   };
 
   const tag = (file: File) => {
+    // Which test a PDF is for is not shown beside it: only what needs saying.
     const kind = kinds[fileKey(file)];
-    if (kind === "SAT") return t("SAT questions");
-    if (kind === "PAA") return t("PAA questions");
-    if (kind === "TSI") return t("TSI questions");
     if (kind === "unknown")
-      return t("Not an SAT, PAA or TSI question PDF: it will be set aside");
-    return t("Checking…");
+      return t("Not a question PDF: it will be set aside");
+    if (kind === undefined || kind === "checking") return t("Checking…");
+    return "";
   };
 
   const close = () => {
@@ -276,7 +272,7 @@ function OpenDialog({
       </div>
       <p className="small muted">
         {t(
-          "Drop your SAT, PAA and TSI question PDFs, or the folder that holds them, together or one at a time. They are sorted for you, read in this browser and never uploaded. The SAT PDF is large and can take 10 minutes or more; keep this tab open while it works.",
+          "Drop your question PDFs, or the folder that holds them, together or one at a time. They are sorted for you, read in this browser and never uploaded. Large PDFs can take 10 minutes or more; keep this tab open while it works.",
         )}
       </p>
       <div className={`drop-zone${over ? " over" : ""}`}>
@@ -300,7 +296,7 @@ function OpenDialog({
       </div>
       <p className="small muted">
         {t(
-          "File names do not matter. Each PDF is sorted by the test named inside it, and only pages that carry the access code for that test are added.",
+          "File names do not matter. Only PDFs that carry the access code are added.",
         )}
       </p>
       {files.length > 0 && (
@@ -310,7 +306,9 @@ function OpenDialog({
               <span>
                 <code>{file.name}</code>{" "}
                 <span className="small muted">{megabytes(file.size)}</span>
-                <span className="small muted pdf-add-tag">{tag(file)}</span>
+                {tag(file) && (
+                  <span className="small muted pdf-add-tag">{tag(file)}</span>
+                )}
               </span>
               <button
                 className="text-button"
@@ -333,19 +331,6 @@ function OpenDialog({
           })}
         </p>
       )}
-      <details className="pdf-prepare-advanced">
-        <summary>{t("Advanced")}</summary>
-        <label className="small">
-          {t("Reviewed exceptions (optional JSON file)")}{" "}
-          <input
-            aria-label={t("Reviewed exceptions")}
-            type="file"
-            accept=".json,application/json"
-            disabled={running}
-            onChange={(e) => setOverrides(e.target.files?.[0])}
-          />
-        </label>
-      </details>
       <div className="pdf-prepare-actions">
         <button
           className="primary"

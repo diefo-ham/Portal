@@ -2728,6 +2728,17 @@ figcaption {
 .review-mark.selected {
   color: var(--warning);
 }
+.update-dialog {
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+.update-dialog::backdrop {
+  background: color-mix(in srgb, var(--backdrop) 78%, transparent);
+  backdrop-filter: blur(0.3125rem) saturate(0.65);
+}
 .test-paused-overlay {
   position: fixed;
   z-index: 130;

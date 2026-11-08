@@ -3,19 +3,14 @@ import { useT } from "../i18n";
 export type BannersProps = {
   error: string;
   onDismissError: () => void;
-  /** A newer version of the portal has been downloaded. */
-  updateReady: boolean;
-  onUpdate: () => void;
   message: string;
   onDismissMessage: () => void;
 };
 
-/** The notices above the page: an error, a pending update, a status message. */
+/** The notices above the page: an error and a status message. */
 export const Banners = ({
   error,
   onDismissError,
-  updateReady,
-  onUpdate,
   message,
   onDismissMessage,
 }: BannersProps) => {
@@ -28,12 +23,6 @@ export const Banners = ({
           <button onClick={onDismissError} aria-label={t("Dismiss error")}>
             ×
           </button>
-        </div>
-      )}
-      {updateReady && (
-        <div role="status" className="banner">
-          {t("A new version of the portal is ready.")}
-          <button onClick={onUpdate}>{t("Reload to update")}</button>
         </div>
       )}
       {message && (

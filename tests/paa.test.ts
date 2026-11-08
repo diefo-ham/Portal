@@ -483,7 +483,7 @@ describe("preparePaaLibrary", () => {
       "carta.pdf": [{ id: "x", unrelated: true }],
     });
     await expect(preparePaaLibrary(files, {}, deps)).rejects.toThrow(
-      "Ninguno de los PDF es una exportación de preguntas de la PAA",
+      "Ninguno de los PDF es un PDF de preguntas",
     );
   });
 
@@ -539,41 +539,58 @@ describe("access codes and the SAT badge", () => {
     expect(await ok("TSI", "TSI-TEST-0000-0000-0003")).toBe(false);
   });
 
-  it("imports pages with the code, and lists the others as left out", async () => {
+  it("accepts the whole PDF when one page carries the code, wherever it is", async () => {
     const { files, deps } = fixtures(
       {
         "banco.pdf": [
-          { id: "ok000001", ref: CODES.PAA },
-          { id: "no000002" },
-          { id: "bad00003", ref: "PAA-TEST-0000-0000-0009" },
-          { id: "sat00004", ref: CODES.SAT },
-          { id: "ok000005", ref: CODES.PAA },
+          { id: "no000001" },
+          { id: "no000002", ref: "PAA-TEST-0000-0000-0009" },
+          { id: "ok000003", ref: CODES.PAA },
+          { id: "no000004" },
         ],
       },
       await check(),
     );
     const prepared = await preparePaaLibrary(files, {}, deps);
-    expect(prepared.report.importedQuestions).toBe(2);
-    expect(prepared.report.quarantined.map((q) => q.sourceId).sort()).toEqual([
-      "bad00003",
-      "no000002",
-      "sat00004",
-    ]);
-    expect(prepared.report.quarantined[0].reason).toMatch(/código de acceso/);
-    const ids = parseQuestions(JSON.parse(prepared.questionsJson)).map(
-      (q) => q.id,
-    );
-    expect(ids).toEqual(["paa-ok000001", "paa-ok000005"]);
+    // One code accepts every question of the PDF, including pages with none.
+    expect(prepared.report.importedQuestions).toBe(4);
+    expect(prepared.report.quarantined).toEqual([]);
+    expect(prepared.report.refused).toBeUndefined();
+    // What is kept is the hash of the code, so a replaced code can revoke the PDF.
+    const digest = await sha256Hex(new TextEncoder().encode(CODES.PAA));
+    for (const q of parseQuestions(JSON.parse(prepared.questionsJson))) {
+      expect(q.document?.provenance.map((p) => p.access)).toEqual([digest]);
+      expect(JSON.stringify(q)).not.toContain(CODES.PAA);
+    }
   });
 
-  it("refuses a PDF where no page carries the code, and says why", async () => {
+  it("refuses a PDF whose only codes are wrong, or another test's", async () => {
     const { files, deps } = fixtures(
-      { "banco.pdf": [{ id: "a0000001" }, { id: "a0000002" }] },
+      {
+        "banco.pdf": [
+          { id: "bad00001", ref: "PAA-TEST-0000-0000-0009" },
+          { id: "sat00002", ref: CODES.SAT },
+          { id: "no000003" },
+        ],
+      },
       await check(),
     );
     await expect(preparePaaLibrary(files, {}, deps)).rejects.toThrow(
-      /código de acceso de la PAA.*banco\.pdf/,
+      "ninguna página lleva el código de acceso. Archivos: banco.pdf",
     );
+  });
+
+  it("refuses only the PDF without a code, and adds the one with it", async () => {
+    const { files, deps } = fixtures(
+      {
+        "con codigo.pdf": [{ id: "ok000001", ref: CODES.PAA }],
+        "sin codigo.pdf": [{ id: "no000002" }],
+      },
+      await check(),
+    );
+    const prepared = await preparePaaLibrary(files, {}, deps);
+    expect(prepared.report.importedQuestions).toBe(1);
+    expect(prepared.report.refused).toEqual(["sin codigo.pdf"]);
   });
 
   it("takes the SAT from one file, with its status from the badge", async () => {
@@ -624,6 +641,7 @@ describe("access codes and the SAT badge", () => {
     expect(prepared.report.quarantined.map((q) => q.sourceId)).toEqual([
       "paa00004",
     ]);
+    expect(prepared.report.quarantined[0].reason).toMatch(/expected SAT/);
   });
 
   it("leaves out an ID printed ACTIVE in one place and INACTIVE in another", async () => {

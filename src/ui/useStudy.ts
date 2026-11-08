@@ -7,7 +7,11 @@ import {
   type UpdateOptions,
 } from "../storage/database";
 import type { ResetArchive } from "../storage/resetArchive";
-import { keepStorage, storageErrorMessage } from "../storage/localData";
+import {
+  keepStorage,
+  revokeUnverifiedQuestions,
+  storageErrorMessage,
+} from "../storage/localData";
 import {
   loadBundledExamples,
   loadPreparedLibrary,
@@ -20,9 +24,15 @@ export function useStudy(assessment: Assessment = "SAT") {
   const [loadingMessage, setLoadingMessage] = useState(
     "Opening your local library…",
   );
+  // Questions removed on load because their PDF's access code is not accepted.
+  const [revoked, setRevoked] = useState(0);
   useEffect(() => {
     loadPreparedLibrary(setLoadingMessage)
-      .then(() => loadBundledExamples(setLoadingMessage))
+      .then(() => revokeUnverifiedQuestions())
+      .then(({ removed }) => {
+        if (removed) setRevoked(removed);
+        return loadBundledExamples(setLoadingMessage);
+      })
       .then((next) => {
         setData(next);
       })
@@ -93,5 +103,6 @@ export function useStudy(assessment: Assessment = "SAT") {
     setError,
     saving: writes > 0,
     loadingMessage,
+    revoked,
   };
 }
