@@ -63,7 +63,16 @@ import type { Page } from "@/src/types/ui";
 /** Which test the person last used; a fresh browser starts on the SAT. */
 const LAST_KEY = "sat-last-assessment";
 const PROTECT_KEY = "sat-protect-tests";
-const EXAMPLES_KEY = "sat-show-examples";
+/** Where each "Include example questions" setting is kept: one for the SAT and the PAA together, one for the TSI. */
+const EXAMPLES_KEYS = {
+  main: "sat-show-examples",
+  tsi: "sat-show-examples-tsi",
+} as const;
+type ExamplesSetting = keyof typeof EXAMPLES_KEYS;
+const readExamples = (setting: ExamplesSetting) => {
+  const stored = readStorage(EXAMPLES_KEYS[setting]);
+  return stored === "true" ? true : stored === "false" ? false : undefined;
+};
 /** Hash routes work on any static host; no server rewrite is needed. */
 const routeOf = (): Assessment | undefined => {
   const hash = location.hash.toLowerCase();
@@ -124,27 +133,30 @@ export const App = () => {
   // Once a test has questions of the person's own, its bundled examples are
   // hidden unless they ask for them (the TSI shows them unless they ask it not
   // to). A test with none keeps its examples, so it is never empty. Nothing is
-  // deleted either way. One choice covers all three tests; until it is made,
-  // each test follows its own default.
-  const [chosenExamples, setChosenExamples] = useState<boolean | undefined>(
-    () => {
-      const stored = readStorage(EXAMPLES_KEY);
-      return stored === "true" ? true : stored === "false" ? false : undefined;
-    },
-  );
-  const showExamples = chosenExamples ?? info.examplesByDefault;
+  // deleted either way. The SAT and the PAA share one choice and the TSI has
+  // its own; until a choice is made each follows its test's default.
+  const [chosenExamples, setChosenExamples] = useState<
+    Record<ExamplesSetting, boolean | undefined>
+  >(() => ({ main: readExamples("main"), tsi: readExamples("tsi") }));
+  const examplesSetting = info.examplesSetting;
+  const showExamples =
+    chosenExamples[examplesSetting] ?? info.examplesByDefault;
   const setShowExamples = (next: boolean) => {
-    setChosenExamples(next);
-    writeStorage(EXAMPLES_KEY, String(next));
+    setChosenExamples((current) => ({ ...current, [examplesSetting]: next }));
+    writeStorage(EXAMPLES_KEYS[examplesSetting], String(next));
   };
   const hideBundled = ownQuestions && !showExamples;
-  const offerExamples = useMemo(
-    () =>
-      !!data &&
+  // Offered once a test that shares this setting has questions of its own.
+  const offerExamples = useMemo(() => {
+    if (!data) return false;
+    const sharing = ASSESSMENTS.filter(
+      (id) => assessmentInfo(id).examplesSetting === examplesSetting,
+    );
+    return (
       data.questions.some((question) => question.bundled === true) &&
-      ASSESSMENTS.some((id) => hasImportedQuestions(data, id)),
-    [data],
-  );
+      sharing.some((id) => hasImportedQuestions(data, id))
+    );
+  }, [data, examplesSetting]);
   const scoped = useMemo(
     () =>
       data
