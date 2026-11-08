@@ -2,7 +2,7 @@
  * THE ACCESS CODES, as hashes. This is the one place to change when a code is
  * replaced.
  *
- * Every question PDF carries one access code for its test ("Ref. SAT-XXXX-…",
+ * Every question PDF carries one access code for its test ("Ref. SAT-XXXX-XXXX-…",
  * small gray text at the bottom left of its pages). A PDF is accepted when the
  * code is found on any one page, and the app keeps the SHA-256 of that code with
  * the questions it read from the PDF. The codes themselves are never stored here
