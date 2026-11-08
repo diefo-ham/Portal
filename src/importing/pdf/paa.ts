@@ -108,11 +108,51 @@ export const peekAssessment = (page: PageLayout): string =>
 export const isPaaRecord = (record: PaaRecord) =>
   flat(record.assessment) === "paa";
 
+/** Where a question's text has got to: the stem, the choices, the answer key, the explanation. */
+type Part = "stem" | "options" | "key" | "rationale";
+
+/**
+ * Reads a page that continues the question before it (it has no "Question ID"):
+ * the stem may carry on, the choices may start or finish here, and the answer
+ * key and explanation may begin here. Lines are added to the part the question
+ * had reached, and the part it reaches is returned for the next page.
+ */
+function continueRecord(
+  record: PaaRecord,
+  page: PageLayout,
+  start: Part,
+): Part {
+  let part = start;
+  const access = accessLine(page);
+  const lines = page.lines
+    .filter((line) => line !== access?.line)
+    .sort((a, b) => top(a) - top(b));
+  for (const line of lines) {
+    const text = normalizedText(line.text);
+    if (!text) continue;
+    const inMargin = line.words[0].x0 < 25;
+    if (part === "stem" && text === "Answer" && inMargin) part = "options";
+    else if (/^Correct Answer:/.test(text)) {
+      if (part !== "rationale") part = "key";
+    } else if (text === "Rationale" && inMargin) part = "rationale";
+    else if (part === "stem") {
+      record.stemLines.push(text);
+      record.stemHeights?.push(
+        Math.max(...line.words.map((word) => word.y1 - word.y0)),
+      );
+    } else if (part === "options") record.optionLines.push(text);
+    else if (part === "rationale") record.rationaleLines.push(text);
+  }
+  return part;
+}
+
 export function indexPaaExport(
   filename: string,
   pages: readonly PageLayout[],
 ): PaaRecord[] {
   const records: PaaRecord[] = [];
+  // How far the last question's text had got when its latest page ended.
+  let part: Part = "stem";
   pages.forEach((page, index) => {
     const match = ID_PATTERN.exec(page.text);
     if (match) {
@@ -209,10 +249,20 @@ export function indexPaaExport(
         ...(access ? { ref: access.token } : {}),
         ...(badgeOf(page) ? { badge: badgeOf(page) } : {}),
       });
+      part = rationale
+        ? "rationale"
+        : key
+          ? "key"
+          : answer
+            ? "options"
+            : "stem";
     }
     if (!records.length)
       throw new Error(`Unassigned page ${index + 1} in ${filename}`);
     const last = records[records.length - 1];
+    // A continuation page adds to the choices and the explanation, which would
+    // otherwise be cut short where the first page ends.
+    if (!match) part = continueRecord(last, page, part);
     last.pages.push(index + 1);
     last.texts.push(page.text);
   });
