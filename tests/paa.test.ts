@@ -17,6 +17,7 @@ import {
   preparePaaLibrary,
 } from "../src/importing/pdf/preparePaa.ts";
 import { accessChecker } from "../src/importing/pdf/access.ts";
+import { convertSatRecord } from "../src/importing/pdf/sat.ts";
 import { sha256Hex } from "../src/importing/pdf/panels.ts";
 import { parseQuestions } from "../src/importing/json.ts";
 import type { RasterImage } from "../src/importing/pdf/raster.ts";
@@ -55,6 +56,8 @@ interface Spec {
   scaled?: boolean;
   /** A page of some other document: no question ID, no metadata table. */
   unrelated?: boolean;
+  /** The page ends early: after some choices, or after the stem alone (a question that goes on). */
+  cut?: "options" | "stem";
   /** The access code printed bottom left after "Ref.". */
   ref?: string;
   /** The SAT's ACTIVE / INACTIVE badge, top right. */
@@ -109,11 +112,9 @@ function page(spec: Spec) {
       run(spec.difficulty ?? "Medium", 484.7, data, 8.76),
       run("Question", 18, heading, 7.89),
       ...stem,
-      ...(spec.options === false ? [] : [answerLabel]),
-      ...options,
-      key,
-      rationaleLabel,
-      ...rationale,
+      ...(spec.options === false || spec.cut === "stem" ? [] : [answerLabel]),
+      ...(spec.cut === "stem" ? [] : options),
+      ...(spec.cut ? [] : [key, rationaleLabel, ...rationale]),
       ...(spec.ref ? [run("Ref. " + spec.ref, 28, 777, 5)] : []),
       ...(spec.badge ? [run(spec.badge, 511, 33, 9)] : []),
     ],
@@ -676,5 +677,132 @@ describe("access codes and the SAT badge", () => {
       "es",
     ).find((plan) => plan.kind === "rationale")!;
     expect(without.rect.y1).toBe(792);
+  });
+});
+
+describe("questions that run over several pages", () => {
+  /** A page with no question ID: the lines below the top, labels in the margin. */
+  const next = (...lines: string[]) =>
+    layoutPage(
+      lines.map((text, i) =>
+        run(
+          text,
+          18,
+          40 + i * 16,
+          text === "Answer" ||
+            text === "Rationale" ||
+            text.startsWith("Correct")
+            ? 7.89
+            : 8.6,
+        ),
+      ),
+      792,
+      612,
+    );
+  const sat = { assessment: "SAT", test: "Math", domain: "Algebra" };
+
+  it("reads choices that carry on to the next page (the 20 left-out SAT questions)", () => {
+    const [record] = indexPaaExport("sat.pdf", [
+      page({
+        id: "multi001",
+        ...sat,
+        cut: "options",
+        options: ["A. uno", "B. dos"],
+      }),
+      next(
+        "C. tres",
+        "D. cuatro",
+        "Correct Answer: B",
+        "Rationale",
+        "Una explicación.",
+      ),
+    ]);
+    expect(record.pages).toEqual([1, 2]);
+    expect(record.optionLines).toEqual([
+      "A. uno",
+      "B. dos",
+      "C. tres",
+      "D. cuatro",
+    ]);
+    expect(record.rationaleLines).toEqual(["Una explicación."]);
+    // It now converts: the labels are A to D in order.
+    const { text } = convertSatRecord(record);
+    expect(text.choices?.map((c) => c.id)).toEqual(["A", "B", "C", "D"]);
+    expect(text.answer).toEqual({ type: "choice", value: "B" });
+    // And the images split where the key is, across the two pages.
+    const plans = planCrops(record, [
+      page({ id: "multi001", ...sat, cut: "options" }),
+      next(
+        "C. tres",
+        "D. cuatro",
+        "Correct Answer: B",
+        "Rationale",
+        "Una explicación.",
+      ),
+    ]);
+    expect(plans.map((p) => [p.kind, p.page])).toEqual([
+      ["question", 1],
+      ["question", 2],
+      ["rationale", 2],
+    ]);
+  });
+
+  it("finds the Answer label and the choices when they start on a later page", () => {
+    const [record] = indexPaaExport("sat.pdf", [
+      page({
+        id: "multi002",
+        ...sat,
+        cut: "stem",
+        stem: ["Primera parte del enunciado."],
+      }),
+      next("Segunda parte del enunciado.", "Answer", "A. uno", "B. dos"),
+      next(
+        "C. tres",
+        "D. cuatro",
+        "Correct Answer: D",
+        "Rationale",
+        "Explicación.",
+      ),
+    ]);
+    expect(record.stemLines).toEqual([
+      "Primera parte del enunciado.",
+      "Segunda parte del enunciado.",
+    ]);
+    expect(record.optionLines).toEqual([
+      "A. uno",
+      "B. dos",
+      "C. tres",
+      "D. cuatro",
+    ]);
+    expect(convertSatRecord(record).text.choices).toHaveLength(4);
+  });
+
+  it("keeps an explanation that runs over several pages, in order", () => {
+    const [record] = indexPaaExport("sat.pdf", [
+      page({ id: "multi003", ...sat, cut: undefined, rationale: ["Primera."] }),
+      next("Segunda.", "Tercera."),
+      next("Cuarta."),
+    ]);
+    expect(record.rationaleLines).toEqual([
+      "Primera.",
+      "Segunda.",
+      "Tercera.",
+      "Cuarta.",
+    ]);
+  });
+
+  it("does not mix pages of two questions", () => {
+    const found = indexPaaExport("sat.pdf", [
+      page({
+        id: "one00001",
+        ...sat,
+        cut: "options",
+        options: ["A. uno", "B. dos"],
+      }),
+      next("C. tres", "D. cuatro", "Correct Answer: A", "Rationale", "Uno."),
+      page({ id: "two00002", ...sat }),
+    ]);
+    expect(found.map((r) => r.optionLines.length)).toEqual([4, 4]);
+    expect(found[1].rationaleLines).toEqual(["Una explicación sintética."]);
   });
 });
