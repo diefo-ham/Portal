@@ -8,7 +8,6 @@ import { formatElapsed } from "./formatTime";
 import { useT, type Translate } from "./i18n";
 import type { Mutate, RetryKind } from "@/src/types/ui";
 import { Select } from "./Select";
-import { defined } from "@/src/utils/defined";
 
 type ResultView = "all" | "incorrect" | "unanswered" | "correct" | "unscored";
 export const displayAnswer = (q: Question, value: string) => {
@@ -298,7 +297,9 @@ export const SessionResults = ({
                   </p>
                 )}
                 {ids.map((id) => {
-            const q = defined(data.questions.find((q) => q.id === id), "A question in this session");
+            const q = data.questions.find((q) => q.id === id);
+            // A question removed since the session is left out, not a failed screen.
+            if (!q) return null;
             const attempt = result.attempts.get(id);
             const elapsedMs = attempt?.durationMs || session.elapsed[id];
             const modulePosition = module.questionIds.indexOf(id) + 1;

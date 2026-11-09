@@ -369,4 +369,28 @@ describe("TimedTestRun", () => {
       expect(screen.getByLabelText("Pregunta 6")).toBeTruthy(),
     );
   });
+
+  it("reports a question that is no longer in the library instead of failing the screen", async () => {
+    const data = bank();
+    const session = beginTimedTest(data, {
+      parts: ["lectura"],
+      count: 3,
+      unusedOnly: false,
+    });
+    const gone = session.questionIds[session.index];
+    data.questions = data.questions.filter((q) => q.id !== gone);
+    const user = userEvent.setup();
+    render(<Stored initial={data} id={session.id} />);
+    expect(
+      screen.getByRole("heading", {
+        name: "Esta pregunta ya no está en tu biblioteca.",
+      }),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Terminar esta parte" }),
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/Resultados de la prueba/)).toBeTruthy(),
+    );
+  });
 });

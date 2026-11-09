@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./ui/App/App";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import "./ui/styles.scss";
 import { applyAppearance } from "./ui/appearance";
 import { registerWorker } from "./updates";
@@ -16,6 +17,8 @@ if ("serviceWorker" in navigator && import.meta.env.PROD)
   );
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 );

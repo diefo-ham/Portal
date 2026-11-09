@@ -4,6 +4,7 @@ import { deleteSession, renameSession } from "../core/commands";
 import {
   isTimedTestSession,
   type SegmentKey,
+  type Question,
   type Section,
   type Session,
   type StudyData,
@@ -40,7 +41,6 @@ import { RenameTestDialog } from "./PracticeTest/RenameTestDialog";
 import { TestList } from "./PracticeTest/TestList";
 import { useBusy } from "@/src/helpers/useBusy";
 import type { Mutate, RetryKind } from "@/src/types/ui";
-import { defined } from "@/src/utils/defined";
 
 /**
  * PAA test mode, as close to the real test as the sources allow: the parts in
@@ -513,6 +513,11 @@ function BreakScreen({
   );
 }
 
+/**
+ * The part being taken. A question that is no longer in the library (removed,
+ * or unreadable) is reported here, with a way to leave or end the part, instead
+ * of failing the whole screen.
+ */
 function LiveTest({
   data,
   session,
@@ -524,16 +529,70 @@ function LiveTest({
   mutate: Mutate;
   onBack: () => void;
 }) {
+  const ids = currentSegment(session.timedTest).questionIds;
+  // An earlier part is locked: a stored position outside this part is moved to its first question.
+  const position = Math.max(0, ids.indexOf(session.questionIds[session.index]));
+  const question = data.questions.find((q) => q.id === ids[position]);
+  const [pending, setPending] = useState(false);
+  if (!question)
+    return (
+      <main className="practice-page focused-practice">
+        <div className="practice-toolbar">
+          <button className="text-button" onClick={onBack}>
+            ← Salir
+          </button>
+        </div>
+        <section className="test-paused-card" role="alert">
+          <p className="eyebrow">PREGUNTA NO DISPONIBLE</p>
+          <h1>Esta pregunta ya no está en tu biblioteca.</h1>
+          <p className="muted">
+            Pudo haberse quitado al cambiar tus PDF. Puedes terminar esta parte
+            con lo que contestaste hasta ahora.
+          </p>
+          <button
+            className="primary"
+            disabled={pending}
+            onClick={() => {
+              setPending(true);
+              void mutate((d) => endTimedSegment(d, session.id)).finally(() =>
+                setPending(false),
+              );
+            }}
+          >
+            Terminar esta parte
+          </button>
+        </section>
+      </main>
+    );
+  return (
+    <LiveQuestion
+      key={session.id}
+      session={session}
+      question={question}
+      position={position}
+      mutate={mutate}
+      onBack={onBack}
+    />
+  );
+}
+
+function LiveQuestion({
+  session,
+  question,
+  position,
+  mutate,
+  onBack,
+}: {
+  session: TimedTestSession;
+  question: Question;
+  position: number;
+  mutate: Mutate;
+  onBack: () => void;
+}) {
   const test = session.timedTest;
   const segment = currentSegment(test);
   const ids = segment.questionIds;
   const lastPart = test.current === test.segments.length - 1;
-  // An earlier part is locked: a stored position outside this part is moved to its first question.
-  const position = Math.max(0, ids.indexOf(session.questionIds[session.index]));
-  const question = defined(
-    data.questions.find((q) => q.id === ids[position]),
-    "This question",
-  );
   const [now, setNow] = useState(() => Date.now());
   const [pending, setPending] = useState(false);
   const [panel, setPanel] = useState<"finish" | null>(null);

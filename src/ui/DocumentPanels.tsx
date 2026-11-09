@@ -9,6 +9,14 @@ function Panel({ panel }: { panel: DocumentPanel }) {
   useEffect(() => {
     let alive = true;
     let url = "";
+    if (!panel.src) {
+      setError(
+        t(
+          "Original PDF image is unavailable. Reload to retry importing the local library.",
+        ),
+      );
+      return;
+    }
     if (panel.src.startsWith("data:")) {
       setSrc(panel.src);
       return;
@@ -69,7 +77,7 @@ export const DocumentPanels = ({ question, kind }: DocumentPanelsProps) => {
           : t("Original PDF explanation")
       }
     >
-      {question.document?.[kind].map((panel, i) => (
+      {(question.document?.[kind] ?? []).map((panel, i) => (
         <Panel panel={panel} key={panel.src + i} />
       ))}
     </div>
