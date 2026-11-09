@@ -1,8 +1,17 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useCallback, useState } from "react";
 import { emptyData, type Assessment, type StudyData } from "../../core/model";
+import { beginTimedTest } from "../../core/timedTest";
 import { testCorpus } from "../../../tests/practiceTestFixtures";
 import { translator } from "../i18n";
 import { App } from "./App";
@@ -567,5 +576,73 @@ describe("notices", () => {
     expect(screen.getByRole("alert").textContent).toContain("Disk is full.");
     await user.click(screen.getByRole("button", { name: "Dismiss error" }));
     expect(setError).toHaveBeenCalledWith("");
+  });
+});
+
+describe("a PAA test in progress", () => {
+  it("visits every question in order, even when the example setting hides some of them", async () => {
+    location.hash = "#/paa";
+    const stored = emptyData();
+    for (let i = 0; i < 10; i++)
+      stored.questions.push({
+        id: `paa-${i}`,
+        assessment: "PAA",
+        section: "matematicas",
+        domain: "Álgebra",
+        skill: "Ecuaciones",
+        difficulty: "medium",
+        stem: `Pregunta ${i}`,
+        choices: [
+          { id: "A", text: "A" },
+          { id: "B", text: "B" },
+        ],
+        answer: { type: "choice", value: "B" },
+        testStatus: "unknown",
+      });
+    const session = beginTimedTest(stored, {
+      parts: ["matematicas"],
+      count: 10,
+      unusedOnly: false,
+    });
+    // Five questions of the test are examples (hidden unless the setting is on).
+    for (const id of session.questionIds.slice(3, 8))
+      stored.questions.find((q) => q.id === id)!.bundled = true;
+    study.useStudy.mockImplementation(() => {
+      const [data, setData] = useState(stored);
+      const mutate = useCallback(async (fn: (d: StudyData) => void) => {
+        let next!: StudyData;
+        setData((current) => {
+          next = structuredClone(current);
+          fn(next);
+          return next;
+        });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        return next;
+      }, []);
+      return answer({ data, mutate });
+    });
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole("button", { name: "Modo de prueba" }));
+    await user.click(screen.getByRole("button", { name: "Retomar" }));
+    const seen: string[] = [];
+    for (let step = 0; step < 10; step++) {
+      await waitFor(() => screen.getByLabelText(/^Pregunta \d+$/));
+      seen.push(
+        screen.getByLabelText(/^Pregunta \d+$/).getAttribute("aria-label")!,
+      );
+      const next = screen.queryByRole("button", {
+        name: /Siguiente pregunta/,
+      });
+      if (!next) break;
+      await user.click(next);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(seen).toEqual(
+      Array.from({ length: 10 }, (_, i) => `Pregunta ${i + 1}`),
+    );
+    // And back again.
+    await user.click(screen.getByRole("button", { name: "← Anterior" }));
+    await waitFor(() => screen.getByLabelText("Pregunta 9"));
   });
 });

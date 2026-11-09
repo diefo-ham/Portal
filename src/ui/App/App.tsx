@@ -171,6 +171,14 @@ export const App = () => {
         : undefined,
     [data, assessment, hideOrigin],
   );
+  // A PAA test in progress is shown exactly as stored: only the test's own
+  // questions and answers, never filtered by the example-questions setting. A
+  // filtered copy drops questions from the session and moves its position, so
+  // Siguiente would jump over them and Anterior could not return.
+  const runView = useMemo(
+    () => (data ? scopeStudyData(data, assessment) : undefined),
+    [data, assessment],
+  );
   const [page, setPage] = useState<Page>("home");
   const [protectedTests, setProtectedTests] = usePersistedBoolean(
     PROTECT_KEY,
@@ -349,6 +357,9 @@ export const App = () => {
   const testData = testView ?? view;
   const filtered = filterQuestions(view, filters);
   const current = view.sessions.find((s) => s.id === sessionId);
+  const timedCurrent = (runView ?? view).sessions.find(
+    (s) => s.id === sessionId && isTimedTestSession(s),
+  );
   const changeFilters = (value: FilterValues) => {
     setFilters(value);
     setVisible(40);
@@ -419,7 +430,11 @@ export const App = () => {
     });
   return (
     <AssessmentProvider value={assessment}>
-      {!(page === "practice" && current && !current.finishedAt) && (
+      {!(
+        page === "practice" &&
+        (timedCurrent ?? current) &&
+        !(timedCurrent ?? current)?.finishedAt
+      ) && (
         <AppHeader
           info={info}
           assessments={ASSESSMENTS.map(assessmentInfo)}
@@ -472,10 +487,12 @@ export const App = () => {
           removesAnswers={deleteRemovesAnswers}
           onAddQuestions={() => setAddOpen(true)}
         />
-      ) : page === "practice" && current && isTimedTestSession(current) ? (
+      ) : page === "practice" &&
+        timedCurrent &&
+        isTimedTestSession(timedCurrent) ? (
         <TimedTestRun
-          data={view}
-          session={current}
+          data={runView ?? view}
+          session={timedCurrent}
           mutate={mutate}
           onBack={() => setPage("tests")}
           onRetry={(ids, kind) =>
