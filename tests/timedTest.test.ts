@@ -116,8 +116,36 @@ describe("building a test", () => {
         "paa-l4",
         "paa-l5",
       ]);
-      // 4 cannot be made of whole readings: the nearest size below is used.
-      expect(buildTimedTestIds(data, pool, 4, random)).toHaveLength(3);
+      // 4 cannot be made of whole readings: a reading is started to make it up,
+      // never fewer questions than were asked for.
+      const four = buildTimedTestIds(data, pool, 4, random);
+      expect([
+        ["paa-l1", "paa-l2", "paa-l3", "paa-l4"],
+        ["paa-l1", "paa-l2", "paa-l4", "paa-l5"],
+      ]).toContainEqual(four);
+    }
+  });
+
+  it("always has as many questions as were asked for, and the setup screen planned", () => {
+    const data = bank();
+    for (const parts of [
+      ["lectura"],
+      ["lectura", "redaccion"],
+      [...ALL],
+    ] as const) {
+      const pool = timedTestPool(data, [...parts], false);
+      for (let count = 1; count <= pool.length; count++)
+        for (let seed = 1; seed <= 15; seed++) {
+          let state = seed;
+          const random = () =>
+            (state = (state * 48271) % 2147483647) / 2147483647;
+          const ids = buildTimedTestIds(data, pool, count, random);
+          expect(ids).toHaveLength(count);
+          expect(new Set(ids).size).toBe(count);
+          expect(
+            planSegments(pool, count).reduce((n, p) => n + p.questions, 0),
+          ).toBe(count);
+        }
     }
   });
 

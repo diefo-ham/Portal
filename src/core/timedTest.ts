@@ -121,8 +121,10 @@ export function allocateCounts(
 
 /**
  * Chooses `limit` questions from one part, keeping each reading's questions
- * together. The size is hit exactly whenever whole readings can add up to it;
- * otherwise it falls back to the nearest size below.
+ * together. Whole readings are used wherever they can add up to the size; when
+ * they cannot, the rest is made up with the first questions of one more reading
+ * (in order), so a test never has fewer questions than were asked for (and than
+ * the setup screen showed) as long as the part has that many.
  */
 function pickWholeReadings(
   questions: readonly Question[],
@@ -152,18 +154,27 @@ function pickWholeReadings(
         reach[i].add(sum + shuffled[i].length);
     }
   let target = Math.max(...reach[0]);
-  // No reading is small enough: keep the first questions of one, in order.
-  if (target === 0) return new Set(shuffled[0].slice(0, limit));
   const chosen = new Set<string>();
+  const taken = new Set<number>();
   shuffled.forEach((unit, i) => {
     const take =
       target >= unit.length && reach[i + 1].has(target - unit.length);
     const skip = reach[i + 1].has(target);
     if (take && (!skip || random() < 0.5)) {
       unit.forEach((id) => chosen.add(id));
+      taken.add(i);
       target -= unit.length;
     }
   });
+  // Whole readings fall short: every reading left over is bigger than the gap,
+  // so the first questions of one of them fill it exactly.
+  const gap = limit - chosen.size;
+  if (gap > 0) {
+    const left = shuffled.filter((_, i) => !taken.has(i));
+    left[Math.floor(random() * left.length)]
+      ?.slice(0, gap)
+      .forEach((id) => chosen.add(id));
+  }
   return chosen;
 }
 

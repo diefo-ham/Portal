@@ -203,12 +203,18 @@ export function selectSessionQuestionIds(
   }
   if (!limit) return shuffled.flat();
   const selected: string[] = [];
+  const left: string[][] = [];
   for (const unit of shuffled) {
-    if (selected.length + unit.length <= limit) selected.push(...unit);
-    if (selected.length === limit) break;
+    if (selected.length < limit && selected.length + unit.length <= limit)
+      selected.push(...unit);
+    else left.push(unit);
   }
-  // A reading longer than the requested size: keep its first questions, in order.
-  return selected.length ? selected : shuffled[0].slice(0, limit);
+  // Whole readings fall short of the size (or one is longer than it): make it up
+  // with the first questions, in order, of another reading, so a session is never
+  // smaller than asked for while enough questions exist.
+  if (selected.length < limit && left.length)
+    selected.push(...left[0].slice(0, limit - selected.length));
+  return selected;
 }
 export function summarize(data: StudyData) {
   const attempts = data.attempts;
