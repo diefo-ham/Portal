@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useCallback, useState } from "react";
 import {
   emptyData,
   type Question,
@@ -20,7 +21,7 @@ import {
   beginTimedTest,
   completeTimedTest,
 } from "../core/timedTest";
-import { TimedTestSetup } from "./TimedTest";
+import { TimedTestRun, TimedTestSetup } from "./TimedTest";
 
 afterEach(cleanup);
 
@@ -301,5 +302,71 @@ describe("TimedTestSetup", () => {
       expect(mutate).not.toHaveBeenCalled();
       expect(session.name!).toBe(before);
     });
+  });
+});
+
+/** Like the app: every save produces a new copy of the data, which the screen re-reads. */
+function Stored({ initial, id }: { initial: StudyData; id: string }) {
+  const [data, setData] = useState(initial);
+  const mutate = useCallback(
+    async (fn: (draft: StudyData) => void) => {
+      const next = structuredClone(data);
+      fn(next);
+      setData(next);
+      return next;
+    },
+    [data],
+  );
+  const session = data.sessions.find((s) => s.id === id)!;
+  return (
+    <TimedTestRun
+      data={data}
+      session={
+        session as Session & { timedTest: NonNullable<Session["timedTest"]> }
+      }
+      mutate={mutate}
+      onBack={() => {}}
+      onRetry={() => {}}
+    />
+  );
+}
+
+describe("TimedTestRun", () => {
+  it("moves through every question of a part, by Siguiente and by the overview", async () => {
+    const data = bank();
+    const session = beginTimedTest(data, {
+      parts: ["lectura", "redaccion"],
+      count: 6,
+      unusedOnly: false,
+    });
+    const total = session.timedTest!.segments[0].questionIds.length;
+    expect(total).toBe(6);
+    const user = userEvent.setup();
+    render(<Stored initial={data} id={session.id} />);
+    for (let n = 1; n < total; n++) {
+      await user.click(
+        screen.getByRole("button", { name: /Siguiente pregunta/ }),
+      );
+      await waitFor(() =>
+        expect(screen.getByLabelText(`Pregunta ${n + 1}`)).toBeTruthy(),
+      );
+    }
+    // The overview reaches any question of the part, and the last one has no "next".
+    await user.click(
+      screen.getByRole("button", { name: "Revisar y terminar →" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Ir a la pregunta 2,/ }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Pregunta 2")).toBeTruthy(),
+    );
+    await user.click(screen.getByRole("button", { name: "Resumen" }));
+    await user.click(
+      await screen.findByRole("button", { name: /Ir a la pregunta 6,/ }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Pregunta 6")).toBeTruthy(),
+    );
   });
 });

@@ -559,8 +559,20 @@ function LiveTest({
   }, []);
   // Time ran out (also if the browser was closed while the clock was running).
   const expired = timedExpired(session, now);
+  // If saving fails, try again: until the part is closed, its answers stay locked.
   useEffect(() => {
-    if (expired) void mutate((d) => endTimedSegment(d, session.id));
+    if (!expired) return;
+    let stopped = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const end = () =>
+      void mutate((d) => endTimedSegment(d, session.id)).catch(() => {
+        if (!stopped) retry = setTimeout(end, 2000);
+      });
+    end();
+    return () => {
+      stopped = true;
+      clearTimeout(retry);
+    };
   }, [expired, mutate, session.id]);
   useEffect(() => {
     if (panel) {
@@ -584,11 +596,15 @@ function LiveTest({
   const go = (target: number) =>
     run(async () => {
       await timer.flush();
+      // The position is looked up in the stored session, not in this screen's
+      // copy, which may have had questions filtered out.
       await mutate((d) =>
         goToTimedQuestion(
           d,
           session.id,
-          session.questionIds.indexOf(ids[target]),
+          d.sessions
+            .find((s) => s.id === session.id)
+            ?.questionIds.indexOf(ids[target]) ?? -1,
         ),
       );
     });

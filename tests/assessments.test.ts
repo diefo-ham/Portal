@@ -440,19 +440,48 @@ describe("shared readings in a session", () => {
     }
   });
 
-  it("chooses whole readings when the size allows and never exceeds the size", () => {
+  it("chooses whole readings when the size allows and is never smaller or bigger than the size", () => {
     for (let seed = 0; seed < 30; seed++) {
       let state = seed + 1;
       const random = () => ((state = (state * 48271) % 2147483647) / 2147483647);
       const picked = selectSessionQuestionIds(questions, ids, 4, [], random);
-      expect(picked.length).toBeLessThanOrEqual(4);
-      for (const group of [
+      expect(picked).toHaveLength(4);
+      expect(new Set(picked).size).toBe(4);
+      // At most one reading is cut short, to make up the size.
+      const cut = [
         ["paa-a1", "paa-a2", "paa-a3"],
         ["paa-b1", "paa-b2"],
-      ]) {
-        const inside = group.filter((id) => picked.includes(id));
-        expect([0, group.length]).toContain(inside.length);
-      }
+      ].filter((group) => {
+        const inside = group.filter((id) => picked.includes(id)).length;
+        return inside > 0 && inside < group.length;
+      });
+      expect(cut.length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("makes up the size with part of a reading when whole readings cannot add up to it", () => {
+    const readings = items([
+      ["a1", "g-a"],
+      ["a2", "g-a"],
+      ["a3", "g-a"],
+      ["a4", "g-a"],
+      ["b1", "g-b"],
+      ["b2", "g-b"],
+      ["b3", "g-b"],
+      ["b4", "g-b"],
+    ]);
+    for (let seed = 0; seed < 20; seed++) {
+      let state = seed + 1;
+      const random = () => ((state = (state * 48271) % 2147483647) / 2147483647);
+      const picked = selectSessionQuestionIds(
+        readings,
+        readings.map((q) => q.id),
+        6,
+        [],
+        random,
+      );
+      expect(picked).toHaveLength(6);
+      expect(new Set(picked).size).toBe(6);
     }
   });
 
