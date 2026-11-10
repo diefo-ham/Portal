@@ -64,6 +64,21 @@ Installing dependencies needs the internet once; the built app and local server 
 ## How it is built
 
 React 19, TypeScript and Vite, with plain CSS and local system fonts. The calculator uses locally bundled DesQuill, Math.js, KaTeX and ml-matrix. Questions, progress, bookmarks and the question images are stored in IndexedDB, in atomic transactions, so a failed write shows an error instead of leaving data half-saved; preferences use localStorage.
+| Location                     | Responsibility                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `src/core/model.ts`          | Central question, attempt, annotation, session, and filter types               |
+| `src/core/practice.ts`       | Pure scoring, filtering, session creation, and analytics                       |
+| `src/core/commands.ts`       | Session lifecycle and validated, idempotent answer submissions                 |
+| `src/core/taxonomy.ts`       | Scoped metadata identity and conservative label grouping                       |
+| `src/core/review.ts`         | Session outcomes, current-status queues, and historical attempt analytics      |
+| `src/importing/json.ts`      | Untrusted JSON validation and conservative duplicate handling                  |
+| `src/importing/backup.ts`    | Study-state snapshot validation (used by Reset's undo)                          |
+| `src/storage/database.ts`    | IndexedDB connection and atomic read-modify-write operations                   |
+| `src/ui/`                    | Screens, components, presentation state, and styles                            |
+| `src/ui/useQuestionTimer.ts` | Foreground timing and persistence checkpoints, independent of layout           |
+| `src/calculator/`            | Modular parser, numerics, regression, SVG graph, workspace and session adapter |
+| `tests/fixtures/synthetic.json` | Original example questions used by automated tests only                     |
+| `scripts/serve.ts`           | Dependency-free production server for built local assets                       |
 
 | Location           | Responsibility                                                              |
 | ------------------ | --------------------------------------------------------------------------- |

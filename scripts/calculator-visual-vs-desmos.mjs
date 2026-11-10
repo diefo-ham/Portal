@@ -61,7 +61,7 @@ const sample = JSON.parse(readFileSync("tests/fixtures/synthetic.json", "utf8"))
 const data = { ...emptyData(), questions: parseQuestions(sample) };
 await vite.close();
 
-const server = spawn("node", ["scripts/serve.mjs", "--port", "4331", "--no-local-library", "--no-local-config"], { stdio: "ignore" });
+const server = spawn("node", ["scripts/serve.ts", "--port", "4331", "--no-local-library", "--no-local-config"], { stdio: "ignore" });
 await new Promise((r) => setTimeout(r, 1500));
 const browser = await chromium.launch({ channel: "msedge" });
 

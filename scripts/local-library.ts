@@ -1,9 +1,15 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 const root = resolve("private-data/library");
 /** Only published local-library artifacts are exposed, never source PDFs or arbitrary files. */
-export async function serveLocalLibrary(req, res, next, disabled = false) {
-  const path = new URL(req.url, "http://127.0.0.1").pathname;
+export async function serveLocalLibrary(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: () => void,
+  disabled = false,
+) {
+  const path = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
   if (!path.startsWith("/local-library/")) {
     next();
     return;

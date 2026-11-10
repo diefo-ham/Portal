@@ -7,8 +7,18 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { resolve, join } from "node:path";
+interface LockEntry {
+  dev?: boolean;
+  optional?: boolean;
+}
+interface PackageJson {
+  name: string;
+  version: string;
+  license?: string;
+  main?: string;
+}
 const root = resolve(import.meta.dirname, "..");
-const lock = JSON.parse(
+const lock: { packages: Record<string, LockEntry> } = JSON.parse(
   await readFile(join(root, "package-lock.json"), "utf8"),
 );
 const output = join(root, "public", "licenses");
@@ -24,7 +34,9 @@ for (const [path, entry] of Object.entries(lock.packages)) {
   if (!path.startsWith("node_modules/") || entry.dev || entry.optional)
     continue;
   const folder = join(root, path);
-  const pkg = JSON.parse(await readFile(join(folder, "package.json"), "utf8"));
+  const pkg: PackageJson = JSON.parse(
+    await readFile(join(folder, "package.json"), "utf8"),
+  );
   const label = pkg.name.replaceAll("/", "-").replaceAll("@", "");
   index.push(
     `${pkg.name} ${pkg.version} — ${pkg.license || "see package license"}`,

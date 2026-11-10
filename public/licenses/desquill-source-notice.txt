@@ -5,7 +5,7 @@ Unmodified upstream source from https://github.com/desmosinc/desquill at
 Source is MPL-2.0, including the bundled Symbola subset and upstream vendor notices.
 This is the open-source formula editor, **not** the proprietary hosted Desmos calculator.
 
-`node scripts/build-desquill.mjs` rebuilds `desquill.js` and `desquill.css` from
+`node scripts/build-desquill.ts` rebuilds `desquill.js` and `desquill.css` from
 the retained source using esbuild and Sass. No upstream source modifications.
 The adapter in `src/calculator/MathEditor.tsx` and parser in `latex.ts` are portal code.
 
