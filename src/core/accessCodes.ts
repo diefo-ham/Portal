@@ -9,7 +9,7 @@
  * or anywhere else in the repository: only their SHA-256 hashes.
  *
  * To replace a code:
- *   1. Run `node scripts/access-hash.mjs "SAT-XXXX-XXXX-XXXX-XXXX"` (it prints
+ *   1. Run `node scripts/access-hash.ts "SAT-XXXX-XXXX-XXXX-XXXX"` (it prints
  *      the hash; nothing is saved).
  *   2. Put the hash below, for that test.
  *   3. Release. When a person updates the app (the pop-up cannot be dismissed

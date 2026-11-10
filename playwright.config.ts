@@ -35,7 +35,7 @@ export default defineConfig({
         : "msedge",
   },
   webServer: {
-    command: "node scripts/serve.mjs --port 4318 --no-local-library",
+    command: "node scripts/serve.ts --port 4318 --no-local-library",
     url: "http://127.0.0.1:4318",
     reuseExistingServer: !process.env.CI,
   },

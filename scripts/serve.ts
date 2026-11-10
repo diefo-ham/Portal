@@ -1,7 +1,7 @@
 import http from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
-import { serveLocalLibrary } from "./local-library.mjs";
+import { serveLocalLibrary } from "./local-library.ts";
 const port = Number(
   process.argv.includes("--port")
     ? process.argv[process.argv.indexOf("--port") + 1]
@@ -16,7 +16,7 @@ try {
   console.error("Build the app first: npm run build");
   process.exit(1);
 }
-const mime = {
+const mime: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -31,17 +31,14 @@ const mime = {
   ".txt": "text/plain; charset=utf-8",
 };
 const server = http.createServer(async (req, res) => {
-  if (!["GET", "HEAD"].includes(req.method)) {
+  const url = new URL(req.url ?? "/", "http://127.0.0.1");
+  if (!["GET", "HEAD"].includes(req.method ?? "")) {
     res.writeHead(405);
     res.end();
     return;
   }
   try {
-    if (
-      new URL(req.url, "http://127.0.0.1").pathname.startsWith(
-        "/local-library/",
-      )
-    ) {
+    if (url.pathname.startsWith("/local-library/")) {
       await serveLocalLibrary(
         req,
         res,
@@ -50,9 +47,7 @@ const server = http.createServer(async (req, res) => {
       );
       return;
     }
-    const path = decodeURIComponent(
-      new URL(req.url, "http://127.0.0.1").pathname,
-    );
+    const path = decodeURIComponent(url.pathname);
     const target = resolve(root, "." + (path === "/" ? "/index.html" : path));
     if (!target.startsWith(root + sep)) {
       res.writeHead(403);
@@ -72,7 +67,7 @@ const server = http.createServer(async (req, res) => {
     res.end("Not found");
   }
 });
-server.on("error", (error) => {
+server.on("error", (error: NodeJS.ErrnoException) => {
   console.error(
     error.code === "EADDRINUSE"
       ? `Port ${port} is in use. Close the other SAT Study server, or open http://127.0.0.1:${port}.`

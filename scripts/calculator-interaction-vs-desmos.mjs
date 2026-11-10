@@ -24,7 +24,7 @@ const { emptyData } = await vite.ssrLoadModule("/src/core/model.ts");
 const data = { ...emptyData(), questions: parseQuestions(JSON.parse(readFileSync("tests/fixtures/synthetic.json", "utf8"))) };
 await vite.close();
 
-const server = spawn("node", ["scripts/serve.mjs", "--port", "4332", "--no-local-library", "--no-local-config"], { stdio: "ignore" });
+const server = spawn("node", ["scripts/serve.ts", "--port", "4332", "--no-local-library", "--no-local-config"], { stdio: "ignore" });
 await new Promise((r) => setTimeout(r, 1500));
 const browser = await chromium.launch({ channel: "msedge" });
 

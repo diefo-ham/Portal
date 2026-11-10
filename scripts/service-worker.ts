@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join, relative, resolve, sep } from "node:path";
+import type { Plugin } from "vite";
 
 const worker = `// Generated at build time. Precaches the built app so it opens offline.
 const CACHE = "sat-study-__VERSION__";
@@ -64,8 +65,8 @@ self.addEventListener("fetch", (event) => {
 });
 `;
 
-async function list(directory) {
-  const files = [];
+async function list(directory: string): Promise<string[]> {
+  const files: string[] = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) files.push(...(await list(path)));
@@ -75,7 +76,7 @@ async function list(directory) {
 }
 
 /** Emits dist/sw.js listing every built file, versioned by their combined hash. */
-export function serviceWorker() {
+export function serviceWorker(): Plugin {
   let outDir = "dist";
   return {
     name: "offline-service-worker",

@@ -70,7 +70,7 @@ async function serveCopyOfBuild() {
   server = spawn(
     process.execPath,
     [
-      resolve("scripts/serve.mjs"),
+      resolve("scripts/serve.ts"),
       "--port",
       String(PORT),
       "--no-local-library",

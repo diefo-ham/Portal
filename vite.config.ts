@@ -1,8 +1,8 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { serveLocalLibrary } from "./scripts/local-library.mjs";
-import { serviceWorker } from "./scripts/service-worker.mjs";
+import { serveLocalLibrary } from "./scripts/local-library.ts";
+import { serviceWorker } from "./scripts/service-worker.ts";
 export default defineConfig({
   // Relative URLs let the same build run at a domain root, a GitHub Pages
   // project path, or the local server. Set VITE_BASE to pin an absolute path.

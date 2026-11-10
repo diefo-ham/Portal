@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4317 --strictPort",
     "build": "tsc -b && vite build",
-    "start": "node scripts/serve.mjs",
+    "start": "node scripts/serve.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "prebuild": "node scripts/update-notices.mjs",
-    "licenses": "node scripts/update-notices.mjs",
-    "build:editor": "node scripts/build-desquill.mjs"
+    "prebuild": "node scripts/update-notices.ts",
+    "licenses": "node scripts/update-notices.ts",
+    "build:editor": "node scripts/build-desquill.ts"
   },
   "dependencies": {
     "@fluent/bundle": "0.19.1",
