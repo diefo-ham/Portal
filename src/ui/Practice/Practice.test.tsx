@@ -361,6 +361,16 @@ describe("Practice", () => {
 });
 
 describe("a TSI practice test", () => {
+  it("times the whole test, not each question", () => {
+    const { data, session } = tsiTest();
+    session.timerVisible = true;
+    session.elapsed = { "tsi-a": 60_000, "tsi-b": 30_000 };
+    session.index = 2;
+    setup({ data, session });
+    expect(screen.queryByLabelText("Time on this question")).toBeNull();
+    expect(screen.getByLabelText("Time on this test").textContent).toBe("1:30");
+  });
+
   it("can be gone back through, and shows no feedback", () => {
     setup(tsiTest());
     expect(screen.getByRole("button", { name: /Previous/ })).toBeTruthy();

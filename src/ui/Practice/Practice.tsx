@@ -270,6 +270,10 @@ export const Practice = ({
     void finish();
   };
   const attempts = data.attempts.filter((a) => a.sessionId === session.id);
+  const sessionElapsed = Object.values(session.elapsed).reduce(
+    (total, ms) => total + ms,
+    0,
+  );
   const calculatorPanel = (
     <CalculatorPanel
       key={calculatorTier}
@@ -357,9 +361,16 @@ export const Practice = ({
                 text: time(
                   testClock
                     ? testClock.ms
-                    : (session.elapsed[question.id] || 0) + timer.pendingMs,
+                    : tsiMode
+                      ? // A TSI test is timed as a whole, across every question.
+                        sessionElapsed + timer.pendingMs
+                      : (session.elapsed[question.id] || 0) + timer.pendingMs,
                 ),
-                label: testClock?.label || t("Time on this question"),
+                label:
+                  testClock?.label ||
+                  (tsiMode
+                    ? t("Time on this test")
+                    : t("Time on this question")),
                 test: !!testClock,
                 warning: !!testClock?.warning,
               }

@@ -125,6 +125,7 @@ export const es: Record<string, string> = {
   "Question {n}": "Pregunta {n}",
   "of {total}": "de {total}",
   "Time on this question": "Tiempo en esta pregunta",
+  "Time on this test": "Tiempo en esta prueba",
   "Practice tools": "Herramientas de práctica",
   "Remove bookmark": "Quitar el marcador",
   "Bookmark question": "Marcar la pregunta",
