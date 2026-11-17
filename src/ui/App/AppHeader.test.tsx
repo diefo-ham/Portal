@@ -157,4 +157,26 @@ describe("AppHeader", () => {
     setup({ page: "home", testOpen: true });
     expect(current()).toEqual(["Practice"]);
   });
+  it("shrinks the side rail to its icons, remembers it, and opens it again", async () => {
+    localStorage.clear();
+    const { user } = setup();
+    const header = document.querySelector("header")!;
+    expect(header.className).not.toContain("rail-collapsed");
+    await user.click(screen.getByRole("button", { name: "Collapse sidebar" }));
+    expect(header.className).toContain("rail-collapsed");
+    expect(localStorage.getItem("sat-rail")).toBe("collapsed");
+    await user.click(screen.getByRole("button", { name: "Keep sidebar open" }));
+    expect(header.className).not.toContain("rail-collapsed");
+    expect(localStorage.getItem("sat-rail")).toBe("open");
+    localStorage.clear();
+  });
+
+  it("starts shrunk when that was the last choice", () => {
+    localStorage.setItem("sat-rail", "collapsed");
+    setup();
+    expect(document.querySelector("header")!.className).toContain(
+      "rail-collapsed",
+    );
+    localStorage.clear();
+  });
 });

@@ -1,8 +1,12 @@
+import { useState } from "react";
 import type { AssessmentInfo } from "../../core/assessments";
 import type { Assessment } from "../../core/model";
 import { Help } from "../Help";
 import { useT } from "../i18n";
 import type { Page } from "@/src/types/ui";
+import { readStorage, writeStorage } from "@/src/utils/storage";
+
+const RAIL_KEY = "sat-rail";
 
 export type AppHeaderProps = {
   info: AssessmentInfo;
@@ -27,6 +31,15 @@ export const AppHeader = ({
   onSwitchAssessment,
 }: AppHeaderProps) => {
   const t = useT();
+  // The side rail can shrink to its icons and open again on hover (laptop
+  // widths only; the top bar on a narrow screen ignores this).
+  const [collapsed, setCollapsed] = useState(
+    () => readStorage(RAIL_KEY) === "collapsed",
+  );
+  const toggleRail = () => {
+    writeStorage(RAIL_KEY, collapsed ? "open" : "collapsed");
+    setCollapsed(!collapsed);
+  };
   // One stroke style for every icon; they are decoration beside a text label.
   const icons: Partial<Record<Page, string>> = {
     home: "M4 16V5l6-2 6 2v11M8 16v-5h4v5",
@@ -50,7 +63,7 @@ export const AppHeader = ({
   else if (info.testMode) links.push(["tests", "Test mode"]);
   else if (info.fixedTests) links.push(["tests", "Tests"]);
   return (
-    <header className="app-header">
+    <header className={`app-header ${collapsed ? "rail-collapsed" : ""}`}>
       <button className="brand" onClick={onHome}>
         <span className="brand-icon">{info.name[0]}</span>
         <span>
@@ -113,6 +126,12 @@ export const AppHeader = ({
           </span>
         </button>
       </nav>
+      <button className="rail-toggle" onClick={toggleRail}>
+        <svg className="nav-icon" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M3 4h14v12H3zM8 4v12" />
+        </svg>
+        {collapsed ? t("Keep sidebar open") : t("Collapse sidebar")}
+      </button>
     </header>
   );
 };

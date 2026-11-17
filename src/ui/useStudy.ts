@@ -28,6 +28,9 @@ export function useStudy(assessment: Assessment = "SAT") {
   const [revoked, setRevoked] = useState(0);
   useEffect(() => {
     loadPreparedLibrary(setLoadingMessage)
+      // A damaged local library is reported, but the questions already stored
+      // and the bundled examples still load.
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .then(() => revokeUnverifiedQuestions())
       .then(({ removed }) => {
         if (removed) setRevoked(removed);
