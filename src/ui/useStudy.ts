@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { type Assessment, type StudyData } from "../core/model";
-import {
-  readData,
-  updateData,
-  readResetArchive,
-  type UpdateOptions,
-} from "../storage/database";
-import type { ResetArchive } from "../storage/resetArchive";
+import { type StudyData } from "../core/model";
+import { dropResetArchives, readData, updateData } from "../storage/database";
 import {
   keepStorage,
   revokeUnverifiedQuestions,
@@ -16,9 +10,8 @@ import {
   loadBundledExamples,
   loadPreparedLibrary,
 } from "../importing/preparedLibrary";
-export function useStudy(assessment: Assessment = "SAT") {
+export function useStudy() {
   const [data, setData] = useState<StudyData>();
-  const [archive, setArchive] = useState<ResetArchive>();
   const [error, setError] = useState("");
   const [writes, setWrites] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState(
@@ -48,37 +41,24 @@ export function useStudy(assessment: Assessment = "SAT") {
         }
       });
   }, []);
-  // Each test keeps its own recovery archive for a progress reset.
+  // Earlier versions kept a restorable copy of the study state from before a
+  // reset. Failing to remove a leftover copy must not disturb the app.
   useEffect(() => {
-    let current = true;
-    readResetArchive(assessment)
-      .then((found) => {
-        if (current) setArchive(found);
-      })
-      .catch(() => {
-        if (current) setArchive(undefined);
-      });
-    return () => {
-      current = false;
-    };
-  }, [assessment, data === undefined]);
-  const mutate = useCallback(
-    async (fn: (d: StudyData) => void, options?: UpdateOptions) => {
-      setWrites((n) => n + 1);
-      try {
-        const next = await updateData(fn, options);
-        setData(next);
-        if (options) setArchive(await readResetArchive(options.assessment));
-        return next;
-      } catch (e) {
-        setError(storageErrorMessage(e));
-        throw e;
-      } finally {
-        setWrites((n) => n - 1);
-      }
-    },
-    [],
-  );
+    void dropResetArchives().catch(() => {});
+  }, []);
+  const mutate = useCallback(async (fn: (d: StudyData) => void) => {
+    setWrites((n) => n + 1);
+    try {
+      const next = await updateData(fn);
+      setData(next);
+      return next;
+    } catch (e) {
+      setError(storageErrorMessage(e));
+      throw e;
+    } finally {
+      setWrites((n) => n - 1);
+    }
+  }, []);
   /** Runs a preparation that ends in a library, then shows the stored data. */
   const adoptLibrary = useCallback(
     async <T extends { result: { data: StudyData } }>(
@@ -99,7 +79,6 @@ export function useStudy(assessment: Assessment = "SAT") {
   );
   return {
     data,
-    archive,
     mutate,
     adoptLibrary,
     error,

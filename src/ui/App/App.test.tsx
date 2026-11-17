@@ -22,7 +22,6 @@ vi.mock("../useStudy", () => study);
 
 const answer = (overrides: Record<string, unknown> = {}) => ({
   data: testCorpus(2) as StudyData | undefined,
-  archive: undefined,
   mutate: vi.fn(async () => emptyData()),
   adoptLibrary: vi.fn(),
   error: "",
@@ -46,12 +45,14 @@ afterEach(() => {
   location.hash = "";
   document.documentElement.lang = "";
   document.documentElement.removeAttribute("data-theme");
+  document.documentElement.removeAttribute("data-assessment");
   vi.clearAllMocks();
 });
 
 const nav = () => screen.getByRole("navigation");
-const assessmentsAsked = () =>
-  study.useStudy.mock.calls.map((call) => call[0] as Assessment);
+// The chosen test is written on <html>, where the stylesheet picks its tint.
+const chosenTest = () =>
+  document.documentElement.dataset.assessment as Assessment | undefined;
 
 describe("loading", () => {
   it("shows the loading message until the data arrives", () => {
@@ -76,7 +77,7 @@ describe("loading", () => {
 describe("choosing the test", () => {
   it("starts on the SAT in a fresh browser", () => {
     render(<App />);
-    expect(assessmentsAsked().at(-1)).toBe("SAT");
+    expect(chosenTest()).toBe("SAT");
     expect(screen.getByRole("button", { name: /SAT Study/ })).toBeTruthy();
     expect(document.documentElement.lang).toBe("en");
   });
@@ -84,7 +85,7 @@ describe("choosing the test", () => {
   it("follows a link to the PAA", () => {
     location.hash = "#/paa";
     render(<App />);
-    expect(assessmentsAsked().at(-1)).toBe("PAA");
+    expect(chosenTest()).toBe("PAA");
     expect(screen.getByRole("button", { name: /PAA Study/ })).toBeTruthy();
     expect(document.documentElement.lang).toBe("es");
   });
@@ -92,20 +93,20 @@ describe("choosing the test", () => {
   it("reopens the test used last", () => {
     localStorage.setItem("sat-last-assessment", "PAA");
     render(<App />);
-    expect(assessmentsAsked().at(-1)).toBe("PAA");
+    expect(chosenTest()).toBe("PAA");
   });
 
   it("prefers the link over the remembered test", () => {
     localStorage.setItem("sat-last-assessment", "PAA");
     location.hash = "#/sat";
     render(<App />);
-    expect(assessmentsAsked().at(-1)).toBe("SAT");
+    expect(chosenTest()).toBe("SAT");
   });
 
   it("ignores a remembered value that is not a test", () => {
     localStorage.setItem("sat-last-assessment", "GRE");
     render(<App />);
-    expect(assessmentsAsked().at(-1)).toBe("SAT");
+    expect(chosenTest()).toBe("SAT");
   });
 
   it("switches test from the header, and remembers it", async () => {
@@ -114,7 +115,7 @@ describe("choosing the test", () => {
     await user.click(screen.getByRole("button", { name: "Switch to PAA" }));
     expect(location.hash).toBe("#/paa");
     expect(localStorage.getItem("sat-last-assessment")).toBe("PAA");
-    expect(assessmentsAsked().at(-1)).toBe("PAA");
+    expect(chosenTest()).toBe("PAA");
     expect(screen.getByRole("button", { name: /PAA Study/ })).toBeTruthy();
     expect(document.documentElement.lang).toBe("es");
   });
@@ -125,7 +126,7 @@ describe("choosing the test", () => {
       location.hash = "#/paa";
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
-    expect(assessmentsAsked().at(-1)).toBe("PAA");
+    expect(chosenTest()).toBe("PAA");
     expect(screen.getByRole("button", { name: /PAA Study/ })).toBeTruthy();
   });
 

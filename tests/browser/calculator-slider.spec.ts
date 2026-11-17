@@ -77,6 +77,27 @@ test("playing a slider moves its value within the range, and pausing stops it", 
     expect(Number(value)).toBeLessThanOrEqual(10);
   }
 
+  // Pause while "Back and forth" is on its way down (checked every frame, in
+  // the page): "Once" must still run up to the maximum afterwards. Between 5
+  // and 8 it is at least a second away from turning round at the bottom.
+  await page.waitForFunction(
+    () => {
+      const input = document.querySelector<HTMLInputElement>(
+        'input[type="range"][aria-label="a slider"]',
+      );
+      const memory = window as unknown as { previous?: number };
+      const value = Number(input?.value);
+      const down =
+        memory.previous !== undefined &&
+        value < memory.previous &&
+        value >= 5 &&
+        value <= 8;
+      memory.previous = value;
+      return down;
+    },
+    undefined,
+    { polling: "raf", timeout: 15_000 },
+  );
   await page.getByRole("button", { name: "Pause a slider" }).click();
   // The last tick can still land just after the click; wait for the value to rest.
   await page.waitForTimeout(300);

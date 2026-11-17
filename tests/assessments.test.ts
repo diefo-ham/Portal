@@ -26,7 +26,7 @@ import {
 import { performanceOverview } from "../src/core/review";
 import { mergeQuestions, parseQuestions } from "../src/importing/json";
 import { parseBackup } from "../src/importing/backup";
-import { readData, readResetArchive, updateData } from "../src/storage/database";
+import { readData, updateData } from "../src/storage/database";
 import { removeQuestionLibrary } from "../src/storage/localData";
 import { taxonomyOptions } from "../src/core/taxonomy";
 import sample from "./fixtures/synthetic.json";
@@ -261,7 +261,7 @@ describe("progress stays separate per assessment", () => {
       await updateData((d) => Object.assign(d, emptyData()));
     });
 
-    it("saves and restores each test's reset archive separately", async () => {
+    it("resets one test's progress and leaves the other's untouched", async () => {
       await updateData((d) => {
         d.questions = both().questions;
         const sat = satId(d);
@@ -270,22 +270,13 @@ describe("progress stays separate per assessment", () => {
         submitAnswer(d, d.sessions[0].id, sat, "A");
         submitAnswer(d, d.sessions[1].id, "paa-p1", "B");
       });
-      await updateData((d) => resetStudyProgress(d, false, "PAA"), {
-        resetArchive: "save",
-        assessment: "PAA",
-      });
-      expect((await readResetArchive("PAA"))?.assessment).toBe("PAA");
-      expect(await readResetArchive("SAT")).toBeUndefined();
-      // Study some SAT after the PAA reset: restoring PAA must not undo it.
-      await updateData((d) => {
-        beginSession(d, [satId(d)], defaultFilters);
-      });
-      const restored = await updateData(() => {}, {
-        resetArchive: "restore",
-        assessment: "PAA",
-      });
-      expect(scopeStudyData(restored, "PAA").attempts).toHaveLength(1);
-      expect(scopeStudyData(restored, "SAT").sessions).toHaveLength(2);
+      const after = await updateData((d) =>
+        resetStudyProgress(d, false, "PAA"),
+      );
+      expect(scopeStudyData(after, "PAA").attempts).toHaveLength(0);
+      expect(scopeStudyData(after, "PAA").sessions).toHaveLength(0);
+      expect(scopeStudyData(after, "SAT").attempts).toHaveLength(1);
+      expect(scopeStudyData(after, "SAT").sessions).toHaveLength(1);
     });
 
     it("removes one test's questions and keeps the other's and all answers", async () => {

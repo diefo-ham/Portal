@@ -255,18 +255,8 @@ test("tables, pasted rows, fits, sliders and session persistence through reset r
     .getByRole("button", { name: "Confirm reset", exact: true })
     .click();
   await expect(page.getByRole("status")).toContainText("Study progress reset");
-  await page
-    .getByRole("button", { name: "Restore previous study state", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Confirm restore", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Previous study state restored",
-  );
-  expect(
-    (await state(page)).sessions.find((s) => s.id === first.id)?.calculator,
-  ).toEqual(first.calculator);
+  // A reset removes the session, and its calculator work with it.
+  expect((await state(page)).sessions).toEqual([]);
 });
 
 for (const theme of ["light", "dark"])

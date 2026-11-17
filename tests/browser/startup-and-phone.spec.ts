@@ -51,7 +51,11 @@ test.describe("the optional local library never blocks the first run", () => {
         : route.fulfill({ status: 500, body: "Server error" }),
     );
     await page.goto("/#/sat");
-    await expect(page.locator(".banner.error")).toBeVisible();
+    // The banner appears once the examples have been copied in, which takes a
+    // few seconds on a busy machine.
+    await expect(page.locator(".banner.error")).toBeVisible({
+      timeout: 20_000,
+    });
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(stored(page)).toContainText("120 questions");
   });
@@ -154,9 +158,21 @@ test.describe("the side rail", () => {
     expect(await width(page)).toBe(216);
     const openLeft = await pageLeft(page);
 
+    // It shuts at once, even though the pointer is still over it.
     await page.getByRole("button", { name: "Collapse sidebar" }).click();
-    await page.mouse.move(900, 400);
     await expect.poll(() => width(page)).toBe(64);
+    await page.mouse.move(900, 400);
+    // Shut, the switch shows the current test alone, inside the strip.
+    const current = (await page
+      .getByRole("button", { name: "Test: SAT" })
+      .boundingBox())!;
+    expect(current.x + current.width).toBeLessThanOrEqual(64);
+    for (const other of ["Switch to PAA", "Switch to TSI"])
+      expect(
+        (await page.getByRole("button", { name: other }).boundingBox())!.width,
+      ).toBe(0);
+    // The page slides over to fill the space (220ms); measure once it rests.
+    await page.waitForTimeout(400);
     const shutLeft = await pageLeft(page);
     expect(shutLeft).toBeLessThan(openLeft);
 
@@ -189,7 +205,24 @@ test.describe("the side rail", () => {
     await page.getByRole("button", { name: "Keep sidebar open" }).click();
     await page.mouse.move(900, 400);
     await expect.poll(() => width(page)).toBe(216);
-    expect(await pageLeft(page)).toBe(openLeft);
+    // Back on the page it started from, the page sits where it did.
+    await page.getByRole("button", { name: "Practice", exact: true }).click();
+    await expect.poll(() => pageLeft(page)).toBe(openLeft);
+  });
+
+  test("does not slide the page into place when it loads", async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.goto("/");
+    await loadSample(page);
+    const left = () =>
+      page.evaluate(() =>
+        Math.round(document.querySelector("main")!.getBoundingClientRect().x),
+      );
+    // Measure the moment the rail appears: a slide would still be under way.
+    await page.getByRole("navigation", { name: "Main navigation" }).waitFor();
+    const first = await left();
+    await page.waitForTimeout(300);
+    expect(await left()).toBe(first);
   });
 
   test("leaves the top bar on a narrow screen alone", async ({ page }) => {

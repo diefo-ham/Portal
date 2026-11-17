@@ -11,8 +11,8 @@ export const es: Record<string, string> = {
   Tests: "Pruebas",
   "Test mode": "Modo de prueba",
   Settings: "Ajustes",
-  "Collapse sidebar": "Contraer la barra lateral",
-  "Keep sidebar open": "Mantener abierta la barra lateral",
+  "Collapse sidebar": "Contraer la barra",
+  "Keep sidebar open": "Fijar la barra",
   "Turn your phone sideways for larger text.":
     "Gira el teléfono de lado para ver el texto más grande.",
   "Hide this tip": "Ocultar este consejo",
@@ -412,8 +412,6 @@ export const es: Record<string, string> = {
     "{n} preguntas guardadas en este navegador, con tus respuestas.",
   "Nothing is uploaded, and no account is needed.":
     "No se envía nada y no hace falta una cuenta.",
-  "Previous study state restored. Saved timers are paused.":
-    "Se restauró el estado de estudio anterior. Los cronómetros guardados están en pausa.",
   "Study progress reset. Your question bank is ready to use.":
     "Se reinició el progreso. Tu banco de preguntas está listo para usarse.",
   "Questions removed. Add your PDFs again whenever you like.":
@@ -459,18 +457,11 @@ export const es: Record<string, string> = {
   "Reset study progress": "Reiniciar el progreso de estudio",
   "Clear your answers and sessions to start fresh. You can keep your bookmarks. This also restores Practice Test question eligibility.":
     "Borra tus respuestas y sesiones para empezar de cero. Puedes conservar tus marcadores.",
-  "One recovery archive · {date}": "Un archivo de recuperación · {date}",
-  "Restore previous study state": "Restaurar el estado de estudio anterior",
-  "Restore previous study state?": "¿Restaurar el estado de estudio anterior?",
   "Reset study progress?": "¿Reiniciar el progreso de estudio?",
-  "This replaces your current answers, sessions, drafts, recorded time, and bookmarks with the state saved immediately before your last reset. Your question bank and preferences stay unchanged. Saved ordinary timers will be paused. Practice Test clocks retain their original start times and exposure history.":
-    "Esto reemplaza tus respuestas, sesiones, borradores, tiempo registrado y marcadores actuales por el estado guardado justo antes de tu último reinicio. Tu banco de preguntas y tus preferencias no cambian. Los cronómetros guardados quedarán en pausa.",
   "This clears all answers, completed and unfinished sessions, drafts, and recorded practice time. Your question bank and interface preferences will remain available.":
     "Esto borra todas las respuestas, las sesiones terminadas y sin terminar, los borradores y el tiempo de práctica registrado. Tu banco de preguntas y tus preferencias de la interfaz se conservan.",
-  "Your current study state, including all bookmarks, will be saved locally as one recovery archive. This replaces any previous reset archive.":
-    "Tu estado de estudio actual, con todos los marcadores, se guardará en este dispositivo como un archivo de recuperación. Este reemplaza cualquier archivo de reinicio anterior.",
   "Also clear bookmarks": "Borrar también los marcadores",
-  "Confirm restore": "Confirmar la restauración",
+  "A reset cannot be undone.": "Un reinicio no se puede deshacer.",
   "Confirm reset": "Confirmar el reinicio",
   "Free up space": "Liberar espacio",
   "This site is using about {size} on this device.":

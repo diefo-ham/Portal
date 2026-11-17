@@ -3,6 +3,7 @@ import type { AssessmentInfo } from "../../core/assessments";
 import type { Assessment } from "../../core/model";
 import { Help } from "../Help";
 import { useT } from "../i18n";
+import { MARK_PATH } from "./mark";
 import type { Page } from "@/src/types/ui";
 import { readStorage, writeStorage } from "@/src/utils/storage";
 
@@ -36,8 +37,15 @@ export const AppHeader = ({
   const [collapsed, setCollapsed] = useState(
     () => readStorage(RAIL_KEY) === "collapsed",
   );
+  // Right after it is shut the pointer is still over it; it stays shut until
+  // the pointer (or keyboard focus) has left, instead of springing open again.
+  const [settling, setSettling] = useState(false);
+  // The page slides only when the person toggles the rail, never on load.
+  const [toggled, setToggled] = useState(false);
   const toggleRail = () => {
     writeStorage(RAIL_KEY, collapsed ? "open" : "collapsed");
+    setSettling(!collapsed);
+    setToggled(true);
     setCollapsed(!collapsed);
   };
   // One stroke style for every icon; they are decoration beside a text label.
@@ -63,10 +71,21 @@ export const AppHeader = ({
   else if (info.testMode) links.push(["tests", "Test mode"]);
   else if (info.fixedTests) links.push(["tests", "Tests"]);
   return (
-    <header className={`app-header ${collapsed ? "rail-collapsed" : ""}`}>
+    <header
+      className={`app-header ${collapsed ? "rail-collapsed" : ""} ${settling ? "rail-settling" : ""} ${toggled ? "rail-toggled" : ""}`}
+      onMouseLeave={() => setSettling(false)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+          setSettling(false);
+      }}
+    >
       <button className="brand" onClick={onHome}>
-        <span className="brand-icon">{info.name[0]}</span>
-        <span>
+        <span className="brand-icon">
+          <svg viewBox="0 0 512 512" aria-hidden="true">
+            <path d={MARK_PATH} />
+          </svg>
+        </span>
+        <span className="brand-name">
           {info.name} <b>Study</b>
         </span>
       </button>
@@ -108,7 +127,7 @@ export const AppHeader = ({
               onClick={() => onNavigate(id)}
             >
               {icon(id)}
-              {t(label)}
+              <span className="nav-label">{t(label)}</span>
             </button>
           );
         })}
@@ -121,7 +140,7 @@ export const AppHeader = ({
           onClick={() => onNavigate("data")}
         >
           {icon("data")}
-          <span className="settings-label" aria-hidden="true">
+          <span className="settings-label nav-label" aria-hidden="true">
             {t("Settings")}
           </span>
         </button>
@@ -130,7 +149,9 @@ export const AppHeader = ({
         <svg className="nav-icon" viewBox="0 0 20 20" aria-hidden="true">
           <path d="M3 4h14v12H3zM8 4v12" />
         </svg>
-        {collapsed ? t("Keep sidebar open") : t("Collapse sidebar")}
+        <span className="nav-label">
+          {collapsed ? t("Keep sidebar open") : t("Collapse sidebar")}
+        </span>
       </button>
     </header>
   );

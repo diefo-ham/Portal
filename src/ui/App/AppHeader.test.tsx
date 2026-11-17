@@ -43,7 +43,9 @@ describe("AppHeader", () => {
   it("shows the test's name as the brand and goes home from it", async () => {
     const { props, user } = setup();
     const brand = screen.getByRole("button", { name: /SAT Study/ });
-    expect(brand.querySelector(".brand-icon")!.textContent).toBe("S");
+    // The mark is a drawing, not a letter: the name carries the meaning.
+    expect(brand.querySelector(".brand-icon svg")).toBeTruthy();
+    expect(brand.textContent).toBe("SAT Study");
     await user.click(brand);
     expect(props.onHome).toHaveBeenCalledOnce();
   });

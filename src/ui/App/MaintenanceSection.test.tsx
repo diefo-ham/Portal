@@ -30,7 +30,6 @@ const setup = (
     busy: false,
     onAddPdfs: vi.fn(),
     onRemovePdf: vi.fn().mockResolvedValue(undefined),
-    onRestore: vi.fn().mockResolvedValue(undefined),
     onReset: vi.fn().mockResolvedValue(undefined),
     onRemoveQuestions: vi.fn().mockResolvedValue(undefined),
     onEraseEverything: vi.fn().mockResolvedValue(undefined),
@@ -137,27 +136,20 @@ describe("MaintenanceSection", () => {
       within(dialog).getByRole("button", { name: "Confirm reset" }),
     );
     expect(props.onReset).toHaveBeenCalledWith(true);
-    expect(props.onRestore).not.toHaveBeenCalled();
   });
 
-  it("offers to restore only when there is an archive", async () => {
-    setup();
+  it("says a reset cannot be undone, and offers no way to restore", async () => {
+    const { user } = setup();
     expect(
       screen.queryByRole("button", { name: "Restore previous study state" }),
     ).toBeNull();
-    cleanup();
-    const { props, user } = setup({ archiveDate: "2026-03-01T10:00:00.000Z" });
     await user.click(
-      screen.getByRole("button", { name: "Restore previous study state" }),
+      screen.getByRole("button", { name: "Reset study progress" }),
     );
     const dialog = screen.getByRole("dialog", {
-      name: "Restore previous study state?",
+      name: "Reset study progress?",
     });
-    await user.click(
-      within(dialog).getByRole("button", { name: "Confirm restore" }),
-    );
-    expect(props.onRestore).toHaveBeenCalledOnce();
-    expect(props.onReset).not.toHaveBeenCalled();
+    expect(within(dialog).getByText("A reset cannot be undone.")).toBeTruthy();
   });
 
   it("removes the questions after confirming", async () => {

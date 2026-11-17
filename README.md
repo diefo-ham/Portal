@@ -84,7 +84,7 @@ React 19, TypeScript and Vite, with plain CSS and local system fonts. The calcul
 | ------------------ | --------------------------------------------------------------------------- |
 | `src/core/`        | Question and progress types, scoring, filtering, sessions, per-test rules   |
 | `src/importing/`   | Untrusted-data validation, PDF reading, access check, example loading       |
-| `src/storage/`     | IndexedDB connection, atomic updates, reset archive, local-data maintenance |
+| `src/storage/`     | IndexedDB connection, atomic updates, local-data maintenance                |
 | `src/ui/`          | Screens, components, presentation state and styles                          |
 | `src/calculator/`  | Parser, numerics, regression, graph, workspace and session adapter          |
 | `public/examples/` | The bundled example questions and their images                              |

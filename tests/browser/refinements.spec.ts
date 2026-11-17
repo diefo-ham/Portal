@@ -127,32 +127,91 @@ test("bookmark pointer and keyboard flow, help, and independent resumable sets",
   ]);
 });
 
-test("reset archive recovers progress and bookmarks and a later reset replaces it", async ({
+test("a reset is final: it keeps bookmarks unless asked, offers no restore, and an old archive is removed", async ({
   page,
 }) => {
   await setup(page);
   await page.keyboard.press("b");
+  // E bookmarks the question, so there is a bookmark for the reset to keep.
+  await page.keyboard.press("e");
   await page.getByRole("radio").first().check();
   await page.keyboard.press("Enter");
   await expect(page.locator(".feedback")).toBeVisible();
   await page.getByRole("button", { name: "← Exit", exact: true }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByLabel("Theme", { exact: true }).selectOption("dark");
-  await expect(
-    page.getByRole("button", {
-      name: "Restore previous study state",
-      exact: true,
-    }),
-  ).toHaveCount(0);
+  const restore = page.getByRole("button", {
+    name: "Restore previous study state",
+  });
+  await expect(restore).toHaveCount(0);
+
+  // An earlier version kept a restorable copy of the study state. It is removed
+  // on the next load and never offered.
+  const archiveKeys = () =>
+    page.evaluate(async () => {
+      const db = await new Promise<IDBDatabase>((resolve) => {
+        const r = indexedDB.open("sat-study-local");
+        r.onsuccess = () => resolve(r.result);
+      });
+      return new Promise<string[]>((resolve) => {
+        const tx = db.transaction("state");
+        const r = tx.objectStore("state").getAllKeys();
+        r.onsuccess = () =>
+          resolve(r.result.map(String).filter((key) => key !== "current"));
+        tx.oncomplete = () => db.close();
+      });
+    });
+  await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const r = indexedDB.open("sat-study-local");
+      r.onsuccess = () => resolve(r.result);
+    });
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction("state", "readwrite");
+      for (const key of ["reset-archive", "reset-archive-PAA"])
+        tx.objectStore("state").put({ format: "sat-study-reset-v1" }, key);
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+    });
+  });
+  expect(await archiveKeys()).toHaveLength(2);
   const before = await state(page);
+  expect(Object.values(before.annotations).some((a) => a.bookmarked)).toBe(
+    true,
+  );
+  await page.reload();
+  await expect.poll(archiveKeys).toEqual([]);
+  expect(await state(page)).toEqual(before);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(restore).toHaveCount(0);
+
   await page
     .getByRole("button", { name: "Reset study progress", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Cancel", exact: true }),
   ).toBeFocused();
+  await expect(page.getByRole("dialog")).toContainText(
+    "A reset cannot be undone.",
+  );
   await page.keyboard.press("Escape");
   expect((await state(page)).attempts).toEqual(before.attempts);
+
+  // Bookmarks are kept unless the person chooses to clear them.
+  await page
+    .getByRole("button", { name: "Reset study progress", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Confirm reset", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Study progress reset");
+  const kept = await state(page);
+  expect(kept.attempts).toEqual([]);
+  expect(kept.sessions).toEqual([]);
+  expect(kept.questions).toEqual(before.questions);
+  expect(Object.values(kept.annotations).some((a) => a.bookmarked)).toBe(true);
   await page
     .getByRole("button", { name: "Reset study progress", exact: true })
     .click();
@@ -160,55 +219,19 @@ test("reset archive recovers progress and bookmarks and a later reset replaces i
   await page
     .getByRole("button", { name: "Confirm reset", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Study progress reset");
-  expect((await state(page)).annotations).toEqual({});
+  await expect.poll(async () => (await state(page)).annotations).toEqual({});
+
+  // Nothing was set aside by either reset, and the preferences are untouched.
+  expect(await archiveKeys()).toEqual([]);
   await page.reload();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Restore previous study state", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toContainText("replaces your current");
-  await page
-    .getByRole("button", { name: "Confirm restore", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Previous study state restored",
-  );
-  const restored = await state(page);
-  expect(restored.attempts).toEqual(before.attempts);
-  expect(restored.annotations).toEqual(before.annotations);
-  expect(restored.sessions).toEqual(
-    before.sessions.map((s) => ({ ...s, paused: true })),
-  );
-  expect(restored.questions).toEqual(before.questions);
+  await expect(restore).toHaveCount(0);
   await expect(page.getByLabel("Theme", { exact: true })).toHaveValue("dark");
   await page.screenshot({
-    path: "private-data/inspection/refinement-reset-recovery.png",
+    path: "private-data/inspection/refinement-reset.png",
     fullPage: true,
     animations: "disabled",
   });
-  // Reset once to empty history, then again to replace the old archive with empty history.
-  for (let i = 0; i < 2; i++) {
-    await page
-      .getByRole("button", { name: "Reset study progress", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Confirm reset", exact: true })
-      .click();
-    await expect.poll(async () => (await state(page)).attempts.length).toBe(0);
-  }
-  await page
-    .getByRole("button", { name: "Restore previous study state", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Confirm restore", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Previous study state restored",
-  );
-  expect((await state(page)).attempts).toEqual([]);
-  expect((await state(page)).sessions).toEqual([]);
-  expect((await state(page)).annotations).toEqual(before.annotations);
   await page.getByRole("button", { name: "Practice", exact: true }).click();
   await page
     .getByRole("button", { name: "Help and keyboard shortcuts" })

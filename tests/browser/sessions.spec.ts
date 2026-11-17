@@ -24,7 +24,7 @@ async function state(page: Page): Promise<StudyData> {
   });
 }
 
-test("sessions can be named, starred, found, repracticed, and reset-restored", async ({
+test("sessions can be named, starred, found, repracticed, and cleared by a reset", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -151,18 +151,6 @@ test("sessions can be named, starred, found, repracticed, and reset-restored", a
     .getByRole("button", { name: "Confirm reset", exact: true })
     .click();
   expect((await state(page)).sessions).toEqual([]);
-  await page
-    .getByRole("button", { name: "Restore previous study state", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Confirm restore", exact: true })
-    .click();
-  const restored = await state(page);
-  expect(restored.sessions).toHaveLength(2);
-  expect(restored.sessions[0]).toMatchObject({
-    name: "Hard Algebra Drill ✓",
-    starred: true,
-  });
 });
 
 test("a selected session can be confirmed and durably deleted without clearing other study state", async ({
