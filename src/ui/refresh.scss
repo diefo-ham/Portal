@@ -117,13 +117,30 @@ button:active:not(:disabled),
   flex: none;
   width: 2rem;
   height: 2rem;
-  border-radius: 0.5rem;
+  border-radius: 0;
+  background: none;
 }
 .brand-icon svg {
   display: block;
   width: 100%;
   height: 100%;
-  fill: var(--bg);
+}
+/* The tile is lit from its top-left corner: a gentle step from a lighter tint
+   of the test's colour to the colour itself. */
+.brand-tile-light {
+  stop-color: color-mix(in srgb, var(--accent), white 26%);
+  transition: stop-color 400ms var(--ease);
+}
+.brand-tile-deep {
+  stop-color: var(--accent);
+  transition: stop-color 400ms var(--ease);
+}
+/* The sparkles catch the light when the mark is pointed at. */
+.brand-icon svg {
+  transition: transform 260ms var(--ease);
+}
+.brand:hover .brand-icon svg {
+  transform: rotate(-6deg) scale(1.06);
 }
 .brand:active:not(:disabled) {
   transform: none;
@@ -737,5 +754,174 @@ dialog {
   .question-footer {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
+  }
+}
+
+/* Motion. Short, quiet movements that say what changed: a page fades in, a
+   dialog rises, a disclosure unfolds, a switch slides. All of it stops for
+   people who ask for less motion (see the end of this block). */
+
+/* A page fades in when you move to it. Only its opacity changes, so nothing
+   measured on the page moves. */
+main.page {
+  animation: page-in 220ms ease-out;
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Dialogs rise into place over a backdrop that fades in. */
+.practice-dialog[open],
+.update-dialog[open],
+.portal-modal {
+  animation: dialog-in 240ms var(--ease);
+}
+.practice-dialog[open]::backdrop,
+.update-dialog[open]::backdrop,
+.portal-modal-backdrop {
+  animation: fade-in 240ms ease-out;
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.625rem) scale(0.97);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Drop-down lists open from their button. */
+.multi-options {
+  transform-origin: top center;
+  animation: popover-in 180ms var(--ease);
+}
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem) scale(0.98);
+  }
+}
+
+/* What a disclosure reveals unfolds instead of appearing at once. */
+details[open] > :not(summary) {
+  animation: unfold 220ms var(--ease);
+}
+@keyframes unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-0.25rem);
+  }
+}
+details > summary {
+  transition: color var(--motion);
+}
+
+/* Messages slide down into view. */
+.banner {
+  animation: banner-in 300ms var(--ease);
+}
+@keyframes banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+
+/* On/off preferences are switches whose knob slides. */
+.settings-page > .study-preferences > label > input[type="checkbox"],
+.pdf-preference > input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 2.25rem;
+  height: 1.25rem;
+  margin: 0.0625rem 0 0;
+  border-radius: 1rem;
+  background: var(--control-border);
+  cursor: pointer;
+  transition: background-color 200ms var(--ease);
+}
+.settings-page > .study-preferences > label > input[type="checkbox"]::before,
+.pdf-preference > input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 30%, transparent);
+  transition: transform 220ms var(--ease);
+}
+.settings-page > .study-preferences > label > input[type="checkbox"]:checked,
+.pdf-preference > input[type="checkbox"]:checked {
+  background: var(--accent);
+}
+.settings-page
+  > .study-preferences
+  > label
+  > input[type="checkbox"]:checked::before,
+.pdf-preference > input[type="checkbox"]:checked::before {
+  transform: translateX(1rem);
+}
+.settings-page
+  > .study-preferences
+  > label
+  > input[type="checkbox"]:active::before,
+.pdf-preference > input[type="checkbox"]:active::before {
+  width: 1.1875rem;
+}
+.settings-page
+  > .study-preferences
+  > label
+  > input[type="checkbox"]:checked:active::before,
+.pdf-preference > input[type="checkbox"]:checked:active::before {
+  transform: translateX(0.8125rem);
+}
+/* The explanation lines up with the label, past the wider switch. */
+.settings-page > .study-preferences > p {
+  margin-left: 2.875rem;
+}
+
+/* The loading screen shows the mark, breathing gently while it works. */
+.loading-page {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 0.25rem;
+}
+.loading-mark {
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.75rem;
+}
+.loading-mark.working {
+  animation: breathe 1600ms ease-in-out infinite;
+}
+@keyframes breathe {
+  50% {
+    transform: scale(0.92) rotate(-4deg);
+    opacity: 0.75;
+  }
+}
+
+/* A theme change cross-fades (appearance.ts) instead of flashing. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 260ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::backdrop,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

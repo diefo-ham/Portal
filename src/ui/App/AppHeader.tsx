@@ -3,7 +3,7 @@ import type { AssessmentInfo } from "../../core/assessments";
 import type { Assessment } from "../../core/model";
 import { Help } from "../Help";
 import { useT } from "../i18n";
-import { MARK_PATH } from "./mark";
+import { BrandMark } from "./BrandMark";
 import type { Page } from "@/src/types/ui";
 import { readStorage, writeStorage } from "@/src/utils/storage";
 
@@ -81,9 +81,7 @@ export const AppHeader = ({
     >
       <button className="brand" onClick={onHome}>
         <span className="brand-icon">
-          <svg viewBox="0 0 512 512" aria-hidden="true">
-            <path d={MARK_PATH} />
-          </svg>
+          <BrandMark />
         </span>
         <span className="brand-name">
           {info.name} <b>Study</b>
