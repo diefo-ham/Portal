@@ -11,6 +11,11 @@ export const es: Record<string, string> = {
   Tests: "Pruebas",
   "Test mode": "Modo de prueba",
   Settings: "Ajustes",
+  "Collapse sidebar": "Contraer la barra lateral",
+  "Keep sidebar open": "Mantener abierta la barra lateral",
+  "Turn your phone sideways for larger text.":
+    "Gira el teléfono de lado para ver el texto más grande.",
+  "Hide this tip": "Ocultar este consejo",
   "Main navigation": "Navegación principal",
   "Test: {name}": "Prueba: {name}",
   "Choose a test": "Elige una prueba",

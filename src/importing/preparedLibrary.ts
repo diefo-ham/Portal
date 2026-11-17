@@ -60,7 +60,26 @@ const staticSource = (
   },
 });
 
-const serverSource = staticSource(library, "prepared local question library");
+/**
+ * The local server's own library is optional: a hosted site has none, and hosts
+ * answer for a missing file in different ways (404, 403, an HTML page, nothing
+ * at all when offline). Any answer that is not a manifest means "no library
+ * here"; it must never stop the app or the bundled examples from loading. A
+ * manifest that is found is still validated in full by ingestLibrary.
+ */
+const serverSource: LibrarySource = {
+  ...staticSource(library, "prepared local question library"),
+  async manifest() {
+    try {
+      const response = await fetch(library("manifest.json"), {
+        cache: "no-store",
+      });
+      return response.ok ? ((await response.json()) as unknown) : undefined;
+    } catch {
+      return undefined;
+    }
+  },
+};
 
 const examplesSource = staticSource(
   (path) => `${import.meta.env.BASE_URL}${EXAMPLES_PATH}${path}`,

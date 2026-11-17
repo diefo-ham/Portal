@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { DocumentPanel, Question } from "../core/model";
 import { readAsset } from "../storage/database";
 import { useT } from "./i18n";
+import { RotateHint } from "./RotateHint";
 function Panel({ panel }: { panel: DocumentPanel }) {
   const t = useT();
   const [src, setSrc] = useState("");
@@ -69,17 +70,20 @@ export type DocumentPanelsProps = {
 export const DocumentPanels = ({ question, kind }: DocumentPanelsProps) => {
   const t = useT();
   return (
-    <div
-      className="pdf-document"
-      aria-label={
-        kind === "question"
-          ? t("Original PDF question")
-          : t("Original PDF explanation")
-      }
-    >
-      {(question.document?.[kind] ?? []).map((panel, i) => (
-        <Panel panel={panel} key={panel.src + i} />
-      ))}
-    </div>
+    <>
+      {kind === "question" && <RotateHint />}
+      <div
+        className="pdf-document"
+        aria-label={
+          kind === "question"
+            ? t("Original PDF question")
+            : t("Original PDF explanation")
+        }
+      >
+        {(question.document?.[kind] ?? []).map((panel, i) => (
+          <Panel panel={panel} key={panel.src + i} />
+        ))}
+      </div>
+    </>
   );
 };
