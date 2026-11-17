@@ -50,6 +50,7 @@ import { readStorage, writeStorage } from "@/src/utils/storage";
 import { ActiveQuestionsDialog } from "./ActiveQuestionsDialog";
 import { AppFooter } from "./AppFooter";
 import { AppHeader } from "./AppHeader";
+import { BrandMark } from "./BrandMark";
 import { Banners } from "./Banners";
 import {
   practiceTestRetryFilters,
@@ -350,7 +351,8 @@ export const App = () => {
   };
   if (!data)
     return (
-      <main className="page">
+      <main className="page loading-page">
+        <BrandMark className={`loading-mark ${error ? "" : "working"}`} />
         <h1>SAT Study</h1>
         <p>{error || loadingMessage}</p>
         {error && <button onClick={() => location.reload()}>Try again</button>}

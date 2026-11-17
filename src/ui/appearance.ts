@@ -29,5 +29,15 @@ export function saveAppearance(theme: Theme, originalPdf: boolean) {
   // If storage is unavailable, appearance still works for this tab.
   writeStorage(themeKey, theme);
   writeStorage(pdfKey, String(originalPdf));
-  applyAppearance(theme, originalPdf);
+  const apply = () => applyAppearance(theme, originalPdf);
+  // Where the browser can, the old look cross-fades into the new one.
+  const doc = document as Document & {
+    startViewTransition?: (update: () => void) => unknown;
+  };
+  if (
+    typeof doc.startViewTransition === "function" &&
+    !matchMedia("(prefers-reduced-motion: reduce)").matches
+  )
+    doc.startViewTransition(apply);
+  else apply();
 }
