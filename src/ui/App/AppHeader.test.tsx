@@ -119,10 +119,10 @@ describe("AppHeader", () => {
     ]);
   });
 
-  it("opens Settings from the gear", async () => {
+  it("opens Settings from its own button", async () => {
     const { props, user } = setup();
     const gear = screen.getByRole("button", { name: "Settings" });
-    expect(gear.textContent).toBe("⚙");
+    expect(gear.textContent).toBe("Settings");
     await user.click(gear);
     expect(props.onNavigate).toHaveBeenCalledWith("data");
   });
@@ -137,7 +137,7 @@ describe("AppHeader", () => {
 
   it("marks Settings when it is open", () => {
     setup({ page: "data" });
-    expect(current()).toEqual(["⚙"]);
+    expect(current()).toEqual(["Settings"]);
     expect(
       screen.getByRole("button", { name: "Settings" }).className,
     ).toContain("active");

@@ -5,6 +5,12 @@ The integrated Calculator libraries are bundled locally.
 @babel/runtime 7.29.10 — MIT
   babel-runtime-LICENSE.txt
 @fluent/bundle 0.19.1 — Apache-2.0
+@fontsource-variable/instrument-sans 5.3.0 — OFL-1.1
+  fontsource-variable-instrument-sans-LICENSE.txt
+@fontsource-variable/jetbrains-mono 5.3.0 — OFL-1.1
+  fontsource-variable-jetbrains-mono-LICENSE.txt
+@fontsource-variable/literata 5.3.0 — OFL-1.1
+  fontsource-variable-literata-LICENSE.txt
 @lukeed/csprng 1.1.0 — MIT
   lukeed-csprng-license.txt
 @lukeed/uuid 2.0.1 — MIT

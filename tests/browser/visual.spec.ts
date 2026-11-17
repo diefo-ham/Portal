@@ -313,8 +313,60 @@ test("long reading and dense PDF tables stay readable in both themes; reduced mo
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Check answer" }).click();
   await expect(page.locator(".feedback")).toHaveCSS("animation-name", "none");
-  await expect(page.locator(".progress-track > div")).toHaveCSS(
+  await expect(page.locator(".progress-ticks > span").first()).toHaveCSS(
     "transition-duration",
     "0s",
   );
+});
+
+test("each test's own tint keeps text readable in both themes", async ({
+  page,
+}) => {
+  await page.goto("/");
+  for (const theme of ["light", "dark"] as const)
+    for (const name of ["SAT", "PAA", "TSI"]) {
+      await page.evaluate(
+        (value) => localStorage.setItem("sat-theme", value),
+        theme,
+      );
+      await page.goto(`/#/${name.toLowerCase()}`);
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute(
+        "data-assessment",
+        name,
+      );
+      await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+      const lowest = await page.evaluate(() => {
+        const css = getComputedStyle(document.documentElement);
+        const lightness = (key: string) => {
+          const hex = css.getPropertyValue(key).trim().slice(1);
+          const c = [0, 2, 4].map((index) => {
+            const v = parseInt(hex.slice(index, index + 2), 16) / 255;
+            return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+          });
+          return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722;
+        };
+        const pairs = [
+          ["--ink", "--bg"],
+          ["--muted", "--bg"],
+          ["--ink", "--paper"],
+          ["--muted", "--paper"],
+          ["--muted", "--surface"],
+          ["--accent", "--bg"],
+          ["--accent", "--paper"],
+          ["--on-accent", "--accent"],
+          ["--correct", "--correct-surface"],
+          ["--incorrect", "--incorrect-surface"],
+          ["--warning", "--warning-surface"],
+        ];
+        return Math.min(
+          ...pairs.map(([fg, bg]) => {
+            const a = lightness(fg),
+              b = lightness(bg);
+            return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+          }),
+        );
+      });
+      expect(lowest, `${name} ${theme}`).toBeGreaterThanOrEqual(4.5);
+    }
 });

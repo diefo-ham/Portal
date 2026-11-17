@@ -236,6 +236,10 @@ export const App = () => {
   useEffect(() => {
     document.documentElement.lang = info.language;
   }, [info.language]);
+  // Each test tints the page with its own hue (tokens.scss).
+  useEffect(() => {
+    document.documentElement.dataset.assessment = assessment;
+  }, [assessment]);
   useEffect(() => {
     const sync = () => {
       const linked = routeOf();
