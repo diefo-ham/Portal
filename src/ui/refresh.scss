@@ -1,0 +1,532 @@
+/* The visual layer over styles.scss: a tinted desk, one bright sheet for the
+   question, a side rail on a laptop, and feedback that answers each action. It
+   loads after styles.scss, so a rule here replaces the rule of the same name
+   there. Motion is switched off by the reduced-motion block in styles.scss. */
+
+body {
+  font-family: var(--font-ui);
+  transition: background-color 400ms var(--ease);
+}
+h1,
+h2 {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  line-height: 1.15;
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 0.6875rem;
+  letter-spacing: 0.09em;
+}
+button,
+.file-button {
+  transition:
+    background-color var(--motion),
+    border-color var(--motion),
+    color var(--motion),
+    box-shadow var(--motion),
+    transform 120ms var(--ease);
+}
+button:active:not(:disabled),
+.file-button:active {
+  transform: scale(0.975);
+}
+.primary {
+  border-radius: 0.625rem;
+}
+.primary:hover:not(:disabled) {
+  box-shadow: 0 0.375rem 1rem -0.375rem var(--accent);
+}
+.text-button:active:not(:disabled) {
+  transform: none;
+}
+:where(button, input, select, textarea, summary, a):focus-visible {
+  outline-offset: 0.1875rem;
+}
+.timer,
+.session-size-input {
+  font-family: var(--font-data);
+}
+
+/* The test switch: a filled pill in the current test's colour. */
+.assessment-switch {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  border: 0;
+  border-radius: 0.5625rem;
+  background: var(--surface);
+  overflow: visible;
+  button {
+    border-radius: 0.4375rem;
+    font-weight: 600;
+    & + button {
+      border-left: 0;
+    }
+    &:hover:not(:disabled) {
+      background: var(--surface-hover);
+      color: var(--ink);
+    }
+    &.active,
+    &.active:hover:not(:disabled) {
+      background: var(--accent);
+      color: var(--on-accent);
+    }
+  }
+}
+
+/* Navigation. Icons belong to the rail; the top bar on a narrow screen is text. */
+.nav-icon {
+  display: none;
+  width: 1.0625rem;
+  height: 1.0625rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.app-header nav .settings-link {
+  font-size: 0.8125rem;
+}
+.app-header nav .settings-link .nav-icon {
+  display: block;
+  width: 1.1875rem;
+  height: 1.1875rem;
+  margin: auto;
+}
+.settings-label {
+  display: none;
+}
+.brand {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.brand b {
+  font-weight: 600;
+}
+.brand:active:not(:disabled) {
+  transform: none;
+}
+
+/* A laptop has more width than height: navigation moves to a rail at the side
+   and the page keeps the full height. Narrower screens keep the top bar. */
+@media (min-width: 68.8125rem) {
+  body:has(#root > .app-header) {
+    padding-left: var(--rail);
+  }
+  .app-header {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: var(--rail);
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1.25rem;
+    padding: 1.5rem 0.875rem 1.25rem;
+    border-bottom: 0;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+  }
+  .brand {
+    padding: 0 0.5rem;
+    min-height: 2rem;
+  }
+  .app-header nav {
+    flex: 1;
+    flex-direction: column;
+    align-items: stretch;
+    align-self: auto;
+    gap: 0.125rem;
+    margin-left: 0;
+  }
+  .app-header nav button,
+  .app-header nav .settings-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6875rem;
+    min-height: 2.375rem;
+    padding: 0 0.625rem;
+    border: 0;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+  }
+  .app-header nav button:hover:not(:disabled) {
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .app-header nav .active,
+  .app-header nav .active:hover:not(:disabled) {
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 12%, transparent);
+  }
+  .app-header nav .active .nav-icon {
+    color: var(--accent);
+  }
+  .nav-icon,
+  .app-header nav .settings-link .nav-icon {
+    display: block;
+    width: 1.0625rem;
+    height: 1.0625rem;
+    margin: 0;
+  }
+  .settings-label {
+    display: inline;
+  }
+  /* Help and Settings sit at the foot of the rail. */
+  .app-header nav .help-link {
+    margin-top: auto;
+    padding-left: 2.375rem;
+    background-image: none;
+    position: relative;
+  }
+  .app-header nav .help-link::before {
+    content: "?";
+    position: absolute;
+    left: 0.625rem;
+    width: 1.0625rem;
+    height: 1.0625rem;
+    display: grid;
+    place-items: center;
+    border: 0.1rem solid currentColor;
+    border-radius: 50%;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .page {
+    min-height: 100dvh;
+    padding-top: 3rem;
+  }
+}
+
+/* Home and the shared filter controls. */
+.section-segments {
+  border: 0;
+  border-radius: 0.5625rem;
+  background: var(--surface);
+}
+.section-segments button {
+  border-radius: 0.4375rem;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.section-segments button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.section-segments button[aria-pressed="true"],
+.section-segments button[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+.practice-composer {
+  padding: 1.5rem 1.75rem;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.composer-start .primary {
+  min-height: 2.75rem;
+  padding-inline: 1.25rem;
+}
+
+/* Practice: the toolbar, one tick per question, and the sheet. */
+.practice-toolbar {
+  margin-bottom: 0.625rem;
+}
+.toolbar-right button {
+  border-color: transparent;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.toolbar-right button:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: transparent;
+  color: var(--ink);
+}
+.toolbar-right button[aria-expanded="true"] {
+  border-color: transparent;
+}
+.progress-ticks {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.25rem;
+  margin-bottom: 1rem;
+}
+.progress-ticks.dense {
+  gap: 1px;
+}
+.progress-ticks span {
+  flex: 1 1 0;
+  max-width: 3rem;
+  height: 0.3125rem;
+  border-radius: 0.1875rem;
+  background: var(--line);
+  transition:
+    height 200ms var(--ease),
+    background-color 250ms;
+}
+.progress-ticks.can-go span {
+  cursor: pointer;
+}
+.progress-ticks.can-go span:hover {
+  height: 0.5625rem;
+}
+.progress-ticks .tick-correct {
+  background: var(--outcome-correct);
+}
+.progress-ticks .tick-incorrect {
+  background: var(--outcome-incorrect);
+}
+.progress-ticks .tick-answered {
+  background: var(--accent);
+}
+.progress-ticks .current {
+  height: 0.6875rem;
+}
+.progress-ticks .tick-open.current {
+  background: var(--ink);
+}
+.question-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+/* A new question fades in while its text slides a little. The sheet itself never
+   moves, so the floating calculator and anything measuring the sheet stay put. */
+.practice-layout > .question-card {
+  animation: sheet-in 260ms ease-out;
+}
+.practice-layout
+  > .question-card
+  > :is(.pdf-document, .question-text, .passage) {
+  animation: sheet-text-in 320ms var(--ease);
+}
+@keyframes sheet-in {
+  from {
+    opacity: 0.2;
+  }
+}
+@keyframes sheet-text-in {
+  from {
+    transform: translateX(0.75rem);
+  }
+}
+.bookmark.selected > span {
+  display: inline-block;
+  animation: bookmark-pop 320ms var(--ease);
+}
+@keyframes bookmark-pop {
+  40% {
+    transform: scale(1.35) rotate(-8deg);
+  }
+}
+
+/* A question read from a PDF shows its choices in the image, so the answer is
+   a row of bubbles that fill in, with Check beside them. Until the answer is
+   checked the row stays at the bottom of the window, always within reach. */
+.question-card:has(.pdf-document) .answer-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  margin-top: 0.5rem;
+  padding: 0.875rem 0;
+  border-top: 1px solid var(--line);
+  background: var(--paper);
+}
+.question-card:has(.pdf-document) .answer-strip:has(> .submit) {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+.question-card:has(.pdf-document) .answer-strip .answers {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 0.5625rem;
+}
+.question-card:has(.pdf-document) .answer-strip .submit {
+  margin-top: 0;
+  min-height: 2.75rem;
+  padding-inline: 1.375rem;
+}
+.question-card:has(.pdf-document) .answer-choice {
+  position: relative;
+  isolation: isolate;
+  width: 2.75rem;
+  height: 2.75rem;
+  min-height: 0;
+  padding: 0;
+  border: 0.09375rem solid var(--control-border);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    transform 140ms var(--ease),
+    border-color var(--motion);
+}
+.question-card:has(.pdf-document) .answer-choice::before {
+  content: "";
+  position: absolute;
+  inset: 0.1875rem;
+  z-index: -1;
+  border-radius: 50%;
+  background: var(--ink);
+  transform: scale(0);
+  transition: transform 260ms var(--ease);
+}
+.question-card:has(.pdf-document) .answer-choice input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+}
+.question-card:has(.pdf-document) .answer-choice .choice-letter {
+  min-width: 0;
+  font-size: 0.9375rem;
+  line-height: 1;
+  color: var(--ink);
+  transition: color 200ms;
+}
+.question-card:has(.pdf-document) fieldset:not(:disabled) .answer-choice:hover {
+  background: transparent;
+  border-color: var(--ink);
+  transform: translateY(-0.125rem);
+}
+.question-card:has(.pdf-document) .answer-choice.chosen {
+  background: transparent;
+  border-color: var(--ink);
+}
+.question-card:has(.pdf-document) .answer-choice.chosen::before {
+  transform: scale(1);
+}
+.question-card:has(.pdf-document) .answer-choice.chosen .choice-letter {
+  color: var(--paper);
+}
+.question-card:has(.pdf-document) fieldset:disabled .answer-choice {
+  border-color: var(--line);
+}
+.question-card:has(.pdf-document)
+  fieldset:disabled
+  .answer-choice:not(.chosen, .right-answer)
+  .choice-letter {
+  color: var(--muted);
+}
+.question-card:has(.pdf-document) .answer-choice.right-answer {
+  background: transparent;
+  border-color: var(--correct);
+}
+.question-card:has(.pdf-document) .answer-choice.right-answer::before {
+  background: var(--correct);
+  transform: scale(1);
+}
+.question-card:has(.pdf-document) .answer-choice.right-answer .choice-letter {
+  color: var(--correct-surface);
+}
+.question-card:has(.pdf-document) .answer-choice.wrong-answer {
+  background: transparent;
+  border-color: var(--incorrect);
+  animation: bubble-shake 300ms;
+}
+.question-card:has(.pdf-document) .answer-choice.wrong-answer::before {
+  background: var(--incorrect-surface);
+  transform: scale(1);
+}
+.question-card:has(.pdf-document) .answer-choice.wrong-answer::after {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: calc(50% - 0.05rem);
+  height: 0.1rem;
+  background: var(--incorrect);
+  transform: rotate(-35deg);
+}
+.question-card:has(.pdf-document) .answer-choice.wrong-answer .choice-letter {
+  color: var(--incorrect);
+}
+@keyframes bubble-shake {
+  30% {
+    transform: translateX(-0.25rem);
+  }
+  60% {
+    transform: translateX(0.1875rem);
+  }
+}
+.question-card:has(.pdf-document) .numeric-answer {
+  flex: 1 1 16rem;
+}
+
+/* A question stored as text keeps full-width rows; the letter becomes the bubble. */
+.answer-choice {
+  border-radius: 0.625rem;
+}
+.answer-choice.chosen {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Feedback: the verdict carries the colour; the explanation stays on the sheet. */
+.feedback {
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left-width: 0.1875rem;
+  border-radius: 0;
+  animation: feedback-in 380ms var(--ease);
+}
+.feedback.success,
+.feedback.miss {
+  background: transparent;
+}
+.feedback.success h2 {
+  color: var(--correct);
+}
+.feedback.miss h2 {
+  color: var(--incorrect);
+}
+.feedback.success .pdf-document,
+.feedback.miss .pdf-document {
+  background: var(--paper);
+}
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+}
+.question-footer .primary {
+  min-height: 2.75rem;
+  padding-inline: 1.25rem;
+}
+
+/* Dialogs and popovers. */
+dialog {
+  border-radius: var(--radius-lg);
+}
+
+/* The accuracy gauge: a thin track with the correct share drawn boldly over
+   it, so 0% no longer looks like a full dial. */
+.gauge-incorrect {
+  stroke-width: 5;
+}
+
+@media (max-width: 43.75rem) {
+  .practice-composer {
+    padding: 1.25rem;
+  }
+}

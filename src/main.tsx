@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./ui/App/App";
 import { ErrorBoundary } from "./ui/ErrorBoundary";
 import "./ui/styles.scss";
+import "./ui/refresh.scss";
 import { applyAppearance } from "./ui/appearance";
 import { registerWorker } from "./updates";
 import { focusClickedControls } from "./focusClicks";

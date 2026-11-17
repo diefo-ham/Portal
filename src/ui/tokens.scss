@@ -1,36 +1,81 @@
+/* Colours are plain hex (the browser specs read them to check contrast). They are
+   generated from one recipe: a quiet "desk" tinted by the current test's hue (SAT
+   green, PAA blue, TSI plum) and one bright "sheet" (--paper) for the question.
+   Correct, incorrect and warning keep the same hue in every test. */
+@font-face {
+  font-family: "Literata Variable";
+  font-style: normal;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("@fontsource-variable/literata/files/literata-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+@font-face {
+  font-family: "Literata Variable";
+  font-style: italic;
+  font-weight: 200 900;
+  font-display: swap;
+  src: url("@fontsource-variable/literata/files/literata-latin-wght-italic.woff2")
+    format("woff2-variations");
+}
+@font-face {
+  font-family: "Instrument Sans Variable";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+@font-face {
+  font-family: "Instrument Sans Variable";
+  font-style: italic;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-italic.woff2")
+    format("woff2-variations");
+}
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
 :root {
   color-scheme: light;
   --font-reading:
-    "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --font-ui: "Segoe UI", Calibri, "Trebuchet MS", sans-serif;
-  --bg: #f3f0e6;
-  --paper: #fbf8ef;
-  --surface: #eeeade;
-  --surface-hover: #e6e6d7;
-  --surface-selected: #e5eadb;
-  --ink: #30382b;
-  --muted: #5c6654;
-  --line: #d4d5c5;
-  --line-strong: #a5af96;
-  --control-border: #828d77;
-  --accent: #405b3c;
-  --accent-hover: #30482d;
-  --on-accent: #fcfaf1;
-  --focus: #657c43;
-  --correct: #3e6843;
-  --correct-surface: #e8eedf;
-  --incorrect: #924c3c;
-  --incorrect-surface: #f3e7de;
-  --warning: #745e25;
-  --warning-surface: #f2ecd7;
-  --outcome-correct: #708969;
-  --outcome-incorrect: #b1755c;
-  --outcome-unanswered: #d0d1c0;
-  --shadow: 0 0.5rem 1.75rem #33382512;
-  --dialog-shadow: 0 1.25rem 5rem #2823172b;
-  --backdrop: #24261f66;
-  --radius: 0.375rem;
-  --radius-lg: 0.625rem;
+    "Literata Variable", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-ui: "Instrument Sans Variable", "Segoe UI", system-ui, sans-serif;
+  --font-data: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
+  --bg: #e5eee8;
+  --paper: #fdfcf9;
+  --surface: #d8e3db;
+  --surface-hover: #ccdad0;
+  --surface-selected: #cae6d3;
+  --ink: #16231a;
+  --muted: #4c5950;
+  --line: #c6d1c9;
+  --line-strong: #97aa9c;
+  --control-border: #6d8073;
+  --accent: #1e5a38;
+  --accent-hover: #024726;
+  --on-accent: #fcfaf3;
+  --focus: #1e7546;
+  --correct: #15632f;
+  --correct-surface: #d9f3dd;
+  --incorrect: #92361f;
+  --incorrect-surface: #ffe6e0;
+  --warning: #694e00;
+  --warning-surface: #f8eac6;
+  --outcome-correct: #439458;
+  --outcome-incorrect: #c16048;
+  --outcome-unanswered: #c6d1c9;
+  --shadow: 0 1px 2px #16231a14, 0 0.75rem 2rem -0.75rem #16231a38;
+  --dialog-shadow: 0 1.25rem 5rem #16231a3d;
+  --backdrop: #16231a66;
+  --radius: 0.5rem;
+  --radius-lg: 0.875rem;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -40,41 +85,107 @@
   --space-7: 3rem;
   --control-height: 2.5rem;
   --motion: 150ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --rail: 13.5rem;
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #241e19;
-  --paper: #2d251e;
-  --surface: #342c23;
-  --surface-hover: #40362a;
-  --surface-selected: #423d2b;
-  --ink: #e7ddc8;
-  --muted: #b8ac97;
-  --line: #4c4134;
-  --line-strong: #817356;
-  --control-border: #817356;
-  --accent: #c2b075;
-  --accent-hover: #d2c28b;
-  --on-accent: #29251a;
-  --focus: #d2bd7a;
-  --correct: #b1c09a;
-  --correct-surface: #303627;
-  --incorrect: #e1ac97;
-  --incorrect-surface: #3e2c25;
-  --warning: #d2be85;
-  --warning-surface: #3a3223;
-  --outcome-correct: #86996b;
-  --outcome-incorrect: #b77f65;
-  --outcome-unanswered: #615646;
-  --shadow: 0 0.5rem 1.75rem #130e091c;
-  --dialog-shadow: 0 1.25rem 5rem #100b0766;
-  --backdrop: #100d0a99;
+  --bg: #0e1510;
+  --paper: #1c241f;
+  --surface: #161e18;
+  --surface-hover: #27312a;
+  --surface-selected: #243c2c;
+  --ink: #eae8df;
+  --muted: #a8b5ac;
+  --line: #374039;
+  --line-strong: #56695c;
+  --control-border: #6d8073;
+  --accent: #8ecfa4;
+  --accent-hover: #a1e3b7;
+  --on-accent: #0c1610;
+  --focus: #81d39f;
+  --correct: #89d298;
+  --correct-surface: #1f3423;
+  --incorrect: #f8a18a;
+  --incorrect-surface: #41251e;
+  --warning: #e2bf76;
+  --warning-surface: #372c15;
+  --outcome-correct: #63ab74;
+  --outcome-incorrect: #d1755e;
+  --outcome-unanswered: #465049;
+  --shadow: 0 1px 2px #0000004d, 0 0.875rem 2.25rem -0.875rem #00000099;
+  --dialog-shadow: 0 1.25rem 5rem #000000a6;
+  --backdrop: #050806b3;
+}
+:root[data-assessment="PAA"] {
+  --bg: #e5ecf3;
+  --surface: #d8e1ea;
+  --surface-hover: #ccd7e3;
+  --surface-selected: #cbe1f8;
+  --ink: #16202b;
+  --muted: #4c5661;
+  --line: #c6cfd8;
+  --line-strong: #97a7b7;
+  --control-border: #6d7c8c;
+  --accent: #255079;
+  --accent-hover: #103c65;
+  --focus: #2a669f;
+  --outcome-unanswered: #c6cfd8;
+}
+:root[data-assessment="PAA"][data-theme="dark"] {
+  --bg: #0e1319;
+  --paper: #1d2228;
+  --surface: #161c23;
+  --surface-hover: #272f37;
+  --surface-selected: #253749;
+  --ink: #eae8df;
+  --muted: #a8b2be;
+  --line: #373e45;
+  --line-strong: #576574;
+  --control-border: #6d7c8c;
+  --accent: #91c3f6;
+  --accent-hover: #a4d6ff;
+  --on-accent: #0d151c;
+  --focus: #86c3ff;
+  --outcome-unanswered: #474e56;
+}
+:root[data-assessment="TSI"] {
+  --bg: #efe9f0;
+  --surface: #e5dce6;
+  --surface-hover: #dcd2de;
+  --surface-selected: #ead6ef;
+  --ink: #251b27;
+  --muted: #5b515d;
+  --line: #d3cbd4;
+  --line-strong: #ad9fb1;
+  --control-border: #837586;
+  --accent: #613d6a;
+  --accent-hover: #4e2a56;
+  --focus: #7e4d8a;
+  --outcome-unanswered: #d3cbd4;
+}
+:root[data-assessment="TSI"][data-theme="dark"] {
+  --bg: #161117;
+  --paper: #252026;
+  --surface: #1f1920;
+  --surface-hover: #322b34;
+  --surface-selected: #3f2f42;
+  --ink: #eae8df;
+  --muted: #b7adb9;
+  --line: #413b42;
+  --line-strong: #6b5e6e;
+  --control-border: #837586;
+  --accent: #d8abe2;
+  --accent-hover: #ecbef6;
+  --on-accent: #181119;
+  --focus: #dda7ea;
+  --outcome-unanswered: #514a53;
 }
 /* Provide an appropriate first paint before the local appearance module runs. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    background: #241e19;
-    color: #e7ddc8;
+    background: #0e1510;
+    color: #eae8df;
     color-scheme: dark;
   }
 }

@@ -23,7 +23,7 @@ export function applyAppearance(
     : "adapted";
   document
     .querySelector('meta[name="theme-color"]')
-    ?.setAttribute("content", dark ? "#241e19" : "#f3f0e6");
+    ?.setAttribute("content", dark ? "#0e1510" : "#e5eee8");
 }
 export function saveAppearance(theme: Theme, originalPdf: boolean) {
   // If storage is unavailable, appearance still works for this tab.

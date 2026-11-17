@@ -31,6 +31,7 @@ import { practiceKeyAction } from "./keyboard";
 import { LeavePanel } from "./LeavePanel";
 import { PausedOverlay } from "./PausedOverlay";
 import { PracticeDialog } from "./PracticeDialog";
+import { ProgressTicks } from "./ProgressTicks";
 import { PracticeToolbar } from "./PracticeToolbar";
 import { QuestionContent } from "./QuestionContent";
 import { QuestionDetails } from "./QuestionDetails";
@@ -313,10 +314,6 @@ export const Practice = ({
         {calculator.visible && calculatorPanel}
       </div>
     );
-  const answeredCount =
-    isTest || tsiMode
-      ? session.questionIds.filter((id) => session.drafts[id]).length
-      : attempts.length;
   const titles: Record<Panel, string> = {
     overview: t("Question overview"),
     details: t("Question details"),
@@ -407,13 +404,18 @@ export const Practice = ({
           {module.mix === "first" ? "1" : "2"}
         </p>
       )}
-      <div className="progress-track">
-        <div
-          style={{
-            width: `${(100 * answeredCount) / session.questionIds.length}%`,
-          }}
-        />
-      </div>
+      <ProgressTicks
+        questionIds={session.questionIds}
+        index={session.index}
+        attempts={attempts}
+        drafts={session.drafts}
+        isTest={isTest || tsiMode}
+        onGo={
+          isTest || pending || session.paused
+            ? undefined
+            : (index) => void navigate(index)
+        }
+      />
       <div className="practice-layout">
         <article
           className="question-card"
@@ -435,23 +437,25 @@ export const Practice = ({
             }}
           />
           <QuestionContent question={question} />
-          <AnswerChoices
-            question={question}
-            answer={answer}
-            attempt={attempt}
-            disabled={!!attempt || pending || !!session.paused}
-            onChange={choose}
-            onSubmit={() => void submit()}
-          />
-          {!isTest && !tsiMode && !attempt && (
-            <button
-              className="primary submit"
-              disabled={pending || !canSubmit}
-              onClick={() => void submit()}
-            >
-              {t("Check answer")}
-            </button>
-          )}
+          <div className="answer-strip">
+            <AnswerChoices
+              question={question}
+              answer={answer}
+              attempt={attempt}
+              disabled={!!attempt || pending || !!session.paused}
+              onChange={choose}
+              onSubmit={() => void submit()}
+            />
+            {!isTest && !tsiMode && !attempt && (
+              <button
+                className="primary submit"
+                disabled={pending || !canSubmit}
+                onClick={() => void submit()}
+              >
+                {t("Check answer")}
+              </button>
+            )}
+          </div>
           {!isTest && !tsiMode && attempt && (
             <AnswerFeedback
               question={question}
