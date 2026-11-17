@@ -434,43 +434,6 @@ export const offersProtection = (
   assessmentInfo(assessment).protectedTests &&
   hasImportedQuestions(data, assessment);
 
-/** The part of the study history that belongs to one assessment. */
-export type StudySlice = Pick<
-  StudyData,
-  "attempts" | "sessions" | "annotations" | "practiceTestUsedIds"
->;
-
-export function studySlice(
-  data: StudyData,
-  assessment: Assessment,
-): StudySlice {
-  const { attempts, sessions, annotations, practiceTestUsedIds } =
-    scopeStudyData(data, assessment);
-  return { attempts, sessions, annotations, practiceTestUsedIds };
-}
-
-/** Replaces one assessment's history, leaving the other's untouched. */
-export function replaceSlice(
-  data: StudyData,
-  assessment: Assessment,
-  slice: StudySlice,
-) {
-  const others = otherAssessments(assessment).map((id) =>
-    scopeStudyData(data, id),
-  );
-  data.attempts = [...others.flatMap((o) => o.attempts), ...slice.attempts];
-  data.sessions = [...others.flatMap((o) => o.sessions), ...slice.sessions];
-  data.annotations = Object.assign(
-    {},
-    ...others.map((o) => o.annotations),
-    slice.annotations,
-  );
-  data.practiceTestUsedIds = [
-    ...others.flatMap((o) => o.practiceTestUsedIds ?? []),
-    ...(slice.practiceTestUsedIds ?? []),
-  ];
-}
-
 /** The assessment shared by every question of a session, or undefined if mixed. */
 export function assessmentOfQuestions(
   data: StudyData,

@@ -31,7 +31,6 @@ const setup = () => {
       busy: false,
       onAddPdfs: vi.fn(),
       onRemovePdf: vi.fn().mockResolvedValue(undefined),
-      onRestore: vi.fn().mockResolvedValue(undefined),
       onReset: vi.fn().mockResolvedValue(undefined),
       onRemoveQuestions: vi.fn().mockResolvedValue(undefined),
       onEraseEverything: vi.fn().mockResolvedValue(undefined),

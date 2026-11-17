@@ -64,9 +64,10 @@ export function Slider({
       if (Math.abs(position.current - shown) > r.step * 1.5)
         position.current = shown;
       const delta = ((r.max - r.min) / SWEEP_SECONDS) * (TICK_MS / 1000) * rate;
-      // Repeat always counts upward and starts over at the minimum, even when
-      // it was switched on while the value was on its way down.
-      if (how === "loop") direction.current = 1;
+      // Repeat and Once always count upward, even when they were switched on
+      // while "Back and forth" had the value on its way down; otherwise Once
+      // would run to the minimum and stop there.
+      if (how === "loop" || how === "once") direction.current = 1;
       let next = position.current + delta * direction.current;
       if (next >= r.max || next <= r.min) {
         if (how === "bounce") {

@@ -97,14 +97,13 @@ export const App = () => {
   const t = useMemo(() => translator(assessment), [assessment]);
   const {
     data,
-    archive,
     mutate,
     adoptLibrary,
     error,
     setError,
     loadingMessage,
     revoked,
-  } = useStudy(assessment);
+  } = useStudy();
   // TSI questions labelled Original can be hidden, leaving the Official ones. The
   // choice is only offered when both kinds are stored, and only applies then, so
   // it can never leave a bank empty with nothing to turn back on.
@@ -398,19 +397,9 @@ export const App = () => {
         ),
       );
     });
-  const restoreProgress = () =>
-    run(async () => {
-      await mutate(() => {}, { resetArchive: "restore", assessment });
-      setSessionId("");
-      clearStudyFilters();
-      setMessage(t("Previous study state restored. Saved timers are paused."));
-    });
   const resetProgress = (clearBookmarks: boolean) =>
     run(async () => {
-      await mutate((d) => resetStudyProgress(d, clearBookmarks, assessment), {
-        resetArchive: "save",
-        assessment,
-      });
+      await mutate((d) => resetStudyProgress(d, clearBookmarks, assessment));
       setSessionId("");
       clearStudyFilters();
       setMessage(
@@ -602,10 +591,8 @@ export const App = () => {
           maintenance={{
             data: view,
             busy,
-            archiveDate: archive?.createdAt,
             onAddPdfs: () => setAddOpen(true),
             onRemovePdf: removePdf,
-            onRestore: restoreProgress,
             onReset: resetProgress,
             onRemoveQuestions: removeQuestions,
             onEraseEverything: eraseEverything,

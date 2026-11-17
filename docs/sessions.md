@@ -27,9 +27,7 @@ custom name with Mistakes or Unanswered; otherwise their automatic labels derive
 from the retry filters and membership.
 
 Full backups validate both optional fields. Progress reset removes named/starred
-sessions exactly like all sessions. The existing single reset archive copies the
-complete session records and therefore restores names and stars without a new
-archive format or database version.
+sessions exactly like all sessions, and a reset cannot be undone.
 
 There is intentionally no deletion command, folder/tag system, manual sort,
 session duplication editor, or separate session backup. Review retains detailed

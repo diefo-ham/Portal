@@ -13,10 +13,6 @@ import {
 } from "../src/core/commands";
 import { beginPracticeTest, unusedPool } from "../src/core/practiceTest";
 import { parseBackupPayload } from "../src/importing/backup";
-import {
-  createResetArchive,
-  validateResetArchive,
-} from "../src/storage/resetArchive";
 import { testCorpus, seededRandom } from "./practiceTestFixtures";
 
 function corpus() {
@@ -148,7 +144,7 @@ describe("active-question protection is separate from Test exposure", () => {
     expect(d.practiceTestUsedIds).toEqual(ledger);
   });
 
-  it("reset, recovery and backup restore preserve statuses and protected selection semantics", () => {
+  it("reset and backup restore preserve statuses and protected selection semantics", () => {
     const d = corpus();
     beginPracticeTest(
       d,
@@ -157,15 +153,16 @@ describe("active-question protection is separate from Test exposure", () => {
       1_800_000_000_000,
       seededRandom(),
     );
-    const archive = createResetArchive(d),
-      statuses = d.questions.map((q) => q.testStatus);
+    const statuses = d.questions.map((q) => q.testStatus);
+    // A backup taken while a test is under way keeps its exposure ledger.
+    const before = structuredClone(d);
+    expect(before.practiceTestUsedIds).toHaveLength(22);
     resetStudyProgress(d);
     expect(d.practiceTestUsedIds).toEqual([]);
     expect(Object.values(d.annotations).every((a) => a.bookmarked)).toBe(true);
     expect(d.questions.map((q) => q.testStatus)).toEqual(statuses);
     assertProtected(d);
-    Object.assign(d, validateResetArchive(archive, d).study);
-    expect(d.practiceTestUsedIds).toHaveLength(22);
+    Object.assign(d, before);
     assertProtected(d);
     const restored = parseBackupPayload({
       format: "sat-study-backup-v1",

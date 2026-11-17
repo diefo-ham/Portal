@@ -255,7 +255,7 @@ test("saved active sessions preserve order, while Practice Again and result revi
   ).not.toBe("false");
 });
 
-test("progress reset and archive recovery keep protected ordinary selection", async ({
+test("a progress reset keeps protected ordinary selection", async ({
   page,
 }) => {
   await seed(page);
@@ -264,13 +264,6 @@ test("progress reset and archive recovery keep protected ordinary selection", as
   await expect(protection).toBeChecked();
   await nav(page, "Reset study progress");
   await nav(page, "Confirm reset");
-  await expect(protection).toBeChecked();
-  await nav(page, "Practice");
-  await nav(page, "Start practice");
-  await assertNewProtected(page);
-  await nav(page, "Settings");
-  await nav(page, "Restore previous study state");
-  await nav(page, "Confirm restore");
   await expect(protection).toBeChecked();
   await nav(page, "Practice");
   await nav(page, "Start practice");

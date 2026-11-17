@@ -49,7 +49,7 @@ The guide's rules for answers the student supplies: positive numbers only (whole
 
 - **IDs cannot collide.** PAA internal IDs are `paa-<source ID>`; `parseQuestions` rejects a PAA question without that prefix and any SAT question that starts with `paa-`. Duplicate detection keys on `(assessment, source, sourceId)`, and a library refresh uses the same key. An internal ID that matches a different question rejects the whole import instead of overwriting.
 - **Separate progress.** Screens receive a scoped view of the data (`scopeStudyData`): questions, answers, sessions, bookmarks and practice-test exposure for one test. Writes still go to the whole record. An answer keeps its own `assessment`, so history stays with its test even if the questions are removed.
-- **Separate maintenance.** Reset progress, its recovery archive (`reset-archive` for SAT, `reset-archive-PAA`) and Remove my questions act on the current test only. Erase all data on this device is the one action that covers both, and says so.
+- **Separate maintenance.** Reset progress and Remove my questions act on the current test only. Erase all data on this device is the one action that covers both, and says so.
 - **Preferences** (theme, timer default, explanations, and whether deleting a session also removes its answers) are per browser and shared. The last test used is `sat-last-assessment` (it keeps the `sat-` prefix so Erase all data removes it); a fresh browser opens the SAT. Hash routes `#/sat` and `#/paa` link to a test (a static host needs no rewrite rules); the site's existing address still works.
 
 ## Importing the PAA questions

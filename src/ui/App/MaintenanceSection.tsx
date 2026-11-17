@@ -8,11 +8,8 @@ export type MaintenanceSectionProps = {
   /** This test's data: its questions, attempts and bookmarks are counted. */
   data: StudyData;
   busy: boolean;
-  /** When the previous study state was archived by a reset, if it was. */
-  archiveDate?: string;
   onAddPdfs: () => void;
   onRemovePdf: (key: string) => Promise<void>;
-  onRestore: () => Promise<void>;
   onReset: (clearBookmarks: boolean) => Promise<void>;
   onRemoveQuestions: () => Promise<void>;
   onEraseEverything: () => Promise<void>;
@@ -22,10 +19,8 @@ export type MaintenanceSectionProps = {
 export const MaintenanceSection = ({
   data,
   busy,
-  archiveDate,
   onAddPdfs,
   onRemovePdf,
-  onRestore,
   onReset,
   onRemoveQuestions,
   onEraseEverything,
@@ -55,12 +50,7 @@ export const MaintenanceSection = ({
           onRemove={onRemovePdf}
         />
       </div>
-      <ResetProgress
-        busy={busy}
-        archiveDate={archiveDate}
-        onRestore={onRestore}
-        onConfirm={onReset}
-      />
+      <ResetProgress busy={busy} onConfirm={onReset} />
       <ClearData
         busy={busy}
         hasQuestions={own > 0}

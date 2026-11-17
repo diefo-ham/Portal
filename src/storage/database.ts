@@ -1,16 +1,5 @@
-import { emptyData, type Assessment, type StudyData } from "../core/model";
-import { backfillAssessments, replaceSlice } from "../core/assessments";
-import {
-  createResetArchive,
-  resetArchiveKey,
-  validateResetArchive,
-  type ResetArchive,
-} from "./resetArchive";
-/** `assessment` says whose progress a reset archive saves or restores. */
-export type UpdateOptions = {
-  resetArchive?: "save" | "restore";
-  assessment?: Assessment;
-};
+import { emptyData, type StudyData } from "../core/model";
+import { backfillAssessments } from "../core/assessments";
 let connection: Promise<IDBDatabase> | undefined;
 function database() {
   return (connection ??= new Promise<IDBDatabase>((resolve, reject) => {
@@ -146,13 +135,13 @@ export async function readData(): Promise<StudyData> {
   const db = await database();
   return new Promise((resolve, reject) => {
     const req = db.transaction("state").objectStore("state").get("current");
-    req.onsuccess = () => resolve(backfillAssessments(req.result ?? emptyData()));
+    req.onsuccess = () =>
+      resolve(backfillAssessments(req.result ?? emptyData()));
     req.onerror = () => reject(req.error);
   });
 }
 export async function updateData(
   update: (data: StudyData) => void,
-  options: UpdateOptions = {},
 ): Promise<StudyData> {
   const db = await database();
   return new Promise((resolve, reject) => {
@@ -162,30 +151,14 @@ export async function updateData(
     const req = store.get("current");
     req.onsuccess = () => {
       data = backfillAssessments(req.result ?? emptyData());
-      const assessment = options.assessment ?? "SAT";
-      const commit = (archive?: unknown) => {
-        try {
-          if (options.resetArchive === "save")
-            store.put(
-              createResetArchive(data, assessment),
-              resetArchiveKey(assessment),
-            );
-          if (options.resetArchive === "restore") {
-            const restored = validateResetArchive(archive, data);
-            replaceSlice(data, restored.assessment ?? "SAT", restored.study);
-          }
-          update(data);
-          backfillAssessments(data);
-          store.put(data, "current");
-        } catch (error) {
-          tx.abort();
-          reject(error);
-        }
-      };
-      if (options.resetArchive === "restore") {
-        const archive = store.get(resetArchiveKey(assessment));
-        archive.onsuccess = () => commit(archive.result);
-      } else commit();
+      try {
+        update(data);
+        backfillAssessments(data);
+        store.put(data, "current");
+      } catch (error) {
+        tx.abort();
+        reject(error);
+      }
     };
     tx.oncomplete = () => resolve(data);
     tx.onerror = () => reject(tx.error);
@@ -196,26 +169,23 @@ export async function updateData(
   });
 }
 
-export async function readResetArchive(
-  assessment: Assessment = "SAT",
-): Promise<ResetArchive | undefined> {
+/**
+ * Earlier versions kept a copy of the study state from before the last progress
+ * reset, one per test, so it could be restored. That feature is gone; this
+ * removes any copy still stored. Missing keys are ignored.
+ */
+export async function dropResetArchives(): Promise<void> {
   const db = await database();
   return new Promise((resolve, reject) => {
-    const store = db.transaction("state").objectStore("state");
-    const current = store.get("current");
-    const archive = store.get(resetArchiveKey(assessment));
-    archive.onsuccess = () => {
-      try {
-        resolve(
-          validateResetArchive(
-            archive.result,
-            backfillAssessments(current.result ?? emptyData()),
-          ),
-        );
-      } catch {
-        resolve(undefined);
-      }
-    };
-    archive.onerror = () => reject(archive.error);
+    const tx = db.transaction("state", "readwrite");
+    for (const key of [
+      "reset-archive",
+      "reset-archive-PAA",
+      "reset-archive-TSI",
+    ])
+      tx.objectStore("state").delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
   });
 }

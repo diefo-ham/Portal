@@ -35,13 +35,9 @@ import {
   parseBackup,
   parseBackupPayload,
 } from "../src/importing/backup";
-import {
-  createResetArchive,
-  validateResetArchive,
-} from "../src/storage/resetArchive";
 import { sessionOutcomes } from "../src/core/review";
 import { formatPercentage } from "../src/ui/PracticeTestResults";
-import { updateData, readResetArchive } from "../src/storage/database";
+import { updateData } from "../src/storage/database";
 import {
   testCorpus,
   seededRandom,
@@ -699,23 +695,19 @@ describe("exposure, reset and backup compatibility", () => {
     expect(next.questionIds.some((id) => ids.includes(id))).toBe(false);
     expect(() => submitAnswer(d, next.id, next.questionIds[0], "A")).toThrow();
     expect(() => finishSession(d, next.id)).toThrow();
-    const archive = createResetArchive(d);
     resetStudyProgress(d);
     expect(unusedPool(d, "reading-writing")).toHaveLength(180);
-    Object.assign(d, validateResetArchive(archive, d).study);
-    expect(unusedPool(d, "reading-writing")).toHaveLength(126);
   });
-  it("atomically archives and restores test eligibility in IndexedDB", async () => {
+  it("a reset in IndexedDB makes every question eligible for a test again", async () => {
     await updateData((d) => Object.assign(d, testCorpus()));
-    await updateData((d) => {
+    const used = await updateData((d) => {
       beginPracticeTest(d, "math:first", "untimed", start);
     });
-    await updateData((d) => resetStudyProgress(d), { resetArchive: "save" });
-    expect((await readResetArchive())!.study.practiceTestUsedIds).toHaveLength(
-      22,
-    );
-    const restored = await updateData(() => {}, { resetArchive: "restore" });
-    expect(unusedPool(restored, "math")).toHaveLength(158);
+    expect(used.practiceTestUsedIds).toHaveLength(22);
+    expect(unusedPool(used, "math")).toHaveLength(158);
+    const reset = await updateData((d) => resetStudyProgress(d));
+    expect(reset.practiceTestUsedIds).toEqual([]);
+    expect(unusedPool(reset, "math")).toHaveLength(180);
   });
   it("keeps old backups readable and pauses only ordinary timers", () => {
     const d = testCorpus();

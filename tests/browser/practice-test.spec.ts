@@ -697,7 +697,7 @@ test("full test routes and locks modules, resumes the break, skips early, and co
   await expect(page.getByText(/R&W \/ 800/)).toBeVisible();
   await expect(page.getByText(/Math \/ 800/)).toBeVisible();
 });
-test("exhaustion blocks recycling, and reset recovery restores the exposure ledger", async ({
+test("exhaustion blocks recycling, and a reset makes the questions available again", async ({
   page,
 }) => {
   await seed(page, 27);
@@ -721,14 +721,6 @@ test("exhaustion blocks recycling, and reset recovery restores the exposure ledg
   await expect(
     page.getByRole("button", { name: "Start Practice Test" }),
   ).toBeEnabled();
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Restore previous study state" })
-    .click();
-  await page
-    .getByRole("button", { name: "Confirm restore", exact: true })
-    .click();
-  expect((await read(page)).practiceTestUsedIds).toHaveLength(27);
 });
 test("live timed countdown advances automatically and untimed stopwatch never expires", async ({
   page,
@@ -839,7 +831,9 @@ test("exact scored percentage stays visible across facets and review retains sim
     page.getByRole("img", { name: /50% scored accuracy/ }),
   ).toBeVisible();
   // One module is one section: there is nothing to switch between.
-  await expect(page.getByRole("group", { name: "Result scope" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Result scope" })).toHaveCount(
+    0,
+  );
   await expect(page.getByLabel("Domain highlights")).toContainText(
     "Strongest domain",
   );

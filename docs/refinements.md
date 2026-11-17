@@ -21,39 +21,27 @@ calculator, and question rendering remain unchanged.
   administrative parsing/prepared-library architecture remain. The empty-library
   synthetic example fallback is retained for development and fresh installations.
 
-## Reset recovery contract
+## Reset
 
-`state/reset-archive` in IndexedDB holds at most one `sat-study-reset-v1` envelope:
-creation time plus attempts, sessions, and annotations. No corpus bytes, import
-receipts, preferences, or recursively nested archive are copied. Database version
-2 and the current study snapshot format are unchanged. The snapshot and reset
-commit in one transaction: a failed write cannot clear progress without saving
-the archive. Reset still preserves bookmarks unless the checkbox is selected;
-the archive always captures all pre-reset bookmarks, even when they are cleared.
+A progress reset clears one test's answers, sessions, drafts and recorded time in
+one transaction: a failed write changes nothing. Bookmarks are kept unless the
+checkbox is selected. Questions, import receipts and preferences are untouched.
+The confirmation says that a reset cannot be undone.
 
-Recovery appears only for a valid archive, confirms that it replaces current
-study records (including bookmarks), and validates again inside its transaction.
-It restores original session membership/order/position, drafts, answers, recorded
-time, annotations, and completed/unfinished status. Recovered timers are paused;
-unanswered/mistake/accuracy views derive from the restored records. Existing
-question data and preferences are untouched. Missing corpus references or corrupt
-records cause rejection rather than partial recovery.
-
-Recovery keeps the archive for repeat recovery; it does not create a swap/history.
-Only another confirmed reset replaces it, including a reset of empty progress.
-The confirmation explains this. Later work therefore does not overwrite the
-archive until another reset. Full backup files retain their existing format and
-do not include this browser-local safety archive. Clearing browser storage removes
-it. No profiles, authentication, graphing engine, or native PDF typesetting added.
+Earlier versions also saved a restorable copy of the study state before each
+reset (`reset-archive`, `reset-archive-PAA`, `reset-archive-TSI` in IndexedDB)
+and offered "Restore previous study state". That was removed on 2026-11-17:
+the app now deletes any such copy when it loads, and offers no restore. A full
+backup file is the way to keep a copy of progress.
 
 ## Verification
 
-Core tests cover independent unfinished sets, complete reset recovery, replacement,
-corpus preservation, and transaction rollback. Browser checks cover pointer and
-keyboard bookmarking, B isolation in numeric inputs/dialogs, independent resume
-after reload, bookmark practice, reset cancellation, bookmark clearing/preservation,
-archive recovery after reload, repeated-reset replacement, theme preservation, and
-keyboard navigation after recovery. Existing workflow/visual checks exercise both
+Core tests cover independent unfinished sets, reset, corpus preservation,
+transaction rollback, and removal of a stored reset archive. Browser checks cover
+pointer and keyboard bookmarking, B isolation in numeric inputs/dialogs,
+independent resume after reload, bookmark practice, reset cancellation, bookmark
+clearing/preservation, removal of an old archive on load, theme preservation, and
+keyboard navigation after a reset. Existing workflow/visual checks exercise both
 themes, laptop/mobile widths, offline requests, filtering, active protection,
 calculator state, PDF assets, backups, and session outcome/repractice routes.
 

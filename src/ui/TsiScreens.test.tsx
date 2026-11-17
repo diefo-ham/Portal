@@ -119,7 +119,6 @@ describe("Settings", () => {
           busy={false}
           onAddPdfs={vi.fn()}
           onRemovePdf={vi.fn()}
-          onRestore={vi.fn()}
           onReset={vi.fn()}
           onRemoveQuestions={vi.fn()}
           onEraseEverything={vi.fn()}

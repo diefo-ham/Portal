@@ -70,7 +70,7 @@ function TsiHelp() {
         aria-label="Help and keyboard shortcuts"
         onClick={() => dialog.current?.showModal()}
       >
-        Help
+        <span className="nav-label">Help</span>
       </button>
       <dialog
         ref={dialog}
@@ -189,7 +189,7 @@ function PaaHelp() {
         aria-label="Ayuda y atajos de teclado"
         onClick={() => dialog.current?.showModal()}
       >
-        Ayuda
+        <span className="nav-label">Ayuda</span>
       </button>
       <dialog
         ref={dialog}

@@ -1,4 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SAT Study">
-  <rect width="512" height="512" rx="96" fill="#405b3c"/>
-  <text x="256" y="352" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="300" fill="#f3f0e6">S</text>
+  <style>
+    path { fill: #1e5a38; }
+    @media (prefers-color-scheme: dark) { path { fill: #8ecfa4; } }
+  </style>
+  <path fill-rule="evenodd" d="M112 0H400A112 112 0 0 1 512 112V400A112 112 0 0 1 400 512H112A112 112 0 0 1 0 400V112A112 112 0 0 1 112 0ZM256 150L432 226L420 231.2V312H424V348Q424 356 416 356H408Q400 356 400 348V312H404V238.1L256 302L80 226ZM160 284L256 326L352 284V336Q256 392 160 336Z"/>
 </svg>

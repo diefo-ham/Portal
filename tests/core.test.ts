@@ -14,7 +14,7 @@ import { emptyData, defaultFilters } from "../src/core/model";
 import {
   updateData,
   readData,
-  readResetArchive,
+  dropResetArchives,
 } from "../src/storage/database";
 import sample from "./fixtures/synthetic.json";
 import {
@@ -33,10 +33,6 @@ import {
   sessionOutcomes,
   sessionTiming,
 } from "../src/core/review";
-import {
-  createResetArchive,
-  validateResetArchive,
-} from "../src/storage/resetArchive";
 import {
   normalizeSessionName,
   sessionDefaultName,
@@ -192,102 +188,79 @@ describe("question integrity and practice rules", () => {
       parseBackup({ format: "sat-study-backup-v1", data: d }),
     ).not.toThrow();
   });
-  it("atomically replaces one reset archive and restores complete study state without replacing the corpus", async () => {
+  it("resets atomically: a failed reset changes nothing, a reset clears progress and keeps the corpus", async () => {
     const original = { ...emptyData(), questions };
     const s = beginSession(
       original,
       [questions[0].id, questions[1].id],
       defaultFilters,
     );
-    s.name = "Archived focus";
-    s.starred = true;
     s.elapsed[questions[0].id] = 1234;
     s.drafts[questions[1].id] = "28";
-    s.eliminated = { [questions[0].id]: ["A"] };
-    s.index = 1;
     submitAnswer(original, s.id, questions[0].id, "B");
     original.annotations[questions[0].id] = {
       bookmarked: true,
       note: "legacy",
     };
     finishSession(original, s.id);
-    const unfinished = beginSession(
-      original,
-      [questions[1].id],
-      defaultFilters,
-    );
-    unfinished.drafts[questions[1].id] = "99";
     await updateData((d) => Object.assign(d, original));
     await expect(
-      updateData(
-        () => {
-          throw new Error("failed reset");
-        },
-        { resetArchive: "save" },
-      ),
+      updateData(() => {
+        throw new Error("failed reset");
+      }),
     ).rejects.toThrow();
     expect(await readData()).toEqual(original);
-    await updateData((d) => resetStudyProgress(d, true), {
-      resetArchive: "save",
-    });
-    const savedArchive = await readResetArchive();
-    await expect(
-      updateData(
-        () => {
-          throw new Error("failed write");
-        },
-        { resetArchive: "save" },
-      ),
-    ).rejects.toThrow();
-    expect(await readResetArchive()).toEqual(savedArchive);
-    expect((await readResetArchive())?.study.attempts).toEqual(
-      original.attempts,
-    );
-    expect((await readResetArchive())?.study.sessions[0]).toMatchObject({
-      name: "Archived focus",
-      starred: true,
-    });
-    expect((await readData()).annotations).toEqual({});
-    await updateData((d) => {
-      d.questions.push({
-        ...questions[0],
-        id: "added-after-reset",
-        sourceId: "unique-source",
-      });
-    });
-    await updateData(() => {}, { resetArchive: "restore" });
-    const recovered = await readData();
-    expect(recovered.questions).toHaveLength(13);
-    expect(recovered.attempts).toEqual(original.attempts);
-    expect(recovered.annotations).toEqual(original.annotations);
-    expect(recovered.sessions).toEqual(
-      original.sessions.map((s) => ({ ...s, paused: true })),
-    );
-    await updateData((d) => {
-      d.annotations[questions[0].id].bookmarked = false;
-    });
-    const second = await readData();
-    await updateData(resetStudyProgress, { resetArchive: "save" });
-    expect((await readResetArchive())?.study.annotations).toEqual(
-      second.annotations,
-    );
-    await updateData(() => {}, { resetArchive: "restore" });
-    expect((await readData()).annotations).toEqual(second.annotations);
+    // Bookmarks survive unless the person chooses to clear them.
+    const kept = await updateData((d) => resetStudyProgress(d));
+    expect(kept.attempts).toEqual([]);
+    expect(kept.sessions).toEqual([]);
+    expect(kept.questions).toEqual(original.questions);
+    expect(kept.annotations[questions[0].id].bookmarked).toBe(true);
+    const cleared = await updateData((d) => resetStudyProgress(d, true));
+    expect(cleared.annotations).toEqual({});
+    expect(cleared.questions).toEqual(original.questions);
   });
-  it("rejects incompatible or corrupt archives instead of partially restoring records", () => {
-    const d = { ...emptyData(), questions };
-    beginSession(d, [questions[0].id], defaultFilters);
-    const archive = createResetArchive(d);
-    expect(() => validateResetArchive(archive, emptyData())).toThrow();
-    expect(() =>
-      validateResetArchive({ ...archive, format: "future-format" }, d),
-    ).toThrow();
-    expect(() =>
-      validateResetArchive(
-        { ...archive, study: { ...archive.study, attempts: [{}] } },
-        d,
-      ),
-    ).toThrow();
+  it("removes the restorable copies earlier versions kept, and nothing else", async () => {
+    const stored = { ...emptyData(), questions };
+    await updateData((d) => Object.assign(d, stored));
+    const open = () =>
+      new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open("sat-study-local", 2);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    const keys = async () => {
+      const db = await open();
+      const found = await new Promise<IDBValidKey[]>((resolve, reject) => {
+        const request = db
+          .transaction("state")
+          .objectStore("state")
+          .getAllKeys();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      db.close();
+      return found.sort();
+    };
+    const db = await open();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction("state", "readwrite");
+      for (const key of [
+        "reset-archive",
+        "reset-archive-PAA",
+        "reset-archive-TSI",
+      ])
+        tx.objectStore("state").put({ format: "sat-study-reset-v1" }, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+    expect(await keys()).toHaveLength(4);
+    await dropResetArchives();
+    expect(await keys()).toEqual(["current"]);
+    expect((await readData()).questions).toEqual(stored.questions);
+    // Nothing left to remove is not an error.
+    await expect(dropResetArchives()).resolves.toBeUndefined();
   });
   it("combines domains and skills without merging similarly named source skills", () => {
     const a = questions[0],
